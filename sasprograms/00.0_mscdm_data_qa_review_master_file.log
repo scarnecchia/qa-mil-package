@@ -1,0 +1,2814 @@
+1                                                          The SAS System                               09:49 Tuesday, March 6, 2018
+
+NOTE: Unable to open SASUSER.REGSTRY. WORK.REGSTRY will be opened instead.
+NOTE: All registry changes will be lost at the end of the session.
+
+WARNING: Unable to copy SASUSER registry to WORK registry. Because of this, you will not see registry customizations during this 
+         session.
+NOTE: Unable to open SASUSER.PROFILE. WORK.PROFILE will be opened 
+      instead.
+NOTE: All profile changes will be lost at the end of the session.
+NOTE: Copyright (c) 2002-2012 by SAS Institute Inc., Cary, NC, USA. 
+NOTE: SAS (r) Proprietary Software 9.4 (TS1M4) 
+      Licensed to HARVARD PILGRIM HEALTH CARE INSTITUTE LLC/FDA CDER, 
+      Site 70152975.
+NOTE: This session is executing on the X64_7PRO  platform.
+
+
+
+NOTE: Updated analytical products:
+      
+      SAS/STAT 14.2
+      SAS/ETS 14.2
+      SAS/IML 14.2
+2                           The SAS System
+                                           09:49 Tuesday, March 6, 2018
+
+
+WARNING: Your system is scheduled to expire on April 1, 2018, which is 
+         26 days from now. The SAS System will no longer function on 
+         or after that date. Please contact your SAS Installation 
+         Representative to obtain your updated SAS Installation Data 
+         (SID) file, which includes SETINIT information.
+To locate the name of your SAS Installation Representative go to 
+http://support.sas.com/repfinder and provide your site number 70152975 
+and company name as HARVARD PILGRIM HEALTH CARE INSTITUTE LLC/FDA 
+CDER. On the SAS REP list provided, locate the REP for operating 
+system Windows.
+NOTE: Additional host information:
+
+ X64_7PRO WIN 6.1.7601 Service Pack 1 Workstation
+
+NOTE: SAS initialization used:
+      real time           0.15 seconds
+      cpu time            0.17 seconds
+      
+1          options linesize=100 pagesize=50;
+2          
+3          /*--------------------------------------------------------------------------------------\
+4          | PROGRAM NAME: 00.0_mscdm_data_qa_review_master_file.sas                               |
+5          |                                                                                       |
+6          | MIL/MIS QA PACKAGE VERSION: 1.0.0
+6        !        |
+7          | DATE: 01/30/2018                                                                      |
+8          |---------------------------------------------------------------------------------------|
+9          | PURPOSE:                                                                              |
+10         |     The purpose of this program is to check data characteristics and quality of the   |
+11         |	  SCDM-formatted Mother-Infant Linkage table.					|
+12         |	  Prior to conducting a statistical 		                                        |
+13         |	  query, sufficient data screening methods should be used for all variables to 		|
+14         |	  identify miscoded, missing, or otherwise disorganized data. Some of the items 	|
+15         |	  to check for include: missing required fields, validating values, validating 		|
+16         |	  dates or dateranges, validating data types, etc.                                  |
+17         |                                                                                       |
+18         |     Data are generated from health plan administrative claims data held by Data       |
+19         |     Partners into the SCDM.  Analytic models and monitoring are dependent on data,    |
+20         |     which are both high in quality and contain a broad representation of the          |
+21         |     population. To ensure the data will meet these goals, the Sentinel Operations     |
+22         |     Center (SOC) has written this program to perform both data quality checks and to  |
+23         |     profile the data to expose the breadth and depth of that data. This program       |
+24         |     defines the data check process, the specific checks that will be performed and    |
+25         |     how flagged data will be identified.                                              |
+26         |---------------------------------------------------------------------------------------|
+27         | PROGRAM INPUT:                                                                        |
+3                                          The SAS System               09:49 Tuesday, March 6, 2018
+
+28         |     MSCDM tables:                                                                     |
+29         |           mscdm.EnrTable                                                              |
+30         |           mscdm.DemTable                                                              |
+31         |           mscdm.EncTable    															|
+32         |           ds.[RUNID]_mother_deliveries                                                |
+33         |           ds.[RUNID]_infants                                                          |
+34         |           mil.MILTABLE or                                                             |
+35         |           mil.MISTABLE				                                                |
+36         |                                                                                       |
+37         |     Dependencies:                                                                     |
+38         |           ms_common_components.sas (not part of QA package, pre-placed via CC pkg)    |
+39         |                                                                                       |
+40         |     SAS programs:                                                                     |
+41         |           00.0_mscdm_control_flow.sas                                                 |
+42         |           00.1_mscdm_standard_macros.sas                                              |
+43         |           00.2_mscdm_formats.sas                                                      |
+44         |           00.3_mscdm_sas_log_checker_directory_cc.sas                                 |
+45         |           00.4_mscdm_qasignaturerequest.sas                                           |
+46         |           01.1_mscdm_data_qa_review-level1.sas                                        |
+47         |           01.2_mscdm_data_qa_review-level2.sas                                        |
+48         |           99.2_mscdm_data_qa_review-level3.sas                                        |
+49         |                                                                                       |
+50         |     Input files:                                                                      |
+51         |           control_flow.sas7bdat                                                       |
+52         |           lkp_all_flags.sas7bdat                                                      |
+53         |           lkp_all_l1.sas7bdat                                                         |
+54         |                                                                                       |
+55         |     PROGRAM OUTPUT:                                                                   |
+56         |                   See Workplan PDF                                                    |
+57         *---------------------------------------------------------------------------------------*
+58         |                                      DEFINITIONS                                      |
+59         *---------------------------------------------------------------------------------------*
+60         | MSCC...[Mini-]Sentinel Common-Components File                                         |
+61         |     Specific to each Data Partner/Data Site, the Common-Components defines key:       |
+62         |       - macro variables (e.g. Data Partner ID, Min and Max Dates, MSCDM table names)  |
+63         |       - libname assignments (e.g. libref INDATA is assigned to production SCDM tables)|
+64         |     NOTE: This parameter needs to be set by programmer at the Data Partner/Data Site  |
+65         |                                                                                       |
+66         | Evaluate_MSCDM... Location of ETL SCDM tables to be evaluated by this QA request      |
+67         |     NOTE: This parameter needs to be set by programmer at the Data Partner/Data Site  |
+68         |                                                                                       |
+69         | MSReqID...[Mini-]Sentinel Project Request-Id                                          |
+70         |     NOTE: This parameter needs to be set by the programmer preparing the Request-ID   |
+71         |           in coordination with the Sentinel Operations Center (SOC)                   |
+72         |                                                                                       |
+73         |---------------------------------------------------------------------------------------|
+74         | CONTACT:                                                                              |
+75         |     Sentinel Coordinating Center                                                      |
+4                                          The SAS System               09:49 Tuesday, March 6, 2018
+
+76         |     info@sentinelsystem.org                                                           |
+77         \--------------------------------------------------------------------------------------*/
+78         
+79         /***************************************************************************************/
+80         /*                                    User Inputs                                      */
+81         /***************************************************************************************/
+82         
+83         /*-------------------------------------------------------------------------------------*/
+84         /* NOTE: The DP Programmer executing this Request sets the following macro variables   */
+85         /*-------------------------------------------------------------------------------------*/
+86         
+87         /* Edit macro variable MSCC to point to the directory containing the CC file .sas file */
+88         /* e.g. <full-path>\ms_common_components.sas */
+89         %let MSCC =
+89       ! B:\mscdm\v6.01\Truven\etl02\sample_1pct\common_components\ms_common_components.sas;
+90         
+91         /* Include Common Components */
+92         %inc "&MSCC" /source2 ;   /* Please do not edit */
+NOTE: %INCLUDE (level 1) file 
+      B:\mscdm\v6.01\Truven\etl02\sample_1pct\common_components\ms_common_components.sas is file 
+      B:\mscdm\v6.01\Truven\etl02\sample_1pct\common_components\ms_common_components.sas.
+93        +/****************************************************************************************
+93       !+*********
+94        +
+95        +The “Common Components” method makes site-specific metadata (e.g., data table names,
+96        +folder locations, ETL facts) available to programs distributed to the
+97        +Sentinel Distributed Network .  Each Sentinel data partner has a SAS file called
+98        +“ms_common_components.sas” that assigns site-specific values to standard macro variables.
+99        +
+100       +The common components file contains macro variables that define attributes such as:
+101       +* Data partner description variables
+102       +* Most recent approved ETL version number
+103       +* Min and Max dates corresponding to the time window with complete data for most recent
+103      !+ETL
+104       +* Key Sentinel directory paths
+105       +* MSCDM table names
+106       +* SAS Module Yes/No Flags
+107       +
+108       +Some ETL related metadata (e.g. ETL version and Min/Max dates) are automatically derived
+108      !+from
+109       +the ETL metadata produced from the QA package, while other ETL related metadata (e.g.
+109      !+directory
+110       +paths) need to be defined explicitly by the data partner
+111       +
+112       +Please consult as needed with your local contacts for MSCDM maintenance/QA review for
+112      !+assistance with
+113       +obtaining the directory paths needed for the macro variables _mscdm, _qaresults, and
+113      !+_staging
+5                                          The SAS System               09:49 Tuesday, March 6, 2018
+
+114       +
+115       +The common components file itself "includes" a macro package -- ms_setup_macros.sas -- to
+115      !+ assist
+116       +with cleaning and validating path assignments and libname assignments
+117       +
+118       +-----------------------------------------------------------------------------------------
+118      !+---------
+119       +Date (mm/dd/yy):  04/07/16
+120       +Version: v1.2.1
+121       +*****************************************************************************************
+121      !+*********/
+122       +
+123       +/*********************************************************************************
+124       +Data Partner Description Macro Variables
+125       +**********************************************************************************/
+126       +*For comprehensive list of valid values, see comprehensive_dp_list.xls;
+127       +
+128       +*Full name of the data partner (see comprehensive_dp_list.xls);
+129       +%LET DPName= Sentinel Operations Center ;
+130       +
+131       +*Data Partner ID (see comprehensive_dp_list.xls);
+132       +%LET DPID= TR;
+133       +
+134       +*Data Partner Site ID (see comprehensive_dp_list.xls);
+135       +%LET SITEID= UVEN;
+136       +
+137       +/***********************************************************************************
+138       +Data Partner Directory Macro Variables
+139       +
+140       +IMPORTANT NOTES:
+141       +  1- DO use forward slashes (e.g. /) which are always compatible on both UNIX and WINDOWS
+142       +  2- DO use end of path separators (e.g. /xyz/ and not /xyz) which are assumed by many
+142      !+programs
+143       +  3- Do NOT surround directory paths with quotes (e.g. /xyz/ not "/xyz/") which the break
+143      !+ the code
+144       +  4- DO consult the DP MSCDM/QA contacts list to help verify that the correct
+145       +***********************************************************************************/
+146       +
+147       +*Specify ETL root*;
+148       +%let ETL_root = B:/mscdm/v6.01/Truven/etl02/;
+149       +
+150       +*Specify Truven sample to use (i.e. 0.1%, 1%, or 5%);
+151       +%let TSamp = 1;  /*(valid values:  0.1, 1, 5)*/
+152       +
+153       +*Folder(s) containing the Sentinel Common Data Model for most recent production ETL*;
+154       +*Location of MSCDM folders for most recenty production ETL;
+155       + %let _mscdm= &ETL_root./sample_&TSamp.pct/;
+156       +
+6                                          The SAS System               09:49 Tuesday, March 6, 2018
+
+157       +*Directory containing the ETL (MSCDM) in process used by the MSOC QA programs *;
+158       +*(can be blank, do NOT comment out) *;
+159       +%let _staging=;
+160       +
+161       +*Directory/folder containing the QA result datasets specific to the most recent
+161      !+production ETL;
+162       +%let _qaresults= &ETL_root./qaresults_100pct/;
+163       +
+164       +/*---------------------------------------------------------------------------------------
+164      !+-------*/
+165       +/* >> The Linkage between Common Components Root-Path parms and Request Subdirectory
+165      !+parms <<   */
+166       +/*---------------------------------------------------------------------------------------
+166      !+-------*/
+167       +/* For each standard workplan subdirectory, a root-path is defined in the common
+167      !+components.    */
+168       +/* The common component root-path parameters are NOT request specific as this would
+168      !+defeat the  */
+169       +/* purpose of common components.  But when combined with parameters from the program
+169      !+header for */
+170       +/* a specific request, the full paths specific to that request are dynamically generated.
+170      !+       */
+171       +/*
+171      !+       */
+172       +/* It helps to see how the root-path parameters will be used by the program header [note
+172      !+that   */
+173       +/* for that for most data partners, all root-path parameters will point to the same
+173      !+directory]. */
+174       +/*
+174      !+       */
+175       +/* Request Subdirectory parms copied from the example program header
+175      !+[ms_program_header.sas]    */
+176       +/*   %let DPLOCAL = &_root_dplocal.&MSReqID./dplocal/ ;
+176      !+       */
+177       +/*   %let MSOC = &_root_msoc.&MSeqQID./msoc/ ;
+177      !+       */
+178       +/*   %let INFOLDER = &_root_inputfiles.&MSReqID./inputfiles/ ;
+178      !+       */
+179       +/*   %let SASPROGRAMS = &_root_sasprograms.&MSReqID./sasprograms/ ;
+179      !+       */
+180       +/*
+180      !+       */
+181       +/* Taking DPLOCAL as an example, let us illustrate how parameters are resolved to
+181      !+dynamically    */
+182       +/* build the full path to dplocal subdirectory for request to07_nme_dabi_wgr_wp005_b03
+182      !+       */
+183       +/*
+183      !+       */
+7                                          The SAS System               09:49 Tuesday, March 6, 2018
+
+184       +/*   &_root_dplocal    -->    //sentinel/requests/
+184      !+       */
+185       +/*   &MSReqID:         -->    to07_nme_dabi_ahr_wp005_b03
+185      !+       */
+186       +/*   &DPLOCAL:         -->    //sentinel/requests/to07_nme_dabi_ahr_wp005_b03/dplocal/
+186      !+       */
+187       +/*---------------------------------------------------------------------------------------
+187      !+-------*/
+188       +
+189       +*Read instructions above carefully before proceeding *;
+190       +*Root directories to subdirectories for Sentinel project workplans (excluding request-ID)
+190      !+ *;
+191       +%let _root_dplocal = a:/dev/test/;
+192       +%let _root_msoc = a:/dev/test/;
+193       +%let _root_inputfiles = a:/dev/test/;
+194       +%let _root_sasprograms = a:/dev/test/;
+195       +
+196       +***********************************************************************************
+197       +Data Partner MSCDM SAS Dataset/View Names
+198       +
+199       +Specify the table names.
+200       +
+201       +For example,
+202       +%let ENRTABLE=enrollment
+203       +***********************************************************************************;
+204       +%let ENRTABLE=enrollment;    *specify the  enrollment table name    *;
+205       +%let DEMTABLE=demographic;   *specify the  demographic table name   *;
+206       +%let DISTABLE=dispensing;    *specify the  rx dispensing table name *;
+207       +%let DIATABLE=diagnosis;     *specify the  diagnosis table name     *;
+208       +%let PROCTABLE=procedure;    *specify the  procedure table name     *;
+209       +%let ENCTABLE=encounter;     *specify the  encounter table name     *;
+210       +
+211       +***********************************************************************************
+212       +The following tables may not be available at all Data Partners.  Leave blank if they
+213       +are not available at your site.  Ensure the macro variables below are not commented
+214       +out (even if the table does NOT exist at your site).
+215       +***********************************************************************************;
+216       +
+217       +%let DEATHTABLE= death;           *specify the death table name          *;
+218       +%let CODTABLE= ;                  *specify the cause_of_death table name *;
+219       +%let LABTABLE= ;                  *specify the lab_result table name     *;
+220       +%let VITTABLE= ;                  *specify the vital_sign table name     *;
+221       +
+222       +%let STATVACCTABLE = ;    *specify the State Vaccine table name *;
+223       +
+224       +%let IPHARMTABLE  = ;     * specify an inpatient pharmacy table name *;
+225       +%let ITRANSTABLE = ;      * specify an inpatient transfusion table name *;
+226       +
+8                                          The SAS System               09:49 Tuesday, March 6, 2018
+
+227       +***********************************************************************************
+228       +Data Partner SAS options
+229       +***********************************************************************************;
+230       +
+231       +****************************************
+232       +SAS/Graph Available
+233       +Y=Yes, N=No
+234       +****************************************;
+235       +%let _sas_graph=Y;   * Y=Yes, N=No;
+236       +
+237       +****************************************
+238       +SAS/Stat Available
+239       +Y=Yes, N=No
+240       +****************************************;
+241       +%let _sas_stat =Y;   * Y=Yes, N=No;
+242       +
+243       +****************************************
+244       +SAS/Aces Interface to PC files Available
+245       +Y=Yes, N=No
+246       +****************************************;
+247       +%let _sas_access =Y;  * Y=Yes, N=No;
+248       +
+249       +
+250       +****************************************
+251       +Define path to MS Setup Macro Package
+252       +****************************************;
+253       +%let MS_SETUP_MACROS = &ETL_root./common_components_shared_files/;
+254       +
+255       +
+256       +***********************************************************************************
+257       +*********                                                                 *********
+258       +*********                    DO NOT EDIT BELOW THIS LINE                  *********
+259       +*********               (Consult with MSOC if edits required)             *********
+260       +*********                                                                 *********
+261       +***********************************************************************************;
+262       +
+263       +****************************************
+264       +Include the MS Setup Macro Package
+265       +****************************************;
+266       +%inc "&MS_SETUP_MACROS./ms_setup_macros.sas" /nosource;
+441       +
+442       +***********************************************************************************
+443       +Key Libname Assignments.
+444       +***********************************************************************************;
+445       +
+446       +/* Clean up paths (e.g. convert slashes and add slashes when necessary) and validates
+446      !+existence */
+447       +/* except for the staging directory path, which may be left blank */
+9                                          The SAS System               09:49 Tuesday, March 6, 2018
+
+448       +%let _mscdm = %ms_clean_path(&_mscdm) ;
+449       +%let _qaresults = %ms_clean_path(&_qaresults) ;
+450       +%let _root_dplocal = %ms_clean_path(&_root_dplocal) ;
+451       +%let _root_msoc = %ms_clean_path(&_root_msoc) ;
+452       +%let _root_inputfiles = %ms_clean_path(&_root_inputfiles) ;
+453       +%let _root_sasprograms = %ms_clean_path(&_root_sasprograms) ;
+454       +
+455       +/* If path is blank the macro %ms_lib will not assign libref*/
+456       +/* %ms_lib(libref-name, path-name, options=%str(options-name=options-value)) */
+457       +%ms_lib(indata, &_mscdm., options=%str(access=readonly));
+NOTE: Libref INDATA was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: B:\mscdm\v6.01\Truven\etl02\\sample_1pct
+458       +%ms_lib(staging, &_staging., options=%str(access=readonly))
+MS-NOTE: for libref staging the path is blank, libname assignment skipped
+459       +%ms_lib(qaresult, &_qaresults., options=%str(access=readonly))
+NOTE: Libref QARESULT was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: B:\mscdm\v6.01\Truven\etl02\\qaresults_100pct
+460       +
+461       +/* Retrieve ETL metadata from production ETL */
+462       +%macro _get_ETL_metadata ;
+463       +   %put
+463      !+*********************************************************************************** ;
+464       +   %put Data partner ETL version number for the most recently approved MSCDM and QA
+464      !+results ;
+465       +   %put
+465      !+*********************************************************************************** ;
+466       +
+467       +   %global ETL ;
+468       +
+469       +   /* ETL 0 is the default value assigned when a DP onboards and does not yet have */
+470       +   /* an existing ETL approved for use in production queries */
+471       +   %let ETL = 0 ;
+472       +
+473       +   /* Retrieve the existing production ETL, if table exists */
+474       +   %if %sysfunc(exist(qaresult.etl_version)) ne 0 %then %do ;
+475       +      proc sql noprint ;
+476       +        select etl into :ETL
+477       +          from qaresult.etl_version
+478       +        ;
+479       +     quit ;
+480       +   %end ;
+481       +   %let ETL = &ETL ;  /* strip blanks for compatibility across SAS versions */
+482       +
+483       +   %put ;
+484       +   %put *** ETL: &ETL ;
+485       +   %put ;
+10                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+486       +
+487       +   %put
+487      !+*********************************************************************************** ;
+488       +   %put Data partner dates of data completeness for the most recently approved ETL ;
+489       +   %put
+489      !+*********************************************************************************** ;
+490       +
+491       +
+492       +   %global DP_MinDate DP_MaxDate ;
+493       +
+494       +   /* 01Jan2000 and 31Dec2099 are the default values assigned when a DP onboards */
+495       +   /* and does not yet have an existing ETL approved for use in production queries */
+496       +   %let DP_MinDate = '01Jan2000'd ;
+497       +   %let DP_MaxDate = '31Dec2099'd ;
+498       +
+499       +   /* Retrieve the existing production Min/Max Dates, if table exists */
+500       +   %if %sysfunc(exist(qaresult.MinMax_Dates)) ne 0 %then %do ;
+501       +      proc sql noprint ;
+502       +        select DP_MinDate format=best12., DP_MaxDate format=best12.
+503       +                  into
+504       +               :DP_MinDate, :DP_MaxDate
+505       +          from qaresult.MinMax_Dates
+506       +        ;
+507       +      quit ;
+508       +   %end ;
+509       +
+510       +   %put ;
+511       +   %put *** DP_MinDate: %sysfunc(putn(&DP_MinDate, date9.)) ;
+512       +   %put *** DP_MaxDate: %sysfunc(putn(&DP_MaxDate, date9.)) ;
+513       +   %put ;
+514       +
+515       +%mend _get_ETL_metadata ;
+516       +%_get_ETL_metadata
+***********************************************************************************
+Data partner ETL version number for the most recently approved MSCDM and QA results
+***********************************************************************************
+WARNING: The Base SAS Software product with which SQL is associated will be expiring soon, and is 
+         currently in warning mode to indicate this upcoming expiration. Please run PROC SETINIT to 
+         obtain more information on your warning period.
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.01 seconds
+      
+
+
+*** ETL: 2
+
+***********************************************************************************
+11                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+Data partner dates of data completeness for the most recently approved ETL
+***********************************************************************************
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      cpu time            0.00 seconds
+      
+
+
+*** DP_MinDate: 01JAN2010
+*** DP_MaxDate: 30SEP2016
+
+517       +
+518       +/* Delete macros that are no longer needed */
+519       +proc catalog catalog=work.sasmacr;
+520       +     delete _get_ETL_metadata / ET = macro;
+521       +quit;
+
+NOTE: Deleting entry _GET_ETL_METADATA.MACRO in catalog WORK.SASMACR.
+NOTE: PROCEDURE CATALOG used (Total process time):
+      real time           0.02 seconds
+      cpu time            0.01 seconds
+      
+
+NOTE: %INCLUDE (level 1) ending.
+522        
+523        /* Edit macro variable Evaluate_MSCDM to specify path to directory with SCDM data tables
+524           to be evaluated by this QA request */
+525        %let Evaluate_MSCDM = B:\mscdm\v6.01\Truven\etl02\sample_1pct;
+526        
+527        /* Name of the Mom Infant Linkage SAS dataset*/
+528        %let MILTABLE = MIL4;
+529        
+530        /* Edit macro variable Evaluate_MIL to specify path to directory with mom Infant
+531           linkage table to be evaluated by this QA request */
+532        %let Evaluate_MIL = A:\dev\test\test_qa_wp001_nsdp_v01;
+533        
+534        /* Name of the Mother deliveries SAS dataset from distributed code (residing at
+534      ! distributed code DPLOCAL folder) */
+535        %let deliveries = r01_mother_deliveries;
+536        
+537        /*Name of the Infants SAS dataset from distributed code (residing at distributed code
+537      ! DPLOCAL folder)*/
+538        %let infants = r02_infants;
+539        
+540        /* Edit macro variable Evaluate_DS to specify path to directory with Mother deliveries
+541           and infant table to be evaluated by this QA request */
+542        %let Evaluate_DS = A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal;
+543        
+12                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+544        /*-------------------------------------------------------------------------------------*/
+545        /* Notes about SCDM table names defined in Common Components (CC)                      */
+546        /* ------------------------------------------------------------------------------------*/
+547        /*  If the names or presence/absence of SCDM tables has changed for the this ETL now   */
+548        /*  being evaluted as compared to the currently approved ETL, we will need to override */
+549        /*  the values for the Common Components macro variables holding the table names.      */
+550        /*  The values need to be overwritten here, not in CC, because the values in CC need   */
+551        /*  to point to the currently approved ETL.  Once the ETL under review has been        */
+552        /*  approved,  the values may be updated in Common Components.                         */
+553        /* ------------------------------------------------------------------------------------*/
+554        /***************************************************************************************\
+555          The macro variables below hold the SCDM table names for your site as currently
+556          defined for your approved ETL as specified in Common Components. Values should be
+557          changed only if necessary (see note above).
+558        \***************************************************************************************/
+559        ;
+560        %let EnrTable=   &EnrTable ;       * Enrollment table name     *;
+561        %let DemTable=   &DemTable ;       * Demographic table name    *;
+562        %let DisTable=   &DisTable ;       * Dispensing table name     *;
+563        %let DiaTable=   &DiaTable ;       * Diagnosis table name      *;
+564        %let ProcTable=  &ProcTable ;      * Procedure table name      *;
+565        %let EncTable=   &EncTable ;       * Encounter table name      *;
+566        %let DeathTable= &DeathTable ;     * Death table name          *;
+567        %let CODTable=   &CODTable ;       * Cause_of_death table name *;
+568        %let LabTable=   &LabTable ;       * Lab_result table name     *;
+569        
+570        *****************************************************************************************
+571        *******                             END OF USER INPUT                              ******
+572        *******                        DO NOT EDIT BELOW THIS LINE                         ******
+573        *******                   (Consult with SOC or Sentinel team leader                ******
+574        *******                      if you feel edits are required)                       ******
+575        *****************************************************************************************
+576        ;
+577        
+578        /*-------------------------------------------------------------------------------------*/
+579        /* NOTE: Programmer preparing RequestID defines the parameter MSReqID ReqETL           */
+580        /*       in coordination with the SOC                                                  */
+581        /*-------------------------------------------------------------------------------------*/
+582        /*-------------------------------------------------------------------------------------*\
+583        * Specific RequestIDs are made up of:
+584        *     project-id, workplan-type, workplan-id, unique-dpid, version-id
+585        *
+586        *  If this is your request is...     -->  then set parameter values as follows...
+587        *  ---------------------------------      ---------------------------------------
+588        *   [Project SOC]                          %let MSProjID = soc ;
+589        *   [Work Plan Type]                       %let MSWPType = qar;
+590        *   [Workplan # 5]                         %let MSWPID = wp005 ;
+591        *   [Unique DPID - MSOC]                   %let MSDPID = msoc;
+13                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+592        *   [Beta 3]                               %let MSVerID = b03 ;
+593        *   [use underscores as delimiter]         %let dlm = _ ;
+594        *
+595        *  The example values above would produce a Request-Id equal to soc_qar_wp005_msoc_b03
+596        \*--------------------------------------------------------------------------------------*
+596      ! /
+597        
+598        * Specify expected ETL # for this request (i.e. last approved ETL # incremented by 1) *;
+599        %let ReqETL = 1;
+600        
+601        * Specify project-id, workplan-type, workplan-id, unique-dpid, and version-id *;
+602        %let MSProjID =  test;
+603        %let MSWPType =  qa;
+604        %let MSWPID   =  wp001;
+605        %let MSDPID   =  nsdp;
+606        %let MSVerID  =  v01;
+607        
+608        %let dlm = _ ;
+609        
+610        * Request-Id *;
+611        %let MSReqID = &MSProjID.&dlm.&MSWPType.&dlm.&MSWPID.&dlm.&MSDPID.&dlm.&MSVerID ;
+612        
+613        * Delete macro variable used as delimiter as we no longer need it *;
+614        %symdel dlm ;
+615        
+616        /*-------------------------------------------------------------------------*/
+617        /* NOTE: Programmer maintaining the QA code defines the following versions */
+618        /*-------------------------------------------------------------------------*/
+619        %let QAVer   = 1.0.0 ;  /* Current QA version needed for signature file */
+620        %let SCDMVer = 6.0.2 ;  /* Current SCDM version needed for signature file */
+621        
+622        /*-------------------------------------------------------------------------*/
+623        /* NOTE: Programmer maintaining the QA code might set obslimit for testing */
+624        /*-------------------------------------------------------------------------*/
+625        /*Set Number of Observations (for testing purposes) */
+626        %let MaxObs=500;
+627        
+628        /*-------------------------------------------------------------------------*/
+629        /* NOTE: Programmer maintaining the QA code may reset kill_dir_[directory] */
+630        /*     to N for specific needs (testing, dp issue), but default=y          */
+631        /*-------------------------------------------------------------------------*/
+632        /*Set KILL_DIR_[local package directory] to 'y' for production runs */
+633        %let kill_dir_work= y;
+634        %let kill_dir_dplocal= y;
+635        %let kill_dir_msoc= y;
+636        
+637        *----------------------------------------------------------------------------------------
+637      ! ---------
+14                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+638        * 0- Setup Environment
+639        *----------------------------------------------------------------------------------------
+639      ! ---------;
+640        /*-------------------------------------------------------------------------*/
+641        /* NOTE: This is standard MSOC environment setup code -- DO Not EDIT       */
+642        /*-------------------------------------------------------------------------*/
+643        /* System options */
+644        options obs=MAX ;
+645        options msglevel=i ;
+646        options mprint mprintnest ;
+647        options errorcheck=strict errors=0 ;
+648        options merror serror ;
+649        options dsnferr dkricond=error dkrocond=error mergenoby=warn;
+650        options dsoptions=nonote2err noquotelenmax ;
+651        options reuse=no ;
+652        options fullstimer ;
+653        
+654        options mprint mlogic symbolgen spool;
+655        ** for qa program;
+656        options nodsnferr fmtsearch=(dplocal);
+657        proc options group=memory;
+658        run;
+
+    SAS (r) Proprietary Software Release 9.4  TS1M4
+
+
+Group=MEMORY
+ SORTSIZE=1073741824
+                   Specifies the amount of memory that is available to the SORT procedure.
+ SUMSIZE=0         Specifies a limit on the amount of memory that is available for data 
+                   summarization procedures when class variables are active.
+ MAXMEMQUERY=0     Specifies the maximum amount of memory that is allocated for procedures.
+ MEMBLKSZ=16777216 Specifies the memory block size for Windows memory-based libraries.
+ MEMMAXSZ=2147483648
+                   Specifies the maximum amount of memory to allocate for using memory-based 
+                   libraries.
+ LOADMEMSIZE=0     Specifies a suggested amount of memory that is needed for executable programs 
+                   loaded by SAS.
+ MEMSIZE=2147483648
+                   Specifies the limit on the amount of virtual memory that can be used during a 
+                   SAS session.
+ REALMEMSIZE=0     Specifies the amount of real memory SAS can expect to allocate.
+NOTE: PROCEDURE OPTIONS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              22.28k
+      OS Memory           11096.00k
+15                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+      Timestamp           03/06/2018 09:49:49 AM
+      Step Count                        4  Switch Count  0
+      
+
+659        
+660        /*---------------------------------------------------------------------------------------
+660      ! ---------
+661        * NOTES:
+662        *   For reasons of compatibility and standardization, paths must meet the following
+662      ! criteria:
+663        *     1- Starting with the request subdirectory, all subdirectory names must be specified
+663      !  in
+664        *        lower case (for UNIX compatibility)
+665        *     2- Slashes must be forward-leaning slashes '/' (for UNIX compatibility)
+666        *     3- Paths must end with a final forward-leaning slash '/' (extra slashes are fine)
+667        *----------------------------------------------------------------------------------------
+667      ! --------*/
+668        
+669        /* Request-Id parameter value must be lower case */
+670        %let MSReqID = %lowcase(&MSReqID) ;
+MLOGIC:  Beginning compilation of LOWCASE using the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas.
+MLOGIC:  Ending compilation of LOWCASE.
+MLOGIC(LOWCASE):  Beginning execution.
+MLOGIC(LOWCASE):  This macro was compiled from the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas
+SYMBOLGEN:  Macro variable MSREQID resolves to test_qa_wp001_nsdp_v01
+MLOGIC(LOWCASE):  Parameter STRING has value test_qa_wp001_nsdp_v01
+SYMBOLGEN:  Macro variable STRING resolves to test_qa_wp001_nsdp_v01
+MLOGIC(LOWCASE):  Ending execution.
+671        
+672        /*Prefix added to the all DPLOCAL and MSOC files*/
+673        %let prefix = mil_;
+674        
+675        /* Define Request Specific Subdirectories */
+676        %let DPLOCAL = &_root_dplocal./&MSReqID./dplocal/ ;
+SYMBOLGEN:  Macro variable _ROOT_DPLOCAL resolves to a:/dev/test/
+SYMBOLGEN:  Macro variable MSREQID resolves to test_qa_wp001_nsdp_v01
+677        %let MSOC = &_root_msoc./&MSReqID./msoc/ ;
+SYMBOLGEN:  Macro variable _ROOT_MSOC resolves to a:/dev/test/
+SYMBOLGEN:  Macro variable MSREQID resolves to test_qa_wp001_nsdp_v01
+678        %let INFOLDER = &_root_inputfiles./&MSReqID./inputfiles/ ;
+SYMBOLGEN:  Macro variable _ROOT_INPUTFILES resolves to a:/dev/test/
+SYMBOLGEN:  Macro variable MSREQID resolves to test_qa_wp001_nsdp_v01
+679        %let SASPROGRAMS = &_root_sasprograms./&MSReqID./sasprograms/ ;
+SYMBOLGEN:  Macro variable _ROOT_SASPROGRAMS resolves to a:/dev/test/
+SYMBOLGEN:  Macro variable MSREQID resolves to test_qa_wp001_nsdp_v01
+680        
+16                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+681        /* Clean up paths (e.g. convert or add slashes when necessary) and validate that paths
+681      ! exist */
+682        %let DPLOCAL = %ms_clean_path(&DPLOCAL) ;
+MLOGIC(MS_CLEAN_PATH):  Beginning execution.
+SYMBOLGEN:  Macro variable DPLOCAL resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_CLEAN_PATH):  Parameter PATH has value a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_CLEAN_PATH):  %LOCAL  LN LC D_EXIST 
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LN)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+SYMBOLGEN:  Macro variable LN resolves to 44
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln eq 0 is FALSE
+SYMBOLGEN:  Macro variable LN resolves to 44
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln > 0 is TRUE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is PATH)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LC)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+SYMBOLGEN:  Macro variable LN resolves to 44
+SYMBOLGEN:  Macro variable LC resolves to /
+MLOGIC(MS_CLEAN_PATH):  %IF condition "&lc" ne "/" is FALSE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_DIREXIST):  Parameter DIR has value a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00038
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_CLEAN_PATH):  %IF condition &d_exist eq 0 is FALSE
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_CLEAN_PATH):  Ending execution.
+683        %let MSOC = %ms_clean_path(&MSOC) ;
+MLOGIC(MS_CLEAN_PATH):  Beginning execution.
+SYMBOLGEN:  Macro variable MSOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_CLEAN_PATH):  Parameter PATH has value a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_CLEAN_PATH):  %LOCAL  LN LC D_EXIST 
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LN)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable LN resolves to 41
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln eq 0 is FALSE
+SYMBOLGEN:  Macro variable LN resolves to 41
+17                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln > 0 is TRUE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is PATH)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LC)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable LN resolves to 41
+SYMBOLGEN:  Macro variable LC resolves to /
+MLOGIC(MS_CLEAN_PATH):  %IF condition "&lc" ne "/" is FALSE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_DIREXIST):  Parameter DIR has value a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00039
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_CLEAN_PATH):  %IF condition &d_exist eq 0 is FALSE
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_CLEAN_PATH):  Ending execution.
+684        %let INFOLDER = %ms_clean_path(&INFOLDER) ;
+MLOGIC(MS_CLEAN_PATH):  Beginning execution.
+SYMBOLGEN:  Macro variable INFOLDER resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_CLEAN_PATH):  Parameter PATH has value a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_CLEAN_PATH):  %LOCAL  LN LC D_EXIST 
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LN)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+SYMBOLGEN:  Macro variable LN resolves to 47
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln eq 0 is FALSE
+SYMBOLGEN:  Macro variable LN resolves to 47
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln > 0 is TRUE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is PATH)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LC)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+SYMBOLGEN:  Macro variable LN resolves to 47
+SYMBOLGEN:  Macro variable LC resolves to /
+MLOGIC(MS_CLEAN_PATH):  %IF condition "&lc" ne "/" is FALSE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_DIREXIST):  Parameter DIR has value a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+18                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00040
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_CLEAN_PATH):  %IF condition &d_exist eq 0 is FALSE
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_CLEAN_PATH):  Ending execution.
+685        %let SASPROGRAMS = %ms_clean_path(&SASPROGRAMS) ;
+MLOGIC(MS_CLEAN_PATH):  Beginning execution.
+SYMBOLGEN:  Macro variable SASPROGRAMS resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+MLOGIC(MS_CLEAN_PATH):  Parameter PATH has value a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+MLOGIC(MS_CLEAN_PATH):  %LOCAL  LN LC D_EXIST 
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LN)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+SYMBOLGEN:  Macro variable LN resolves to 48
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln eq 0 is FALSE
+SYMBOLGEN:  Macro variable LN resolves to 48
+MLOGIC(MS_CLEAN_PATH):  %IF condition &ln > 0 is TRUE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is PATH)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is LC)
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+SYMBOLGEN:  Macro variable LN resolves to 48
+SYMBOLGEN:  Macro variable LC resolves to /
+MLOGIC(MS_CLEAN_PATH):  %IF condition "&lc" ne "/" is FALSE
+MLOGIC(MS_CLEAN_PATH):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+MLOGIC(MS_DIREXIST):  Parameter DIR has value a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00041
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_CLEAN_PATH):  %IF condition &d_exist eq 0 is FALSE
+19                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/sasprograms/
+MLOGIC(MS_CLEAN_PATH):  Ending execution.
+686        
+687        /* Assign libnames */
+688        /* e.g. %ms_lib(<libref-name>, <path-name>, options=%str(options-name=<options-value>))
+688      ! */
+689        %ms_lib(dplocal, &DPLOCAL)
+MLOGIC(MS_LIB):  Beginning execution.
+SYMBOLGEN:  Macro variable DPLOCAL resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_LIB):  Parameter REF has value dplocal
+MLOGIC(MS_LIB):  Parameter PATH has value a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_LIB):  Parameter OPTIONS has value 
+SYMBOLGEN:  Macro variable REF resolves to dplocal
+MLOGIC(MS_LIB):  %IF condition %length(&ref) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LOCAL  D_EXIST 
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_LIB):  %IF condition %length(&path) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_DIREXIST):  Parameter DIR has value a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00042
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_LIB):  %IF condition &d_exist eq 1 is TRUE
+SYMBOLGEN:  Macro variable REF resolves to dplocal
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+SYMBOLGEN:  Macro variable OPTIONS resolves to 
+MPRINT(MS_LIB):   libname dplocal "a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/" ;
+NOTE: Libref DPLOCAL was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: a:\dev\test\\test_qa_wp001_nsdp_v01\dplocal
+MLOGIC(MS_LIB):  Ending execution.
+690        %ms_lib(msoc, &MSOC)
+MLOGIC(MS_LIB):  Beginning execution.
+SYMBOLGEN:  Macro variable MSOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_LIB):  Parameter REF has value msoc
+MLOGIC(MS_LIB):  Parameter PATH has value a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_LIB):  Parameter OPTIONS has value 
+SYMBOLGEN:  Macro variable REF resolves to msoc
+20                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+MLOGIC(MS_LIB):  %IF condition %length(&ref) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LOCAL  D_EXIST 
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_LIB):  %IF condition %length(&path) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_DIREXIST):  Parameter DIR has value a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00043
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_LIB):  %IF condition &d_exist eq 1 is TRUE
+SYMBOLGEN:  Macro variable REF resolves to msoc
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable OPTIONS resolves to 
+MPRINT(MS_LIB):   libname msoc "a:/dev/test//test_qa_wp001_nsdp_v01/msoc/" ;
+NOTE: Libref MSOC was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: a:\dev\test\\test_qa_wp001_nsdp_v01\msoc
+MLOGIC(MS_LIB):  Ending execution.
+691        %ms_lib(infolder, &INFOLDER, options=%str(access=readonly))
+MLOGIC(MS_LIB):  Beginning execution.
+SYMBOLGEN:  Macro variable INFOLDER resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_LIB):  Parameter REF has value infolder
+MLOGIC(MS_LIB):  Parameter PATH has value a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_LIB):  Parameter OPTIONS has value accessreadonly
+SYMBOLGEN:  Macro variable REF resolves to infolder
+MLOGIC(MS_LIB):  %IF condition %length(&ref) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LOCAL  D_EXIST 
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_LIB):  %IF condition %length(&path) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_DIREXIST):  Parameter DIR has value a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+21                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00044
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_LIB):  %IF condition &d_exist eq 1 is TRUE
+SYMBOLGEN:  Macro variable REF resolves to infolder
+SYMBOLGEN:  Macro variable PATH resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+SYMBOLGEN:  Macro variable OPTIONS resolves to access=readonly
+SYMBOLGEN:  Some characters in the above value which were subject to macro quoting have been 
+            unquoted for printing.
+MPRINT(MS_LIB):   libname infolder "a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/" 
+access=readonly ;
+NOTE: Libref INFOLDER was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: a:\dev\test\\test_qa_wp001_nsdp_v01\inputfiles
+MLOGIC(MS_LIB):  Ending execution.
+692        %ms_lib(mscdm, &Evaluate_MSCDM, options=%str(access=readonly))
+MLOGIC(MS_LIB):  Beginning execution.
+SYMBOLGEN:  Macro variable EVALUATE_MSCDM resolves to B:\mscdm\v6.01\Truven\etl02\sample_1pct
+MLOGIC(MS_LIB):  Parameter REF has value mscdm
+MLOGIC(MS_LIB):  Parameter PATH has value B:\mscdm\v6.01\Truven\etl02\sample_1pct
+MLOGIC(MS_LIB):  Parameter OPTIONS has value accessreadonly
+SYMBOLGEN:  Macro variable REF resolves to mscdm
+MLOGIC(MS_LIB):  %IF condition %length(&ref) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LOCAL  D_EXIST 
+SYMBOLGEN:  Macro variable PATH resolves to B:\mscdm\v6.01\Truven\etl02\sample_1pct
+MLOGIC(MS_LIB):  %IF condition %length(&path) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to B:\mscdm\v6.01\Truven\etl02\sample_1pct
+MLOGIC(MS_DIREXIST):  Parameter DIR has value B:\mscdm\v6.01\Truven\etl02\sample_1pct
+SYMBOLGEN:  Macro variable DIR resolves to B:\mscdm\v6.01\Truven\etl02\sample_1pct
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to B:\mscdm\v6.01\Truven\etl02\sample_1pct
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00045
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_LIB):  %IF condition &d_exist eq 1 is TRUE
+SYMBOLGEN:  Macro variable REF resolves to mscdm
+SYMBOLGEN:  Macro variable PATH resolves to B:\mscdm\v6.01\Truven\etl02\sample_1pct
+SYMBOLGEN:  Macro variable OPTIONS resolves to access=readonly
+22                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Some characters in the above value which were subject to macro quoting have been 
+            unquoted for printing.
+MPRINT(MS_LIB):   libname mscdm "B:\mscdm\v6.01\Truven\etl02\sample_1pct" access=readonly ;
+NOTE: Libref MSCDM was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: B:\mscdm\v6.01\Truven\etl02\sample_1pct
+MLOGIC(MS_LIB):  Ending execution.
+693        %ms_lib(mil, &Evaluate_MiL, options=%str(access=readonly));
+MLOGIC(MS_LIB):  Beginning execution.
+SYMBOLGEN:  Macro variable EVALUATE_MIL resolves to A:\dev\test\test_qa_wp001_nsdp_v01
+MLOGIC(MS_LIB):  Parameter REF has value mil
+MLOGIC(MS_LIB):  Parameter PATH has value A:\dev\test\test_qa_wp001_nsdp_v01
+MLOGIC(MS_LIB):  Parameter OPTIONS has value accessreadonly
+SYMBOLGEN:  Macro variable REF resolves to mil
+MLOGIC(MS_LIB):  %IF condition %length(&ref) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LOCAL  D_EXIST 
+SYMBOLGEN:  Macro variable PATH resolves to A:\dev\test\test_qa_wp001_nsdp_v01
+MLOGIC(MS_LIB):  %IF condition %length(&path) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to A:\dev\test\test_qa_wp001_nsdp_v01
+MLOGIC(MS_DIREXIST):  Parameter DIR has value A:\dev\test\test_qa_wp001_nsdp_v01
+SYMBOLGEN:  Macro variable DIR resolves to A:\dev\test\test_qa_wp001_nsdp_v01
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to A:\dev\test\test_qa_wp001_nsdp_v01
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00046
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_LIB):  %IF condition &d_exist eq 1 is TRUE
+SYMBOLGEN:  Macro variable REF resolves to mil
+SYMBOLGEN:  Macro variable PATH resolves to A:\dev\test\test_qa_wp001_nsdp_v01
+SYMBOLGEN:  Macro variable OPTIONS resolves to access=readonly
+SYMBOLGEN:  Some characters in the above value which were subject to macro quoting have been 
+            unquoted for printing.
+MPRINT(MS_LIB):   libname mil "A:\dev\test\test_qa_wp001_nsdp_v01" access=readonly ;
+NOTE: Libref MIL was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: A:\dev\test\test_qa_wp001_nsdp_v01
+MLOGIC(MS_LIB):  Ending execution.
+694        %ms_lib(ds, &Evaluate_DS, options=%str(access=readonly));
+MLOGIC(MS_LIB):  Beginning execution.
+SYMBOLGEN:  Macro variable EVALUATE_DS resolves to A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+MLOGIC(MS_LIB):  Parameter REF has value ds
+23                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+MLOGIC(MS_LIB):  Parameter PATH has value A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+MLOGIC(MS_LIB):  Parameter OPTIONS has value accessreadonly
+SYMBOLGEN:  Macro variable REF resolves to ds
+MLOGIC(MS_LIB):  %IF condition %length(&ref) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LOCAL  D_EXIST 
+SYMBOLGEN:  Macro variable PATH resolves to A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+MLOGIC(MS_LIB):  %IF condition %length(&path) eq 0 is FALSE
+MLOGIC(MS_LIB):  %LET (variable name is D_EXIST)
+MLOGIC(MS_DIREXIST):  Beginning execution.
+SYMBOLGEN:  Macro variable PATH resolves to A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+MLOGIC(MS_DIREXIST):  Parameter DIR has value A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+SYMBOLGEN:  Macro variable DIR resolves to A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+MLOGIC(MS_DIREXIST):  %IF condition %length(&dir) eq 0 is FALSE
+MLOGIC(MS_DIREXIST):  %LOCAL  RC FILEREF RETURN 
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+SYMBOLGEN:  Macro variable DIR resolves to A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+MLOGIC(MS_DIREXIST):  %LET (variable name is RETURN)
+SYMBOLGEN:  Macro variable FILEREF resolves to #LN00047
+SYMBOLGEN:  Macro variable RETURN resolves to 1
+MLOGIC(MS_DIREXIST):  %LET (variable name is RC)
+MLOGIC(MS_DIREXIST):  Ending execution.
+SYMBOLGEN:  Macro variable D_EXIST resolves to 1
+MLOGIC(MS_LIB):  %IF condition &d_exist eq 1 is TRUE
+SYMBOLGEN:  Macro variable REF resolves to ds
+SYMBOLGEN:  Macro variable PATH resolves to A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+SYMBOLGEN:  Macro variable OPTIONS resolves to access=readonly
+SYMBOLGEN:  Some characters in the above value which were subject to macro quoting have been 
+            unquoted for printing.
+MPRINT(MS_LIB):   libname ds "A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal" access=readonly ;
+NOTE: Libref DS was successfully assigned as follows: 
+      Engine:        V9 
+      Physical Name: A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal
+MLOGIC(MS_LIB):  Ending execution.
+695        
+696        /* Create clean work environment */
+697        proc datasets lib=work kill memtype=data nolist nodetails;
+698        quit;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              232.78k
+      OS Memory           11352.00k
+      Timestamp           03/06/2018 09:49:49 AM
+      Step Count                        5  Switch Count  0
+      
+
+24                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable INFOLDER resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+699        
+700        *----------------------------------------------------------------------------------------
+700      ! ---------
+701        * 1- Execute Program
+702        *----------------------------------------------------------------------------------------
+702      ! ---------;
+703        %include "&INFOLDER.00.0_mscdm_control_flow.sas" /nosource2;
+1151       %MASTER_FLOW ;
+MLOGIC(MASTER_FLOW):  Beginning execution.
+MLOGIC(MASTER_FLOW):  %PUT &syscc.
+SYMBOLGEN:  Macro variable SYSCC resolves to 0
+0
+MPRINT(MASTER_FLOW):   *Clean work library;
+MPRINT(MASTER_FLOW):   proc datasets lib=work nolist kill;
+NOTE: Deleting WORK.PROFILE (memtype=CATALOG).
+NOTE: File WORK.PROFILE (memtype=CATALOG) cannot be deleted because it is in use.
+NOTE: Deleting WORK.REGSTRY (memtype=ITEMSTOR).
+NOTE: File WORK.REGSTRY (memtype=ITEMSTOR) cannot be deleted because it is in use.
+NOTE: Deleting WORK.SASMACR (memtype=CATALOG).
+NOTE: File WORK.SASMACR (memtype=CATALOG) cannot be deleted because it is in use.
+MPRINT(MASTER_FLOW):   quit;
+
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              232.68k
+      OS Memory           11352.00k
+      Timestamp           03/06/2018 09:49:49 AM
+      Step Count                        6  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   run;
+MLOGIC(MASTER_FLOW):  %LET (variable name is END_QA)
+MLOGIC(MASTER_FLOW):  %LET (variable name is PROTABLE)
+SYMBOLGEN:  Macro variable PROCTABLE resolves to procedure
+MLOGIC(MASTER_FLOW):  %LET (variable name is DTHTABLE)
+SYMBOLGEN:  Macro variable DEATHTABLE resolves to death
+MLOGIC(MASTER_FLOW):  %LOCAL  DT_TODAY
+MLOGIC(MASTER_FLOW):  %LET (variable name is DT_TODAY)
+SYMBOLGEN:  Macro variable SYSDATE resolves to 06MAR18
+MPRINT(MASTER_FLOW):   proc sql;
+MPRINT(MASTER_FLOW):   select module into: tabid trimmed from infolder.control_flow where cc_table 
+ne "X" and execute_flag = "Y";
+MPRINT(MASTER_FLOW):   quit;
+NOTE: The PROCEDURE SQL printed page 1.
+NOTE: PROCEDURE SQL used (Total process time):
+25                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5334.87k
+      OS Memory           16476.00k
+      Timestamp           03/06/2018 09:49:49 AM
+      Step Count                        7  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable TABID resolves to mil
+MLOGIC(MASTER_FLOW):  %IF condition "&tabid." = "mil" is TRUE
+MLOGIC(MASTER_FLOW):  %LET (variable name is LOGDIR)
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable LOGDIR resolves to msoc
+SYMBOLGEN:  Macro variable MSOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable DT_TODAY resolves to 20180306
+MPRINT(MASTER_FLOW):   filename runlog 
+"a:/dev/test//test_qa_wp001_nsdp_v01/msoc//scdm_data_qa_master_20180306.log";
+MPRINT(MASTER_FLOW):   proc printto log=runlog new;
+MPRINT(MASTER_FLOW):   run;
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              7.03k
+      OS Memory           12636.00k
+      Timestamp           03/06/2018 09:49:50 AM
+      Step Count                        51  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   options orientation=portrait linesize=100 pagesize=50;
+MLOGIC(MASTER_FLOW):  %LOCAL  NMOD MODULE_LIST SASCODE_LIST
+MPRINT(MASTER_FLOW):   proc sql;
+SYMBOLGEN:  Macro variable PREFIX resolves to mil_
+MPRINT(MASTER_FLOW):   select module , sascode into :module_list separated by ' ' , :sascode_list 
+separated by '~' from dplocal.mil_control_flow_3 where upcase(cc_table) eq "X" order by seqno ;
+NOTE: The query as specified involves ordering by an item that doesn't appear in its SELECT clause.
+MPRINT(MASTER_FLOW):   quit;
+NOTE: The PROCEDURE SQL printed page 14.
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5332.28k
+      OS Memory           17760.00k
+      Timestamp           03/06/2018 09:49:50 AM
+      Step Count                        52  Switch Count  0
+      
+
+MLOGIC(MASTER_FLOW):  %PUT &module_list &sascode_list.
+SYMBOLGEN:  Macro variable MODULE_LIST resolves to l1 l2 l3
+SYMBOLGEN:  Macro variable SASCODE_LIST resolves to 
+            01.1_mscdm_data_qa_review-level1~01.2_mscdm_data_qa_review-level2~01.3_mscdm_data_qa_rev
+52                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+            iew-level3
+l1 l2 l3 
+01.1_mscdm_data_qa_review-level1~01.2_mscdm_data_qa_review-level2~01.3_mscdm_data_qa_review-level3
+MLOGIC(MASTER_FLOW):  %LET (variable name is NMOD)
+SYMBOLGEN:  Macro variable SQLOBS resolves to 3
+MPRINT(MASTER_FLOW):   data _null_;
+MPRINT(MASTER_FLOW):   put 70*'-';
+MPRINT(MASTER_FLOW):   put "Note: For module execution details, see module specific log files";
+MPRINT(MASTER_FLOW):   put 70*'-';
+MPRINT(MASTER_FLOW):   run;
+
+----------------------------------------------------------------------
+Note: For module execution details, see module specific log files
+----------------------------------------------------------------------
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              289.18k
+      OS Memory           12636.00k
+      Timestamp           03/06/2018 09:49:50 AM
+      Step Count                        53  Switch Count  0
+      
+
+MLOGIC(MASTER_FLOW):  %LOCAL  Z MODULE SASCODE
+SYMBOLGEN:  Macro variable NMOD resolves to 3
+MLOGIC(MASTER_FLOW):  %DO loop beginning; index variable Z; start value is 1; stop value is 3; by 
+      value is 1.  
+MLOGIC(KILL_DIRECTORY):  Beginning execution.
+MLOGIC(KILL_DIRECTORY):  Parameter KILL_LIST has value work
+SYMBOLGEN:  Macro variable KILL_LIST resolves to work
+MLOGIC(KILL_DIRECTORY):  %DO loop beginning; index variable K; start value is 1; stop value is 1; 
+      by value is 1.  
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is DIR)
+SYMBOLGEN:  Macro variable KILL_LIST resolves to work
+SYMBOLGEN:  Macro variable K resolves to 1
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is KILL)
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable DIR resolves to work
+SYMBOLGEN:  Macro variable KILL_DIR_WORK resolves to y
+MLOGIC(KILL_DIRECTORY):  %PUT &kill
+SYMBOLGEN:  Macro variable KILL resolves to y
+y
+MLOGIC(LOWCASE):  Beginning execution.
+MLOGIC(LOWCASE):  This macro was compiled from the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas
+SYMBOLGEN:  Macro variable KILL resolves to y
+MLOGIC(LOWCASE):  Parameter STRING has value y
+53                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable STRING resolves to y
+MLOGIC(LOWCASE):  Ending execution.
+MLOGIC(KILL_DIRECTORY):  %IF condition %lowcase(&kill.)=y is TRUE
+SYMBOLGEN:  Macro variable DIR resolves to work
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   proc datasets kill lib=work memtype=data nowarn nolist 
+nodetails;
+NOTE: Deleting WORK.CONTROL_FLOW (memtype=DATA).
+NOTE: Deleting WORK.CONTROL_FLOW_1 (memtype=DATA).
+NOTE: Deleting WORK.CONTROL_FLOW_2 (memtype=DATA).
+NOTE: Deleting WORK.ETLNUM (memtype=DATA).
+NOTE: Deleting WORK.FORMATS (memtype=DATA).
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   quit;
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              231.12k
+      OS Memory           12636.00k
+      Timestamp           03/06/2018 09:49:50 AM
+      Step Count                        54  Switch Count  0
+      
+
+MLOGIC(KILL_DIRECTORY):  %DO loop index variable K is now 2; loop will not iterate again.
+MLOGIC(KILL_DIRECTORY):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MLOGIC(MASTER_FLOW):  %LET (variable name is MODULE)
+SYMBOLGEN:  Macro variable MODULE_LIST resolves to l1 l2 l3
+SYMBOLGEN:  Macro variable Z resolves to 1
+MLOGIC(MASTER_FLOW):  %LET (variable name is SASCODE)
+SYMBOLGEN:  Macro variable SASCODE_LIST resolves to 
+            01.1_mscdm_data_qa_review-level1~01.2_mscdm_data_qa_review-level2~01.3_mscdm_data_qa_rev
+            iew-level3
+SYMBOLGEN:  Macro variable Z resolves to 1
+SYMBOLGEN:  Macro variable MODULE resolves to l1
+MLOGIC(MASTER_FLOW):  %IF condition %sysfunc(lengthc(&module.)) = 3 is FALSE
+MLOGIC(MASTER_FLOW):  %LET (variable name is TABID)
+SYMBOLGEN:  Macro variable END_QA resolves to 0
+MLOGIC(MASTER_FLOW):  %IF condition &end_qa.=0 is TRUE
+MPRINT(MASTER_FLOW):   proc printto;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              7.03k
+      OS Memory           12636.00k
+      Timestamp           03/06/2018 09:49:50 AM
+54                                         The SAS System               09:49 Tuesday, March 6, 2018
+
+      Step Count                        55  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   data _null_;
+MPRINT(MASTER_FLOW):   put 75*'-';
+MPRINT(MASTER_FLOW):   put ' ';
+SYMBOLGEN:  Macro variable MODULE resolves to l1
+SYMBOLGEN:  Macro variable SASCODE resolves to 01.1_mscdm_data_qa_review-level1
+MPRINT(MASTER_FLOW):   put "==> Begin Execution of module: l1, sascode: 
+01.1_mscdm_data_qa_review-level1.sas";
+SYMBOLGEN:  Macro variable Z resolves to 1
+SYMBOLGEN:  Macro variable NMOD resolves to 3
+MPRINT(MASTER_FLOW):   put "==> This is module 1 of 3 modules selected to execute";
+MPRINT(MASTER_FLOW):   put ' ';
+MPRINT(MASTER_FLOW):   put 75*'-';
+MPRINT(MASTER_FLOW):   run;
+
+---------------------------------------------------------------------------
+
+==> Begin Execution of module: l1, sascode: 01.1_mscdm_data_qa_review-level1.sas
+==> This is module 1 of 3 modules selected to execute
+
+---------------------------------------------------------------------------
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              304.25k
+      OS Memory           12636.00k
+      Timestamp           03/06/2018 09:49:50 AM
+      Step Count                        56  Switch Count  0
+      
+
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable LOGDIR resolves to msoc
+SYMBOLGEN:  Macro variable MSOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable MODULE resolves to l1
+SYMBOLGEN:  Macro variable DT_TODAY resolves to 20180306
+MPRINT(MASTER_FLOW):   proc printto log="a:/dev/test//test_qa_wp001_nsdp_v01/msoc/l1_20180306.log" 
+new;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              7.03k
+      OS Memory           14944.00k
+      Timestamp           03/06/2018 09:49:52 AM
+      Step Count                        207  Switch Count  0
+      
+
+MLOGIC(MASTER_FLOW):  %DO loop index variable Z is now 2; loop will iterate again.
+MLOGIC(KILL_DIRECTORY):  Beginning execution.
+MLOGIC(KILL_DIRECTORY):  Parameter KILL_LIST has value work
+SYMBOLGEN:  Macro variable KILL_LIST resolves to work
+MLOGIC(KILL_DIRECTORY):  %DO loop beginning; index variable K; start value is 1; stop value is 1; 
+      by value is 1.  
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is DIR)
+SYMBOLGEN:  Macro variable KILL_LIST resolves to work
+SYMBOLGEN:  Macro variable K resolves to 1
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is KILL)
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable DIR resolves to work
+SYMBOLGEN:  Macro variable KILL_DIR_WORK resolves to y
+MLOGIC(KILL_DIRECTORY):  %PUT &kill
+SYMBOLGEN:  Macro variable KILL resolves to y
+y
+MLOGIC(LOWCASE):  Beginning execution.
+MLOGIC(LOWCASE):  This macro was compiled from the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas
+SYMBOLGEN:  Macro variable KILL resolves to y
+MLOGIC(LOWCASE):  Parameter STRING has value y
+166                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable STRING resolves to y
+MLOGIC(LOWCASE):  Ending execution.
+MLOGIC(KILL_DIRECTORY):  %IF condition %lowcase(&kill.)=y is TRUE
+SYMBOLGEN:  Macro variable DIR resolves to work
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   proc datasets kill lib=work memtype=data nowarn nolist 
+nodetails;
+NOTE: Deleting WORK.SIGNATURE (memtype=DATA).
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   quit;
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              230.43k
+      OS Memory           14944.00k
+      Timestamp           03/06/2018 09:49:52 AM
+      Step Count                        208  Switch Count  0
+      
+
+MLOGIC(KILL_DIRECTORY):  %DO loop index variable K is now 2; loop will not iterate again.
+MLOGIC(KILL_DIRECTORY):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MLOGIC(MASTER_FLOW):  %LET (variable name is MODULE)
+SYMBOLGEN:  Macro variable MODULE_LIST resolves to l1 l2 l3
+SYMBOLGEN:  Macro variable Z resolves to 2
+MLOGIC(MASTER_FLOW):  %LET (variable name is SASCODE)
+SYMBOLGEN:  Macro variable SASCODE_LIST resolves to 
+            01.1_mscdm_data_qa_review-level1~01.2_mscdm_data_qa_review-level2~01.3_mscdm_data_qa_rev
+            iew-level3
+SYMBOLGEN:  Macro variable Z resolves to 2
+SYMBOLGEN:  Macro variable MODULE resolves to l2
+MLOGIC(MASTER_FLOW):  %IF condition %sysfunc(lengthc(&module.)) = 3 is FALSE
+MLOGIC(MASTER_FLOW):  %LET (variable name is TABID)
+SYMBOLGEN:  Macro variable END_QA resolves to 0
+MLOGIC(MASTER_FLOW):  %IF condition &end_qa.=0 is TRUE
+MPRINT(MASTER_FLOW):   proc printto;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              7.03k
+      OS Memory           14944.00k
+      Timestamp           03/06/2018 09:49:52 AM
+      Step Count                        209  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   data _null_;
+167                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW):   put 75*'-';
+MPRINT(MASTER_FLOW):   put ' ';
+SYMBOLGEN:  Macro variable MODULE resolves to l2
+SYMBOLGEN:  Macro variable SASCODE resolves to 01.2_mscdm_data_qa_review-level2
+MPRINT(MASTER_FLOW):   put "==> Begin Execution of module: l2, sascode: 
+01.2_mscdm_data_qa_review-level2.sas";
+SYMBOLGEN:  Macro variable Z resolves to 2
+SYMBOLGEN:  Macro variable NMOD resolves to 3
+MPRINT(MASTER_FLOW):   put "==> This is module 2 of 3 modules selected to execute";
+MPRINT(MASTER_FLOW):   put ' ';
+MPRINT(MASTER_FLOW):   put 75*'-';
+MPRINT(MASTER_FLOW):   run;
+
+---------------------------------------------------------------------------
+
+==> Begin Execution of module: l2, sascode: 01.2_mscdm_data_qa_review-level2.sas
+==> This is module 2 of 3 modules selected to execute
+
+---------------------------------------------------------------------------
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              304.93k
+      OS Memory           14944.00k
+      Timestamp           03/06/2018 09:49:52 AM
+      Step Count                        210  Switch Count  0
+      
+
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable LOGDIR resolves to msoc
+SYMBOLGEN:  Macro variable MSOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable MODULE resolves to l2
+SYMBOLGEN:  Macro variable DT_TODAY resolves to 20180306
+MPRINT(MASTER_FLOW):   proc printto log="a:/dev/test//test_qa_wp001_nsdp_v01/msoc/l2_20180306.log" 
+new;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              7.03k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        546  Switch Count  0
+398                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+      
+
+MLOGIC(MASTER_FLOW):  %DO loop index variable Z is now 3; loop will iterate again.
+MLOGIC(KILL_DIRECTORY):  Beginning execution.
+MLOGIC(KILL_DIRECTORY):  Parameter KILL_LIST has value work
+SYMBOLGEN:  Macro variable KILL_LIST resolves to work
+MLOGIC(KILL_DIRECTORY):  %DO loop beginning; index variable K; start value is 1; stop value is 1; 
+      by value is 1.  
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is DIR)
+SYMBOLGEN:  Macro variable KILL_LIST resolves to work
+SYMBOLGEN:  Macro variable K resolves to 1
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is KILL)
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable DIR resolves to work
+SYMBOLGEN:  Macro variable KILL_DIR_WORK resolves to y
+MLOGIC(KILL_DIRECTORY):  %PUT &kill
+SYMBOLGEN:  Macro variable KILL resolves to y
+y
+MLOGIC(LOWCASE):  Beginning execution.
+MLOGIC(LOWCASE):  This macro was compiled from the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas
+SYMBOLGEN:  Macro variable KILL resolves to y
+MLOGIC(LOWCASE):  Parameter STRING has value y
+SYMBOLGEN:  Macro variable STRING resolves to y
+MLOGIC(LOWCASE):  Ending execution.
+MLOGIC(KILL_DIRECTORY):  %IF condition %lowcase(&kill.)=y is TRUE
+SYMBOLGEN:  Macro variable DIR resolves to work
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   proc datasets kill lib=work memtype=data nowarn nolist 
+nodetails;
+NOTE: Deleting WORK.SIGNATURE (memtype=DATA).
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   quit;
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              230.09k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        547  Switch Count  0
+      
+
+MLOGIC(KILL_DIRECTORY):  %DO loop index variable K is now 2; loop will not iterate again.
+MLOGIC(KILL_DIRECTORY):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MLOGIC(MASTER_FLOW):  %LET (variable name is MODULE)
+SYMBOLGEN:  Macro variable MODULE_LIST resolves to l1 l2 l3
+SYMBOLGEN:  Macro variable Z resolves to 3
+MLOGIC(MASTER_FLOW):  %LET (variable name is SASCODE)
+399                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable SASCODE_LIST resolves to 
+            01.1_mscdm_data_qa_review-level1~01.2_mscdm_data_qa_review-level2~01.3_mscdm_data_qa_rev
+            iew-level3
+SYMBOLGEN:  Macro variable Z resolves to 3
+SYMBOLGEN:  Macro variable MODULE resolves to l3
+MLOGIC(MASTER_FLOW):  %IF condition %sysfunc(lengthc(&module.)) = 3 is FALSE
+MLOGIC(MASTER_FLOW):  %LET (variable name is TABID)
+SYMBOLGEN:  Macro variable END_QA resolves to 1
+MLOGIC(MASTER_FLOW):  %IF condition &end_qa.=0 is FALSE
+MLOGIC(MASTER_FLOW):  %LOCAL  LAST_MODULE
+MLOGIC(MASTER_FLOW):  %LET (variable name is LAST_MODULE)
+SYMBOLGEN:  Macro variable MODULE_LIST resolves to l1 l2 l3
+SYMBOLGEN:  Macro variable Z resolves to 3
+MPRINT(MASTER_FLOW):   data _null;
+MPRINT(MASTER_FLOW):   put 75*'!';
+MPRINT(MASTER_FLOW):   put ' ';
+SYMBOLGEN:  Macro variable LAST_MODULE resolves to L2
+MPRINT(MASTER_FLOW):   put 'ERR'"OR: The L2 module has produced data check flags that";
+MPRINT(MASTER_FLOW):   put "         require the QA package to abort after creating a master";
+MPRINT(MASTER_FLOW):   put "         signature file and running the log checker.";
+MPRINT(MASTER_FLOW):   put ' ';
+MPRINT(MASTER_FLOW):   put 75*'!';
+MPRINT(MASTER_FLOW):   run;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ERROR: The L2 module has produced data check flags that
+         require the QA package to abort after creating a master
+         signature file and running the log checker.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+NOTE: The data set WORK._NULL has 1 observations and 0 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              393.93k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        548  Switch Count  0
+      
+
+MLOGIC(MASTER_FLOW):  %LET (variable name is Z)
+MLOGIC(MASTER_FLOW):  %DO loop index variable Z is now 100; loop will not iterate again.
+MPRINT(MASTER_FLOW):   proc printto log=log;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE PRINTTO used (Total process time):
+400                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              133.18k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        549  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   proc printto print=print;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              133.18k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        550  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable END_QA resolves to 1
+MLOGIC(MASTER_FLOW):  %IF condition &end_qa.=0 is FALSE
+MLOGIC(MASTER_FLOW):  %LOCAL  RC1 
+SYMBOLGEN:  Macro variable INFOLDER resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER 
+;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MLOGIC(MS_QASIGNATUREREQUEST):  Beginning execution.
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   data _sigfiles;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   keep fname;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length filref $8 fname $80;
+SYMBOLGEN:  Macro variable DPLOCAL resolves to a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   rc = filename(filref, 
+"a:/dev/test//test_qa_wp001_nsdp_v01/dplocal/");
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if rc = 0 then do;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   dir_id = dopen(filref);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   rc = filename(filref);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   else do;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length msg $200.;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   msg = sysmsg();
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   put msg=;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   dir_id = .;
+401                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if dir_id <= 0 then do;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   putlog 
+'================================================================';
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   putlog ' ERR'"OR: Unable to open directory.";
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   abort cancel;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   putlog 
+'================================================================';
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   n_members = dnum(dir_id);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   do i = 1 to n_members;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   fname = dread(dir_id, i);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   fid = mopen(dir_id, fname);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if fid > 0 then output;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   rc = dclose(dir_id);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: The data set WORK._SIGFILES has 11 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              1248.93k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        551  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   data _null_;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   set _sigfiles end=eof;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length strng $ 1000 filname $ 36;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):  ;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   retain strng;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   retain nfiles 0;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if index(lowcase(fname),'_signature') > 0 and 
+index(lowcase(fname),'alltable') = 0 then do;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   filname = substr(fname,1,index(fname,'.')-1);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   strng = strip(strng) || ' ' || strip(filname);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   nfiles = nfiles + 1;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if eof then do;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   call symput("FLIST",strng);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   call symput("NFILS",put(nfiles,3.));
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: There were 11 observations read from the data set WORK._SIGFILES.
+402                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              481.93k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        552  Switch Count  0
+      
+
+MLOGIC(MS_QASIGNATUREREQUEST):  %PUT FILE COUNT: &NFILS
+SYMBOLGEN:  Macro variable NFILS resolves to   2
+FILE COUNT:   2
+MLOGIC(MS_QASIGNATUREREQUEST):  %PUT FILE LIST: &FLIST
+SYMBOLGEN:  Macro variable FLIST resolves to mil_l1_signature mil_l2_signature                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                             
+FILE LIST: mil_l1_signature mil_l2_signature
+SYMBOLGEN:  Macro variable NFILS resolves to   2
+MLOGIC(MS_QASIGNATUREREQUEST):  %DO loop beginning; index variable F; start value is 1; stop value 
+      is 2; by value is 1.  
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   data _tmp_signature;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length DPID $ 4 SiteID $ 8 MSReqID $ 36 MSProjID $16 
+MSWPType MSWPID MSDPID MSVerID QAVer SCDMVer OSAbbr OSName SASVersion $ 12 SASVersionLong $ 30 
+RunType NCPU $ 12;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length Seconds 8;
+SYMBOLGEN:  Macro variable FLIST resolves to mil_l1_signature mil_l2_signature                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                             
+SYMBOLGEN:  Macro variable F resolves to 1
+403                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   set DPLOCAL.mil_l1_signature end=eof;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   retain DPID SiteID MSReqID MSProjID MSWPType MSWPID 
+MSDPID MSVerID QAVer SCDMVer OSAbbr OSName SASVersion SASVersionLong RunType NCPU Seconds;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   keep DPID SiteID MSReqID MSProjID MSWPType MSWPID 
+MSDPID MSVerID QAVer SCDMVer OSAbbr OSName SASVersion SASVersionLong RunType NCPU Seconds;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length svalue $ 49;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   svalue = strip(value);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   select (upcase(strip(variable)));
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('DPID') DPID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SITEID') SITEID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSREQID') MSREQID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSPROJID') MSPROJID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSWPTYPE') MSWPTYPE = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSWPID') MSWPID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSDPID') MSDPID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSVERID') MSVERID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('QAVER') QAVer = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SCDMVER') SCDMVer= svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('OSABBR') OSAbbr = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('OSNAME') OSName = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SASVERSION') SASVersion = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SASVERSIONLONG') SASVersionLong = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('RUNTYPE') RunType = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('NCPU') NCPU = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SECONDS') Seconds = 
+input(strip(compress(svalue,,'A')),15.);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   otherwise;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if eof then do;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   output;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: There were 21 observations read from the data set DPLOCAL.MIL_L1_SIGNATURE.
+NOTE: The data set WORK._TMP_SIGNATURE has 1 observations and 17 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              605.18k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        553  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   proc append base=_all_sigs data=_tmp_signature;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+404                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+NOTE: Appending WORK._TMP_SIGNATURE to WORK._ALL_SIGS.
+NOTE: BASE data set does not exist. DATA file is being copied to BASE file.
+INFO: Engine's block-read method is in use.
+INFO: Engine's block-write  method is in use.
+NOTE: There were 1 observations read from the data set WORK._TMP_SIGNATURE.
+NOTE: The data set WORK._ALL_SIGS has 1 observations and 17 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              613.96k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        554  Switch Count  0
+      
+
+MLOGIC(MS_QASIGNATUREREQUEST):  %DO loop index variable F is now 2; loop will iterate again.
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   data _tmp_signature;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length DPID $ 4 SiteID $ 8 MSReqID $ 36 MSProjID $16 
+MSWPType MSWPID MSDPID MSVerID QAVer SCDMVer OSAbbr OSName SASVersion $ 12 SASVersionLong $ 30 
+RunType NCPU $ 12;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length Seconds 8;
+SYMBOLGEN:  Macro variable FLIST resolves to mil_l1_signature mil_l2_signature                      
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                             
+SYMBOLGEN:  Macro variable F resolves to 2
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   set DPLOCAL.mil_l2_signature end=eof;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   retain DPID SiteID MSReqID MSProjID MSWPType MSWPID 
+MSDPID MSVerID QAVer SCDMVer OSAbbr OSName SASVersion SASVersionLong RunType NCPU Seconds;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   keep DPID SiteID MSReqID MSProjID MSWPType MSWPID 
+MSDPID MSVerID QAVer SCDMVer OSAbbr OSName SASVersion SASVersionLong RunType NCPU Seconds;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length svalue $ 49;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   svalue = strip(value);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   select (upcase(strip(variable)));
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('DPID') DPID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SITEID') SITEID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSREQID') MSREQID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSPROJID') MSPROJID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSWPTYPE') MSWPTYPE = svalue;
+405                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSWPID') MSWPID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSDPID') MSDPID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('MSVERID') MSVERID = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('QAVER') QAVer = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SCDMVER') SCDMVer= svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('OSABBR') OSAbbr = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('OSNAME') OSName = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SASVERSION') SASVersion = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SASVERSIONLONG') SASVersionLong = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('RUNTYPE') RunType = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('NCPU') NCPU = svalue;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   when ('SECONDS') Seconds = 
+input(strip(compress(svalue,,'A')),15.);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   otherwise;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if eof then do;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   output;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   end;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: There were 21 observations read from the data set DPLOCAL.MIL_L2_SIGNATURE.
+NOTE: The data set WORK._TMP_SIGNATURE has 1 observations and 17 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              605.18k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        555  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   proc append base=_all_sigs data=_tmp_signature;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: Appending WORK._TMP_SIGNATURE to WORK._ALL_SIGS.
+ 
+INFO: Engine's fast-append process in use.
+INFO: 09:50:31 Reading DATA file, updating BASE file
+INFO: Starting data set size is 1 pages
+INFO: Engine's block-read method is in use.
+INFO: Engine's block-write  method is in use.
+INFO: Ending data set size is 1 pages, 0 added.
+INFO: 00:00:00 Elapsed time
+INFO: 09:50:31 Finished updating BASE file
+ 
+NOTE: There were 1 observations read from the data set WORK._TMP_SIGNATURE.
+NOTE: 1 observations added.
+406                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+NOTE: The data set WORK._ALL_SIGS has 2 observations and 17 variables.
+NOTE: PROCEDURE APPEND used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              518.68k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        556  Switch Count  0
+      
+
+MLOGIC(MS_QASIGNATUREREQUEST):  %DO loop index variable F is now 3; loop will not iterate again.
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   data _sig1;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   set _all_sigs end=eof;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   retain total_seconds 0;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   total_seconds = total_seconds + seconds;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   if eof then output;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: There were 2 observations read from the data set WORK._ALL_SIGS.
+NOTE: The data set WORK._SIG1 has 1 observations and 18 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              558.68k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        557  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   data _signatures;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   set _sig1;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   length TotalRequestTime $ 30;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   drop hours minutes seconds2 total_seconds seconds;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   hours=int(total_seconds/3600);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   minutes=int((total_seconds-hours*3600)/60);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   seconds2=int((total_seconds-hours*3600-minutes*60));
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   TotalRequestTime=strip(put(hours, 3.))||' h 
+'||strip(put(minutes,2.))||' m '||strip(put(seconds2,2.))||' s';
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: There were 1 observations read from the data set WORK._SIG1.
+NOTE: The data set WORK._SIGNATURES has 1 observations and 17 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+407                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+      memory              583.78k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        558  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   proc transpose data=_signatures 
+out=_signature(rename=_NAME_=Variable rename=COL1=Value);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   var _ALL_;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: There were 1 observations read from the data set WORK._SIGNATURES.
+NOTE: The data set WORK._SIGNATURE has 17 observations and 2 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              2463.84k
+      OS Memory           17252.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        559  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable PREFIX resolves to mil_
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   data dplocal.mil_alltable_signature;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   set _signature;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   value = strip(value);
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   label variable = "Metadata Variable";
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   run;
+
+NOTE: There were 17 observations read from the data set WORK._SIGNATURE.
+NOTE: The data set DPLOCAL.MIL_ALLTABLE_SIGNATURE has 17 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              550.90k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        560  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   proc datasets lib=work nolist;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   delete _sigfiles _tmp_signature _all_sigs _sig1 
+_signatures _signature;
+MPRINT(MASTER_FLOW.MS_QASIGNATUREREQUEST):   quit;
+
+NOTE: Deleting WORK._SIGFILES (memtype=DATA).
+408                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+NOTE: Deleting WORK._TMP_SIGNATURE (memtype=DATA).
+NOTE: Deleting WORK._ALL_SIGS (memtype=DATA).
+NOTE: Deleting WORK._SIG1 (memtype=DATA).
+NOTE: Deleting WORK._SIGNATURES (memtype=DATA).
+NOTE: Deleting WORK._SIGNATURE (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              230.09k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        561  Switch Count  0
+      
+
+MLOGIC(MS_QASIGNATUREREQUEST):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * End 00.4_mscdm_qasignaturerequest.sas ;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MLOGIC(MASTER_FLOW):  %LET (variable name is RC1)
+SYMBOLGEN:  Macro variable SYSCC resolves to 0
+MLOGIC(MASTER_FLOW):  %LET (variable name is SYSCC)
+MLOGIC(_DISABLE_SYNTAX_CHECKS):  Beginning execution.
+MPRINT(MASTER_FLOW._DISABLE_SYNTAX_CHECKS):   options obs=max ;
+MPRINT(MASTER_FLOW._DISABLE_SYNTAX_CHECKS):   options NOSYNTAXCHECK ;
+SYMBOLGEN:  Macro variable SYSSCP resolves to WIN
+MLOGIC(_DISABLE_SYNTAX_CHECKS):  %IF condition &SYSSCP eq WIN is TRUE
+MPRINT(MASTER_FLOW._DISABLE_SYNTAX_CHECKS):   options NODMSSYNCHK ;
+MPRINT(MASTER_FLOW._DISABLE_SYNTAX_CHECKS):   run ;
+MLOGIC(_DISABLE_SYNTAX_CHECKS):  Ending execution.
+MPRINT(MASTER_FLOW):   ;
+MLOGIC(MASTER_FLOW):  %LOCAL  RC2 
+SYMBOLGEN:  Macro variable INFOLDER resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER 
+;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   data _null_;
+MPRINT(MASTER_FLOW):   call symput('datestamp',put(datepart(datetime()),date9.));
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+409                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              309.21k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        562  Switch Count  0
+      
+
+MLOGIC(LOGCHECK):  Beginning execution.
+MPRINT(MASTER_FLOW.LOGCHECK):   proc sql noprint;
+SYMBOLGEN:  Macro variable PREFIX resolves to mil_
+MPRINT(MASTER_FLOW.LOGCHECK):   select module into: tabid trimmed from dplocal.mil_control_flow_3 
+(where = (cc_table ne 'X'));
+MPRINT(MASTER_FLOW.LOGCHECK):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5326.62k
+      OS Memory           20324.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        563  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable TABID resolves to mil
+MLOGIC(LOGCHECK):  %IF condition "%upcase(&tabid.)" = "MIL" is TRUE
+MLOGIC(LOGCHECK):  %LET (variable name is DIRNAME)
+SYMBOLGEN:  Macro variable MSOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(GETFNAMES):  Beginning execution.
+SYMBOLGEN:  Macro variable DIRNAME resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MLOGIC(GETFNAMES):  Parameter LOC has value a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable LOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   filename _dir_ 
+"a:/dev/test//test_qa_wp001_nsdp_v01/msoc/";
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   data filenames(keep=memname);
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   dirname=dopen( '_dir_' );
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   if dirname > 0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   count=dnum(dirname);
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   do i=1 to count;
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   memname=dread(dirname,i);
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   output filenames;
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   end;
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   end;
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   rc=dclose(dirname);
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   run;
+
+INFO: Character variables have defaulted to a length of 200 at the places given by: 
+      (Line):(Column). Truncation can result.
+410                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+      5314:186 memname
+NOTE: The data set WORK.FILENAMES has 4 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              403.06k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        564  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LOGCHECK.GETFNAMES):   filename _dir_ clear;
+NOTE: Fileref _DIR_ has been deassigned.
+MLOGIC(GETFNAMES):  Ending execution.
+MPRINT(MASTER_FLOW.LOGCHECK):  ;
+MPRINT(MASTER_FLOW.LOGCHECK):   data logs(keep=fname);
+MPRINT(MASTER_FLOW.LOGCHECK):   set filenames;
+MPRINT(MASTER_FLOW.LOGCHECK):   fname=strip(memname);
+MPRINT(MASTER_FLOW.LOGCHECK):   where index(upcase(memname),'.LOG');
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: There were 4 observations read from the data set WORK.FILENAMES.
+      WHERE INDEX(UPCASE(memname), '.LOG');
+NOTE: The data set WORK.LOGS has 4 observations and 1 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              574.34k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        565  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LOGCHECK):   proc sql noprint;
+MPRINT(MASTER_FLOW.LOGCHECK):   select count(distinct fname), fname into : fnum, : fname separated 
+by "*" from logs ;
+NOTE: The query requires remerging summary statistics back with the original data.
+MPRINT(MASTER_FLOW.LOGCHECK):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5327.71k
+      OS Memory           20324.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        566  Switch Count  0
+411                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+      
+
+MLOGIC(LOGCHECK):  %PUT FILENAMES ===========> &fname.
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+FILENAMES ===========> 
+l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_20180306.log
+MLOGIC(LOGCHECK):  %PUT NUMBER OF FILES =====> &fnum.
+SYMBOLGEN:  Macro variable FNUM resolves to        4
+NUMBER OF FILES =====>        4
+SYMBOLGEN:  Macro variable FNUM resolves to        4
+MLOGIC(LOGCHECK):  %DO loop beginning; index variable I; start value is 1; stop value is 4; by 
+      value is 1.  
+MLOGIC(LOGCHECK):  %LET (variable name is FN)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 1
+MLOGIC(LOGCHECK):  %LET (variable name is FNAMI)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 1
+SYMBOLGEN:  Macro variable I resolves to 1
+MLOGIC(LOGCHECK):  %LET (variable name is FNAM1)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 1
+MLOGIC(LOGCHECK):  %PUT FN===================> &fn.
+SYMBOLGEN:  Macro variable FN resolves to l1_20180306.log
+FN===================> l1_20180306.log
+MLOGIC(LOGCHECK):  %PUT FNAMI================> &fnami.
+SYMBOLGEN:  Macro variable FNAMI resolves to l1_20180306
+FNAMI================> l1_20180306
+SYMBOLGEN:  Macro variable DIRNAME resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable FNAMI resolves to l1_20180306
+MPRINT(MASTER_FLOW.LOGCHECK):   filename onef 
+"a:/dev/test//test_qa_wp001_nsdp_v01/msoc//l1_20180306.log";
+SYMBOLGEN:  Macro variable FNAMI resolves to l1_20180306
+MPRINT(MASTER_FLOW.LOGCHECK):   data l1_20180306(keep=type message logname where=(message ne ''));
+MPRINT(MASTER_FLOW.LOGCHECK):   retain noerr 0;
+MPRINT(MASTER_FLOW.LOGCHECK):   length string1 message $200. logname type $50.;
+MPRINT(MASTER_FLOW.LOGCHECK):   infile onef pad length=len missover end=eof;
+MPRINT(MASTER_FLOW.LOGCHECK):   input @01 string1 $varying200. len;
+SYMBOLGEN:  Macro variable FN resolves to l1_20180306.log
+MPRINT(MASTER_FLOW.LOGCHECK):   logname="l1_20180306.log";
+412                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) ='ERRO' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('ERR'||'OR');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,6) = 'WARNIN' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('WARN'||'ING');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) = 'NOTE' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   note1=index(string1,'stopped');
+MPRINT(MASTER_FLOW.LOGCHECK):   note2=index(string1,'converted');
+MPRINT(MASTER_FLOW.LOGCHECK):   note3=index(string1,'uninitialized');
+MPRINT(MASTER_FLOW.LOGCHECK):   note4=index(string1,'Division') ;
+MPRINT(MASTER_FLOW.LOGCHECK):   note5=index(string1,'Invalid');
+MPRINT(MASTER_FLOW.LOGCHECK):   note6=index(string1,'Missing');
+MPRINT(MASTER_FLOW.LOGCHECK):   note7=index(string1,'W.D format');
+MPRINT(MASTER_FLOW.LOGCHECK):   note8=index(string1,'repeats of BY values');
+MPRINT(MASTER_FLOW.LOGCHECK):   note9=index(string1,'Mathematical');
+MPRINT(MASTER_FLOW.LOGCHECK):   note10=index(string1,'MERGE statement');
+MPRINT(MASTER_FLOW.LOGCHECK):   note11=index(string1,'Character values have');
+MPRINT(MASTER_FLOW.LOGCHECK):   note12=index(string1,'disabled');
+MPRINT(MASTER_FLOW.LOGCHECK):   note13=index(string1,'No observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   note14=index(string1,'Groups are not');
+MPRINT(MASTER_FLOW.LOGCHECK):   note15=index(string1,' 0 observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   array v(15) note1-note15;
+MPRINT(MASTER_FLOW.LOGCHECK):   do i=1 to 15;
+MPRINT(MASTER_FLOW.LOGCHECK):   if v(i) gt 0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NOTE';
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if eof then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   if noerr=0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message='NO MESSAGES OF CONCERN IN LOG';
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NONE';
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: The infile ONEF is:
+      Filename=a:\dev\test\\test_qa_wp001_nsdp_v01\msoc\\l1_20180306.log,
+      RECFM=V,LRECL=32767,File Size (bytes)=279332,
+      Last Modified=06Mar2018:09:49:52,
+      Create Time=06Mar2018:08:41:08
+413                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+
+NOTE: 5525 records were read from the infile ONEF.
+      The minimum record length was 0.
+      The maximum record length was 101.
+NOTE: The data set WORK.L1_20180306 has 7 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.02 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.01 seconds
+      memory              601.78k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:31 AM
+      Step Count                        567  Switch Count  0
+      
+
+MLOGIC(LOGCHECK):  %DO loop index variable I is now 2; loop will iterate again.
+MLOGIC(LOGCHECK):  %LET (variable name is FN)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 2
+MLOGIC(LOGCHECK):  %LET (variable name is FNAMI)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 2
+SYMBOLGEN:  Macro variable I resolves to 2
+MLOGIC(LOGCHECK):  %LET (variable name is FNAM2)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 2
+MLOGIC(LOGCHECK):  %PUT FN===================> &fn.
+SYMBOLGEN:  Macro variable FN resolves to l2_20180306.log
+FN===================> l2_20180306.log
+MLOGIC(LOGCHECK):  %PUT FNAMI================> &fnami.
+SYMBOLGEN:  Macro variable FNAMI resolves to l2_20180306
+FNAMI================> l2_20180306
+SYMBOLGEN:  Macro variable DIRNAME resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable FNAMI resolves to l2_20180306
+MPRINT(MASTER_FLOW.LOGCHECK):   filename onef 
+"a:/dev/test//test_qa_wp001_nsdp_v01/msoc//l2_20180306.log";
+SYMBOLGEN:  Macro variable FNAMI resolves to l2_20180306
+MPRINT(MASTER_FLOW.LOGCHECK):   data l2_20180306(keep=type message logname where=(message ne ''));
+MPRINT(MASTER_FLOW.LOGCHECK):   retain noerr 0;
+MPRINT(MASTER_FLOW.LOGCHECK):   length string1 message $200. logname type $50.;
+MPRINT(MASTER_FLOW.LOGCHECK):   infile onef pad length=len missover end=eof;
+MPRINT(MASTER_FLOW.LOGCHECK):   input @01 string1 $varying200. len;
+414                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable FN resolves to l2_20180306.log
+MPRINT(MASTER_FLOW.LOGCHECK):   logname="l2_20180306.log";
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) ='ERRO' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('ERR'||'OR');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,6) = 'WARNIN' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('WARN'||'ING');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) = 'NOTE' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   note1=index(string1,'stopped');
+MPRINT(MASTER_FLOW.LOGCHECK):   note2=index(string1,'converted');
+MPRINT(MASTER_FLOW.LOGCHECK):   note3=index(string1,'uninitialized');
+MPRINT(MASTER_FLOW.LOGCHECK):   note4=index(string1,'Division') ;
+MPRINT(MASTER_FLOW.LOGCHECK):   note5=index(string1,'Invalid');
+MPRINT(MASTER_FLOW.LOGCHECK):   note6=index(string1,'Missing');
+MPRINT(MASTER_FLOW.LOGCHECK):   note7=index(string1,'W.D format');
+MPRINT(MASTER_FLOW.LOGCHECK):   note8=index(string1,'repeats of BY values');
+MPRINT(MASTER_FLOW.LOGCHECK):   note9=index(string1,'Mathematical');
+MPRINT(MASTER_FLOW.LOGCHECK):   note10=index(string1,'MERGE statement');
+MPRINT(MASTER_FLOW.LOGCHECK):   note11=index(string1,'Character values have');
+MPRINT(MASTER_FLOW.LOGCHECK):   note12=index(string1,'disabled');
+MPRINT(MASTER_FLOW.LOGCHECK):   note13=index(string1,'No observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   note14=index(string1,'Groups are not');
+MPRINT(MASTER_FLOW.LOGCHECK):   note15=index(string1,' 0 observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   array v(15) note1-note15;
+MPRINT(MASTER_FLOW.LOGCHECK):   do i=1 to 15;
+MPRINT(MASTER_FLOW.LOGCHECK):   if v(i) gt 0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NOTE';
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if eof then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   if noerr=0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message='NO MESSAGES OF CONCERN IN LOG';
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NONE';
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: The infile ONEF is:
+      Filename=a:\dev\test\\test_qa_wp001_nsdp_v01\msoc\\l2_20180306.log,
+      RECFM=V,LRECL=32767,File Size (bytes)=570676,
+415                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+      Last Modified=06Mar2018:09:50:31,
+      Create Time=06Mar2018:09:49:52
+
+NOTE: 11502 records were read from the infile ONEF.
+      The minimum record length was 0.
+      The maximum record length was 101.
+NOTE: The data set WORK.L2_20180306 has 95 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.03 seconds
+      user cpu time       0.03 seconds
+      system cpu time     0.00 seconds
+      memory              602.00k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        568  Switch Count  0
+      
+
+MLOGIC(LOGCHECK):  %DO loop index variable I is now 3; loop will iterate again.
+MLOGIC(LOGCHECK):  %LET (variable name is FN)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 3
+MLOGIC(LOGCHECK):  %LET (variable name is FNAMI)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 3
+SYMBOLGEN:  Macro variable I resolves to 3
+MLOGIC(LOGCHECK):  %LET (variable name is FNAM3)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 3
+MLOGIC(LOGCHECK):  %PUT FN===================> &fn.
+SYMBOLGEN:  Macro variable FN resolves to module_execution_plan_20180306.log
+FN===================> module_execution_plan_20180306.log
+MLOGIC(LOGCHECK):  %PUT FNAMI================> &fnami.
+SYMBOLGEN:  Macro variable FNAMI resolves to module_execution_plan_20180306
+FNAMI================> module_execution_plan_20180306
+SYMBOLGEN:  Macro variable DIRNAME resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable FNAMI resolves to module_execution_plan_20180306
+MPRINT(MASTER_FLOW.LOGCHECK):   filename onef 
+"a:/dev/test//test_qa_wp001_nsdp_v01/msoc//module_execution_plan_20180306.log";
+SYMBOLGEN:  Macro variable FNAMI resolves to module_execution_plan_20180306
+MPRINT(MASTER_FLOW.LOGCHECK):   data module_execution_plan_20180306(keep=type message logname 
+where=(message ne ''));
+MPRINT(MASTER_FLOW.LOGCHECK):   retain noerr 0;
+416                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.LOGCHECK):   length string1 message $200. logname type $50.;
+MPRINT(MASTER_FLOW.LOGCHECK):   infile onef pad length=len missover end=eof;
+MPRINT(MASTER_FLOW.LOGCHECK):   input @01 string1 $varying200. len;
+SYMBOLGEN:  Macro variable FN resolves to module_execution_plan_20180306.log
+MPRINT(MASTER_FLOW.LOGCHECK):   logname="module_execution_plan_20180306.log";
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) ='ERRO' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('ERR'||'OR');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,6) = 'WARNIN' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('WARN'||'ING');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) = 'NOTE' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   note1=index(string1,'stopped');
+MPRINT(MASTER_FLOW.LOGCHECK):   note2=index(string1,'converted');
+MPRINT(MASTER_FLOW.LOGCHECK):   note3=index(string1,'uninitialized');
+MPRINT(MASTER_FLOW.LOGCHECK):   note4=index(string1,'Division') ;
+MPRINT(MASTER_FLOW.LOGCHECK):   note5=index(string1,'Invalid');
+MPRINT(MASTER_FLOW.LOGCHECK):   note6=index(string1,'Missing');
+MPRINT(MASTER_FLOW.LOGCHECK):   note7=index(string1,'W.D format');
+MPRINT(MASTER_FLOW.LOGCHECK):   note8=index(string1,'repeats of BY values');
+MPRINT(MASTER_FLOW.LOGCHECK):   note9=index(string1,'Mathematical');
+MPRINT(MASTER_FLOW.LOGCHECK):   note10=index(string1,'MERGE statement');
+MPRINT(MASTER_FLOW.LOGCHECK):   note11=index(string1,'Character values have');
+MPRINT(MASTER_FLOW.LOGCHECK):   note12=index(string1,'disabled');
+MPRINT(MASTER_FLOW.LOGCHECK):   note13=index(string1,'No observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   note14=index(string1,'Groups are not');
+MPRINT(MASTER_FLOW.LOGCHECK):   note15=index(string1,' 0 observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   array v(15) note1-note15;
+MPRINT(MASTER_FLOW.LOGCHECK):   do i=1 to 15;
+MPRINT(MASTER_FLOW.LOGCHECK):   if v(i) gt 0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NOTE';
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if eof then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   if noerr=0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message='NO MESSAGES OF CONCERN IN LOG';
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NONE';
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+417                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+NOTE: The infile ONEF is:
+      Filename=a:\dev\test\\test_qa_wp001_nsdp_v01\msoc\\module_execution_plan_20180306.log,
+      RECFM=V,LRECL=32767,File Size (bytes)=3943,
+      Last Modified=06Mar2018:09:49:50,
+      Create Time=06Mar2018:08:41:08
+
+NOTE: 26 records were read from the infile ONEF.
+      The minimum record length was 0.
+      The maximum record length was 257.
+NOTE: The data set WORK.MODULE_EXECUTION_PLAN_20180306 has 1 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              601.78k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        569  Switch Count  0
+      
+
+MLOGIC(LOGCHECK):  %DO loop index variable I is now 4; loop will iterate again.
+MLOGIC(LOGCHECK):  %LET (variable name is FN)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 4
+MLOGIC(LOGCHECK):  %LET (variable name is FNAMI)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 4
+SYMBOLGEN:  Macro variable I resolves to 4
+MLOGIC(LOGCHECK):  %LET (variable name is FNAM4)
+SYMBOLGEN:  Macro variable FNAME resolves to 
+            l1_20180306.log*l2_20180306.log*module_execution_plan_20180306.log*scdm_data_qa_master_2
+            0180306.log
+SYMBOLGEN:  Macro variable I resolves to 4
+MLOGIC(LOGCHECK):  %PUT FN===================> &fn.
+SYMBOLGEN:  Macro variable FN resolves to scdm_data_qa_master_20180306.log
+FN===================> scdm_data_qa_master_20180306.log
+MLOGIC(LOGCHECK):  %PUT FNAMI================> &fnami.
+SYMBOLGEN:  Macro variable FNAMI resolves to scdm_data_qa_master_20180306
+FNAMI================> scdm_data_qa_master_20180306
+SYMBOLGEN:  Macro variable DIRNAME resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable FNAMI resolves to scdm_data_qa_master_20180306
+MPRINT(MASTER_FLOW.LOGCHECK):   filename onef 
+"a:/dev/test//test_qa_wp001_nsdp_v01/msoc//scdm_data_qa_master_20180306.log";
+SYMBOLGEN:  Macro variable FNAMI resolves to scdm_data_qa_master_20180306
+418                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.LOGCHECK):   data scdm_data_qa_master_20180306(keep=type message logname 
+where=(message ne ''));
+MPRINT(MASTER_FLOW.LOGCHECK):   retain noerr 0;
+MPRINT(MASTER_FLOW.LOGCHECK):   length string1 message $200. logname type $50.;
+MPRINT(MASTER_FLOW.LOGCHECK):   infile onef pad length=len missover end=eof;
+MPRINT(MASTER_FLOW.LOGCHECK):   input @01 string1 $varying200. len;
+SYMBOLGEN:  Macro variable FN resolves to scdm_data_qa_master_20180306.log
+MPRINT(MASTER_FLOW.LOGCHECK):   logname="scdm_data_qa_master_20180306.log";
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) ='ERRO' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('ERR'||'OR');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,6) = 'WARNIN' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type=compress('WARN'||'ING');
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if substr(string1,1,4) = 'NOTE' then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   note1=index(string1,'stopped');
+MPRINT(MASTER_FLOW.LOGCHECK):   note2=index(string1,'converted');
+MPRINT(MASTER_FLOW.LOGCHECK):   note3=index(string1,'uninitialized');
+MPRINT(MASTER_FLOW.LOGCHECK):   note4=index(string1,'Division') ;
+MPRINT(MASTER_FLOW.LOGCHECK):   note5=index(string1,'Invalid');
+MPRINT(MASTER_FLOW.LOGCHECK):   note6=index(string1,'Missing');
+MPRINT(MASTER_FLOW.LOGCHECK):   note7=index(string1,'W.D format');
+MPRINT(MASTER_FLOW.LOGCHECK):   note8=index(string1,'repeats of BY values');
+MPRINT(MASTER_FLOW.LOGCHECK):   note9=index(string1,'Mathematical');
+MPRINT(MASTER_FLOW.LOGCHECK):   note10=index(string1,'MERGE statement');
+MPRINT(MASTER_FLOW.LOGCHECK):   note11=index(string1,'Character values have');
+MPRINT(MASTER_FLOW.LOGCHECK):   note12=index(string1,'disabled');
+MPRINT(MASTER_FLOW.LOGCHECK):   note13=index(string1,'No observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   note14=index(string1,'Groups are not');
+MPRINT(MASTER_FLOW.LOGCHECK):   note15=index(string1,' 0 observations');
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   array v(15) note1-note15;
+MPRINT(MASTER_FLOW.LOGCHECK):   do i=1 to 15;
+MPRINT(MASTER_FLOW.LOGCHECK):   if v(i) gt 0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message=strip(string1);
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NOTE';
+MPRINT(MASTER_FLOW.LOGCHECK):   noerr+1;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   if eof then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   if noerr=0 then do;
+MPRINT(MASTER_FLOW.LOGCHECK):   message='NO MESSAGES OF CONCERN IN LOG';
+MPRINT(MASTER_FLOW.LOGCHECK):   type='NONE';
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+419                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.LOGCHECK):   end;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: The infile ONEF is:
+      Filename=a:\dev\test\\test_qa_wp001_nsdp_v01\msoc\\scdm_data_qa_master_20180306.log,
+      RECFM=V,LRECL=32767,File Size (bytes)=65813,
+      Last Modified=06Mar2018:09:49:50,
+      Create Time=06Mar2018:08:41:07
+
+NOTE: 1320 records were read from the infile ONEF.
+      The minimum record length was 0.
+      The maximum record length was 257.
+NOTE: The data set WORK.SCDM_DATA_QA_MASTER_20180306 has 1 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              602.00k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        570  Switch Count  0
+      
+
+MLOGIC(LOGCHECK):  %DO loop index variable I is now 5; loop will not iterate again.
+MPRINT(MASTER_FLOW.LOGCHECK):   data logall;
+SYMBOLGEN:  Macro variable FNAM1 resolves to l1_20180306
+SYMBOLGEN:  Macro variable FNUM resolves to        4
+MLOGIC(LOGCHECK):  %DO loop beginning; index variable J; start value is 2; stop value is 4; by 
+      value is 1.  
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable J resolves to 2
+SYMBOLGEN:  Macro variable FNAM2 resolves to l2_20180306
+MLOGIC(LOGCHECK):  %DO loop index variable J is now 3; loop will iterate again.
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable J resolves to 3
+SYMBOLGEN:  Macro variable FNAM3 resolves to module_execution_plan_20180306
+MLOGIC(LOGCHECK):  %DO loop index variable J is now 4; loop will iterate again.
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable J resolves to 4
+SYMBOLGEN:  Macro variable FNAM4 resolves to scdm_data_qa_master_20180306
+MLOGIC(LOGCHECK):  %DO loop index variable J is now 5; loop will not iterate again.
+MPRINT(MASTER_FLOW.LOGCHECK):   set l1_20180306 l2_20180306 module_execution_plan_20180306 
+scdm_data_qa_master_20180306;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: There were 7 observations read from the data set WORK.L1_20180306.
+NOTE: There were 95 observations read from the data set WORK.L2_20180306.
+NOTE: There were 1 observations read from the data set WORK.MODULE_EXECUTION_PLAN_20180306.
+420                                        The SAS System               09:49 Tuesday, March 6, 2018
+
+NOTE: There were 1 observations read from the data set WORK.SCDM_DATA_QA_MASTER_20180306.
+NOTE: The data set WORK.LOGALL has 104 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              1078.75k
+      OS Memory           15456.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        571  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LOGCHECK):   proc sql;
+MPRINT(MASTER_FLOW.LOGCHECK):   create table rep as select count(message) as message_no, type, 
+logname from logall group by logname, type ;
+NOTE: Table WORK.REP created, with 5 rows and 3 columns.
+
+MPRINT(MASTER_FLOW.LOGCHECK):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5329.12k
+      OS Memory           20324.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        572  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LOGCHECK):   data rep1;
+MPRINT(MASTER_FLOW.LOGCHECK):   set rep;
+MPRINT(MASTER_FLOW.LOGCHECK):   if type='NONE' then message_no=.;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: There were 5 observations read from the data set WORK.REP.
+NOTE: The data set WORK.REP1 has 5 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              548.90k
+      OS Memory           15200.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        573  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LOGCHECK):   ods _all_ close;
+MPRINT(MASTER_FLOW.LOGCHECK):   options nonumber;
+MPRINT(MASTER_FLOW.LOGCHECK):   ods escapechar="^";
+                                           The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.LOGCHECK):   ods pdf file=
+MLOGIC(LOWCASE):  Beginning execution.
+MLOGIC(LOWCASE):  This macro was compiled from the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas
+SYMBOLGEN:  Macro variable DIRNAME resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable DPID resolves to TR
+SYMBOLGEN:  Macro variable SITEID resolves to UVEN
+MLOGIC(LOWCASE):  Parameter STRING has value 
+      "a:/dev/test//test_qa_wp001_nsdp_v01/msoc//TRUVEN_mscdm_data_qa_logcheck.pdf"
+SYMBOLGEN:  Macro variable STRING resolves to 
+            "a:/dev/test//test_qa_wp001_nsdp_v01/msoc//TRUVEN_mscdm_data_qa_logcheck.pdf"
+MPRINT(MASTER_FLOW.LOGCHECK.LOWCASE):  
+"a:/dev/test//test_qa_wp001_nsdp_v01/msoc//truven_mscdm_data_qa_logcheck.pdf"
+MLOGIC(LOWCASE):  Ending execution.
+MPRINT(MASTER_FLOW.LOGCHECK):   style=statdoc;
+NOTE: Writing ODS PDF output to DISK destination 
+      "a:\dev\test\\test_qa_wp001_nsdp_v01\msoc\\truven_mscdm_data_qa_logcheck.pdf", printer "PDF".
+NOTE: This SAS session is using a registry in WORK.  All changes will be lost at the end of this 
+      session.
+SYMBOLGEN:  Macro variable DIRNAME resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+MPRINT(MASTER_FLOW.LOGCHECK):   title1 "Summary of Log Messages for Directory 
+a:/dev/test//test_qa_wp001_nsdp_v01/msoc/";
+SYMBOLGEN:  Macro variable DATESTAMP resolves to 06MAR2018
+MPRINT(MASTER_FLOW.LOGCHECK):   title2 "Report Run Date: 06MAR2018";
+MPRINT(MASTER_FLOW.LOGCHECK):   title3 " ";
+MPRINT(MASTER_FLOW.LOGCHECK):   options missing=' ';
+MPRINT(MASTER_FLOW.LOGCHECK):   proc report data=rep1 nowd headskip headline missing 
+formchar(2)='_' spacing=2 split='~';
+MPRINT(MASTER_FLOW.LOGCHECK):   column logname type message_no;
+MPRINT(MASTER_FLOW.LOGCHECK):   define logname / order "FILENAME" width=25 left flow;
+MPRINT(MASTER_FLOW.LOGCHECK):   define type / order "MESSAGE TYPE" width=30 left flow;
+MPRINT(MASTER_FLOW.LOGCHECK):   define message_no / "NUMBER OF REPORTED MESSAGES" width=40 left 
+flow;
+MPRINT(MASTER_FLOW.LOGCHECK):   break after logname / skip;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: Multiple concurrent threads will be used to summarize data.
+NOTE: There were 5 observations read from the data set WORK.REP1.
+NOTE: PROCEDURE REPORT used (Total process time):
+      real time           0.03 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.01 seconds
+      memory              8133.21k
+      OS Memory           22652.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        574  Switch Count  0
+      
+
+                                           The SAS System               09:49 Tuesday, March 6, 2018
+
+MPRINT(MASTER_FLOW.LOGCHECK):   title1 "Detailed Breakdown of Log Messages";
+MPRINT(MASTER_FLOW.LOGCHECK):   proc report data=logall nowd headskip headline missing 
+formchar(2)='_' spacing=2 split='~';
+MPRINT(MASTER_FLOW.LOGCHECK):   column logname type message ;
+MPRINT(MASTER_FLOW.LOGCHECK):   define logname / order "FILENAME" width=25 left flow;
+MPRINT(MASTER_FLOW.LOGCHECK):   define type / order "MESSAGE TYPE" width=20 left flow;
+MPRINT(MASTER_FLOW.LOGCHECK):   define message / "MESSAGE" width=30 left flow;
+MPRINT(MASTER_FLOW.LOGCHECK):   run;
+
+NOTE: Multiple concurrent threads will be used to summarize data.
+NOTE: There were 104 observations read from the data set WORK.LOGALL.
+NOTE: PROCEDURE REPORT used (Total process time):
+      real time           0.02 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              7157.96k
+      OS Memory           23156.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        575  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LOGCHECK):   options missing='-';
+MPRINT(MASTER_FLOW.LOGCHECK):   title;
+MPRINT(MASTER_FLOW.LOGCHECK):   footnote;
+MPRINT(MASTER_FLOW.LOGCHECK):   ods pdf close;
+NOTE: ODS PDF printed 4 pages to 
+      a:\dev\test\\test_qa_wp001_nsdp_v01\msoc\\truven_mscdm_data_qa_logcheck.pdf.
+MPRINT(MASTER_FLOW.LOGCHECK):   ods listing;
+MLOGIC(LOGCHECK):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * End 00.3_scdm_sas_log_checker_directory_cc.sas ;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MLOGIC(MASTER_FLOW):  %LET (variable name is RC2)
+SYMBOLGEN:  Macro variable SYSCC resolves to 0
+MLOGIC(_ENABLE_SYNTAX_CHECKS):  Beginning execution.
+MPRINT(MASTER_FLOW._ENABLE_SYNTAX_CHECKS):   options obs=max ;
+MPRINT(MASTER_FLOW._ENABLE_SYNTAX_CHECKS):   options SYNTAXCHECK ;
+SYMBOLGEN:  Macro variable SYSSCP resolves to WIN
+MLOGIC(_ENABLE_SYNTAX_CHECKS):  %IF condition &SYSSCP eq WIN is TRUE
+MPRINT(MASTER_FLOW._ENABLE_SYNTAX_CHECKS):   options DMSSYNCHK ;
+MPRINT(MASTER_FLOW._ENABLE_SYNTAX_CHECKS):   run ;
+MLOGIC(_ENABLE_SYNTAX_CHECKS):  Ending execution.
+MPRINT(MASTER_FLOW):   ;
+SYMBOLGEN:  Macro variable RC1 resolves to 0
+SYMBOLGEN:  Macro variable RC2 resolves to 0
+                                           The SAS System               09:49 Tuesday, March 6, 2018
+
+SYMBOLGEN:  Macro variable END_QA resolves to 1
+MLOGIC(MASTER_FLOW):  %IF condition &rc1 le 4 and &rc2 le 4 and &end_qa eq 0 is FALSE
+SYMBOLGEN:  Macro variable END_QA resolves to 1
+MLOGIC(MASTER_FLOW):  %IF condition &end_qa.=1 is TRUE
+MPRINT(MASTER_FLOW):   data _null_;
+MPRINT(MASTER_FLOW):   put 75*'!';
+MPRINT(MASTER_FLOW):   put ' ';
+MPRINT(MASTER_FLOW):   putlog 'ERR' "OR: The macro MASTER_FLOW has terminated early due to data 
+check failures";
+MPRINT(MASTER_FLOW):   put ' ';
+MPRINT(MASTER_FLOW):   put '==> The macro MASTER_FLOW will now abort ...';
+SYMBOLGEN:  Macro variable DPID resolves to TR
+SYMBOLGEN:  Macro variable SITEID resolves to UVEN
+MPRINT(MASTER_FLOW):   put "==> Check msoc.TRUVEN_mscdm_data_qa_logcheck.pdf for details.";
+MPRINT(MASTER_FLOW):   put ' ';
+MPRINT(MASTER_FLOW):   put 75*'!';
+MPRINT(MASTER_FLOW):   run;
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ERROR: The macro MASTER_FLOW has terminated early due to data check failures
+
+==> The macro MASTER_FLOW will now abort ...
+==> Check msoc.TRUVEN_mscdm_data_qa_logcheck.pdf for details.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              306.09k
+      OS Memory           15968.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        576  Switch Count  0
+      
+
+MLOGIC(MASTER_FLOW):  %ABORT 99
+ERROR: Execution terminated by an %ABORT statement.
+5319       
+5320       *+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+5320     ! +-+-+-+-+;
+5321       * End 00.0_mscdm_data_qa_review_master_file.sas
+5321     !          ;
+5322       *+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+5322     ! +-+-+-+-+;
+5323       
+
+ERROR: Errors printed on pages 391,399,423.
+                                           The SAS System               09:49 Tuesday, March 6, 2018
+
+
+NOTE: SAS Institute Inc., SAS Campus Drive, Cary, NC USA 27513-2414
+NOTE: The SAS System used:
+      real time           42.61 seconds
+      user cpu time       22.44 seconds
+      system cpu time     5.44 seconds
+      memory              1067943.32k
+      OS Memory           1071044.00k
+      Timestamp           03/06/2018 09:50:32 AM
+      Step Count                        576  Switch Count  1167
+      

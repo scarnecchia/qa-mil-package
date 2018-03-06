@@ -1,0 +1,1236 @@
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              97.62k
+      OS Memory           18416.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        6  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   quit;
+SYMBOLGEN:  Macro variable INFOLDER resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER 
+;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * End 00.1_mscdm_standard_macros.sas ;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+SYMBOLGEN:  Macro variable INFOLDER resolves to a:/dev/test//test_qa_wp001_nsdp_v01/inputfiles/
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER 
+;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MLOGIC(CREATE_L1_FORMATS):  Beginning execution.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql noprint;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   create table temp as select monotonic ( ) as row, 
+max(varlength) as length, * from infolder.lkp_all_l1 (where=(validvaluetype="list_values")) where 
+lowcase(variable) ne "ms_result_c" ;
+NOTE: The query requires remerging summary statistics back with the original data.
+NOTE: Table WORK.TEMP created, with 9 rows and 13 columns.
+
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5377.50k
+      OS Memory           23540.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        7  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %LET (variable name is ROWCT)
+SYMBOLGEN:  Macro variable SQLOBS resolves to 9
+SYMBOLGEN:  Macro variable ROWCT resolves to 9
+MLOGIC(CREATE_L1_FORMATS):  %DO loop beginning; index variable I; start value is 1; stop value is 
+      9; by value is 1.  
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 1
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=1 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5329.21k
+      OS Memory           24052.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        8  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 1
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_1 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 1
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=1));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 4);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=1;
+NOTE: The data set WORK.TEMP_1 has 5 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              840.71k
+      OS Memory           19956.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        9  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 2; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 2
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=2 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              5330.50k
+      OS Memory           25080.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        10  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 2
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_2 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 2
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=2));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 5
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 5);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=2;
+NOTE: The data set WORK.TEMP_2 has 6 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        11  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 3; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 3
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=3 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              5330.50k
+      OS Memory           25336.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        12  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 3
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_3 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 3
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=3));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 4);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=3;
+NOTE: The data set WORK.TEMP_3 has 5 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        13  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 4; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=4 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              5330.50k
+      OS Memory           25336.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        14  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_4 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=4));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 5
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 5);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=4;
+NOTE: The data set WORK.TEMP_4 has 6 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        15  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 5; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 5
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=5 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              5330.50k
+      OS Memory           25336.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        16  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 5
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_5 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 5
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=5));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 8
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 8);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=5;
+NOTE: The data set WORK.TEMP_5 has 9 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        17  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 6; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 6
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=6 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5330.50k
+      OS Memory           25336.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        18  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 6
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_6 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 6
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=6));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 5
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 5);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=6;
+NOTE: The data set WORK.TEMP_6 has 6 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        19  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 7; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 7
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=7 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5330.50k
+      OS Memory           25336.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        20  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 7
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_7 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 7
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=7));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 4);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=7;
+NOTE: The data set WORK.TEMP_7 has 5 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        21  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 8; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 8
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=8 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5330.50k
+      OS Memory           25336.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        22  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 8
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_8 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 8
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=8));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 5
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 5);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=8;
+NOTE: The data set WORK.TEMP_8 has 6 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        23  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 9; loop will iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc sql;
+SYMBOLGEN:  Macro variable I resolves to 9
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   select countw(validvalue,'|'), length into :varct trimmed, 
+:length trimmed from temp where row=9 ;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              5330.50k
+      OS Memory           25336.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        24  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable I resolves to 9
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data temp_9 (keep=fmtname start);
+SYMBOLGEN:  Macro variable LENGTH resolves to 4
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   length fmtname $25 start $4;
+SYMBOLGEN:  Macro variable I resolves to 9
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp (where=(row=9));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start= ' ';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct=1;
+SYMBOLGEN:  Macro variable VARCT resolves to 8
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   do while (ct le 8);
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   start=scan(validvalue,ct,'|');
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   fmtname=lowcase(compress('$'||tabid||variable));
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   output;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   ct+1;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   end;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 1 observations read from the data set WORK.TEMP.
+      WHERE row=9;
+NOTE: The data set WORK.TEMP_9 has 9 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              580.81k
+      OS Memory           20212.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        25  Switch Count  0
+      
+
+MLOGIC(CREATE_L1_FORMATS):  %DO loop index variable I is now 10; loop will not iterate again.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   data formats;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   set temp_:;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   label='*';
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: There were 5 observations read from the data set WORK.TEMP_1.
+NOTE: There were 6 observations read from the data set WORK.TEMP_2.
+NOTE: There were 5 observations read from the data set WORK.TEMP_3.
+NOTE: There were 6 observations read from the data set WORK.TEMP_4.
+NOTE: There were 9 observations read from the data set WORK.TEMP_5.
+NOTE: There were 6 observations read from the data set WORK.TEMP_6.
+NOTE: There were 5 observations read from the data set WORK.TEMP_7.
+NOTE: There were 6 observations read from the data set WORK.TEMP_8.
+NOTE: There were 9 observations read from the data set WORK.TEMP_9.
+NOTE: The data set WORK.FORMATS has 57 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              2048.65k
+      OS Memory           22260.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        26  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc datasets lib=work;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   delete temp:;
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   quit;
+
+NOTE: Deleting WORK.TEMP (memtype=DATA).
+NOTE: Deleting WORK.TEMP_1 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_2 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_3 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_4 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_5 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_6 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_7 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_8 (memtype=DATA).
+NOTE: Deleting WORK.TEMP_9 (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.05 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              471.81k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        27  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   proc format library=dplocal cntlin=formats;
+NOTE: Format $DEMSEX is already on the library DPLOCAL.FORMATS.
+NOTE: Format $DEMSEX has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBLENCTYPE is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBLENCTYPE has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBLSEX is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBLSEX has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBLMATCHMETHOD is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBLMATCHMETHOD has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBLBIRTH_TYPE is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBLBIRTH_TYPE has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBSENCTYPE is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBSENCTYPE has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBSSEX is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBSSEX has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBSMATCHMETHOD is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBSMATCHMETHOD has been written to DPLOCAL.FORMATS.
+NOTE: Format $MBSBIRTH_TYPE is already on the library DPLOCAL.FORMATS.
+NOTE: Format $MBSBIRTH_TYPE has been written to DPLOCAL.FORMATS.
+MPRINT(MASTER_FLOW.CREATE_L1_FORMATS):   run;
+
+NOTE: PROCEDURE FORMAT used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              407.12k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        28  Switch Count  0
+      
+NOTE: There were 57 observations read from the data set WORK.FORMATS.
+
+MLOGIC(CREATE_L1_FORMATS):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MPRINT(MASTER_FLOW):   proc format library=dplocal;
+MPRINT(MASTER_FLOW):   value agecat_years . = "00. Missing" low-<0 = "00. Negative" 0-<2 = "01. 0-1 
+yrs" 2-<5 = "02. 2-4 yrs" 5-<10 = "03. 5-9 yrs" 10-<15 = "04. 10-14 yrs" 15-<19 = "05. 15-18 yrs" 
+19-<22 = "06. 19-21 yrs" 22-<45 = "07. 22-44 yrs" 45-<65 = "08. 45-64 yrs" 65-<75 = "09. 65-74 yrs" 
+75-high = "10. 75+ yrs" ;
+NOTE: Format AGECAT_YEARS is already on the library DPLOCAL.FORMATS.
+NOTE: Format AGECAT_YEARS has been written to DPLOCAL.FORMATS.
+MPRINT(MASTER_FLOW):   value $enr_overlap 'D'='Duplicate' 'O'='Overlap' 'S'='Subset' ;
+NOTE: Format $ENR_OVERLAP is already on the library DPLOCAL.FORMATS.
+NOTE: Format $ENR_OVERLAP has been written to DPLOCAL.FORMATS.
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE FORMAT used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              96.65k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        29  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MPRINT(MASTER_FLOW):   * End 00.2_mscdm_formats.sas ;
+MPRINT(MASTER_FLOW):   
+*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
+MLOGIC(MASTER_FLOW):  %LOCAL  NEXT_ETL 
+MLOGIC(MASTER_FLOW):  %LET (variable name is NEXT_ETL)
+SYMBOLGEN:  Macro variable ETL resolves to 0
+MPRINT(MASTER_FLOW):   data _null_;
+MPRINT(MASTER_FLOW):   putlog 75*'*';
+MPRINT(MASTER_FLOW):   putlog ' ';
+SYMBOLGEN:  Macro variable ETL resolves to 0
+MPRINT(MASTER_FLOW):   putlog "=====> Current Production ETL from CC: 0";
+MPRINT(MASTER_FLOW):   putlog ' ';
+SYMBOLGEN:  Macro variable REQETL resolves to 1
+MPRINT(MASTER_FLOW):   putlog "=====> Expected ETL for this QA review: 1";
+SYMBOLGEN:  Macro variable NEXT_ETL resolves to 1
+MPRINT(MASTER_FLOW):   putlog "=====> Calculated ETL for this QA review: 1";
+MPRINT(MASTER_FLOW):   putlog ' ';
+MPRINT(MASTER_FLOW):   putlog 75*'*';
+MPRINT(MASTER_FLOW):   putlog ' ';
+MPRINT(MASTER_FLOW):   run;
+
+***************************************************************************
+
+=====> Current Production ETL from CC: 0
+
+=====> Expected ETL for this QA review: 1
+=====> Calculated ETL for this QA review: 1
+
+***************************************************************************
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              305.93k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        30  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable REQETL resolves to 1
+SYMBOLGEN:  Macro variable ETL resolves to 0
+MLOGIC(MASTER_FLOW):  %IF condition %sysevalf(&ReqETL.-&ETL. ne 1) is FALSE
+MLOGIC(MASTER_FLOW):  %LOCAL  ETL_VERSIONTABLE
+MLOGIC(MASTER_FLOW):  %IF condition %sysfunc(exist(msoc.etl_version,data)) is TRUE
+MLOGIC(MASTER_FLOW):  %PUT 
+
+MLOGIC(MASTER_FLOW):  %PUT ==> An ETL_version table already exists and will be reviewed to
+==> An ETL_version table already exists and will be reviewed to
+MLOGIC(MASTER_FLOW):  %PUT ==> ensure that the ETL in the ETL_version table is equal to the 
+      expected ETL
+==> ensure that the ETL in the ETL_version table is equal to the expected ETL
+MLOGIC(MASTER_FLOW):  %PUT 
+
+MPRINT(MASTER_FLOW):   proc sql noprint;
+MPRINT(MASTER_FLOW):   select etl into :ETL_VersionTable trimmed from msoc.etl_version ;
+MPRINT(MASTER_FLOW):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5301.81k
+      OS Memory           26104.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        31  Switch Count  0
+      
+
+MLOGIC(MASTER_FLOW):  %PUT 
+
+MLOGIC(MASTER_FLOW):  %PUT ====> CURRENT ETL: &ETL.
+SYMBOLGEN:  Macro variable ETL resolves to 0
+====> CURRENT ETL: 0
+MLOGIC(MASTER_FLOW):  %PUT ====> Expected ETL: &Next_ETL.
+SYMBOLGEN:  Macro variable NEXT_ETL resolves to 1
+====> Expected ETL: 1
+MLOGIC(MASTER_FLOW):  %PUT ====> ETL from ETL_Version table in this QA package MSOC folder: 
+      &ETL_VersionTable.
+SYMBOLGEN:  Macro variable ETL_VERSIONTABLE resolves to 1
+====> ETL from ETL_Version table in this QA package MSOC folder: 1
+MLOGIC(MASTER_FLOW):  %PUT 
+
+SYMBOLGEN:  Macro variable NEXT_ETL resolves to 1
+SYMBOLGEN:  Macro variable ETL_VERSIONTABLE resolves to 1
+MLOGIC(MASTER_FLOW):  %IF condition &Next_ETL.=&ETL_VersionTable. is TRUE
+MLOGIC(MASTER_FLOW):  %PUT 
+
+MLOGIC(MASTER_FLOW):  %PUT ==> ETL Versions match and the program will continue
+==> ETL Versions match and the program will continue
+MLOGIC(MASTER_FLOW):  %PUT ==> HOWEVER, unless otherwise specified in the master program, all
+==> HOWEVER, unless otherwise specified in the master program, all
+MLOGIC(MASTER_FLOW):  %PUT ==>  existing SAS datasets in the local output directories 
+      ('dplocal','msoc')
+==>  existing SAS datasets in the local output directories ('dplocal','msoc')
+MLOGIC(MASTER_FLOW):  %PUT ==>  will be deleted for data quality assurance purposes
+==>  will be deleted for data quality assurance purposes
+MLOGIC(MASTER_FLOW):  %PUT 
+
+MLOGIC(KILL_DIRECTORY):  Beginning execution.
+MLOGIC(KILL_DIRECTORY):  Parameter KILL_LIST has value dplocal msoc
+SYMBOLGEN:  Macro variable KILL_LIST resolves to dplocal msoc
+MLOGIC(KILL_DIRECTORY):  %DO loop beginning; index variable K; start value is 1; stop value is 2; 
+      by value is 1.  
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is DIR)
+SYMBOLGEN:  Macro variable KILL_LIST resolves to dplocal msoc
+SYMBOLGEN:  Macro variable K resolves to 1
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is KILL)
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable DIR resolves to dplocal
+SYMBOLGEN:  Macro variable KILL_DIR_DPLOCAL resolves to y
+MLOGIC(KILL_DIRECTORY):  %PUT &kill
+SYMBOLGEN:  Macro variable KILL resolves to y
+y
+MLOGIC(LOWCASE):  Beginning execution.
+MLOGIC(LOWCASE):  This macro was compiled from the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas
+SYMBOLGEN:  Macro variable KILL resolves to y
+MLOGIC(LOWCASE):  Parameter STRING has value y
+SYMBOLGEN:  Macro variable STRING resolves to y
+MLOGIC(LOWCASE):  Ending execution.
+MLOGIC(KILL_DIRECTORY):  %IF condition %lowcase(&kill.)=y is TRUE
+SYMBOLGEN:  Macro variable DIR resolves to dplocal
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   proc datasets kill lib=dplocal memtype=data nowarn nolist 
+nodetails;
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   quit;
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              228.93k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        32  Switch Count  0
+      
+
+MLOGIC(KILL_DIRECTORY):  %DO loop index variable K is now 2; loop will iterate again.
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is DIR)
+SYMBOLGEN:  Macro variable KILL_LIST resolves to dplocal msoc
+SYMBOLGEN:  Macro variable K resolves to 2
+MLOGIC(KILL_DIRECTORY):  %LET (variable name is KILL)
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable DIR resolves to msoc
+SYMBOLGEN:  Macro variable KILL_DIR_MSOC resolves to y
+MLOGIC(KILL_DIRECTORY):  %PUT &kill
+SYMBOLGEN:  Macro variable KILL resolves to y
+y
+MLOGIC(LOWCASE):  Beginning execution.
+MLOGIC(LOWCASE):  This macro was compiled from the autocall file C:\Program 
+      Files\SASHome2\SASFoundation\9.4\core\sasmacro\lowcase.sas
+SYMBOLGEN:  Macro variable KILL resolves to y
+MLOGIC(LOWCASE):  Parameter STRING has value y
+SYMBOLGEN:  Macro variable STRING resolves to y
+MLOGIC(LOWCASE):  Ending execution.
+MLOGIC(KILL_DIRECTORY):  %IF condition %lowcase(&kill.)=y is TRUE
+SYMBOLGEN:  Macro variable DIR resolves to msoc
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   proc datasets kill lib=msoc memtype=data nowarn nolist 
+nodetails;
+NOTE: Deleting MSOC.CONTROL_FLOW_3 (memtype=DATA).
+NOTE: Deleting MSOC.ETL_VERSION (memtype=DATA).
+NOTE: Deleting MSOC.LICENSED (memtype=DATA).
+MPRINT(MASTER_FLOW.KILL_DIRECTORY):   quit;
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              229.93k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        33  Switch Count  0
+      
+
+MLOGIC(KILL_DIRECTORY):  %DO loop index variable K is now 3; loop will not iterate again.
+MLOGIC(KILL_DIRECTORY):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MPRINT(MASTER_FLOW):   data msoc.etl_version;
+MPRINT(MASTER_FLOW):   length MSDPID $6 DPID $2 SiteID $4;
+SYMBOLGEN:  Macro variable DPID resolves to TR
+SYMBOLGEN:  Macro variable SITEID resolves to UVEN
+MPRINT(MASTER_FLOW):   msdpid=compress("TRUVEN");
+SYMBOLGEN:  Macro variable DPID resolves to TR
+MPRINT(MASTER_FLOW):   dpid="TR";
+SYMBOLGEN:  Macro variable SITEID resolves to UVEN
+MPRINT(MASTER_FLOW):   siteid="UVEN";
+SYMBOLGEN:  Macro variable NEXT_ETL resolves to 1
+MPRINT(MASTER_FLOW):   ETL=1;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: The data set MSOC.ETL_VERSION has 1 observations and 4 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              389.03k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        34  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   title 'ETL Version undergoing QA review' ;
+SYMBOLGEN:  Macro variable SYSDATE resolves to 14FEB18
+SYMBOLGEN:  Macro variable SYSTIME resolves to 09:46
+MPRINT(MASTER_FLOW):   title2 "Job executed on 14FEB18 at 09:46" ;
+MPRINT(MASTER_FLOW):   proc print data=msoc.etl_version;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: There were 1 observations read from the data set MSOC.ETL_VERSION.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              381.03k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        35  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   title ;
+MLOGIC(MASTER_FLOW):  %LET (variable name is COMPS)
+MLOGIC(MASTER_FLOW):  %PUT =====> comps = &comps.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+=====> comps = base stat graph ets af iml connect oracle odbc teradata
+MLOGIC(LICENSED):  Beginning execution.
+MPRINT(MASTER_FLOW.LICENSED):   proc setinit;
+MPRINT(MASTER_FLOW.LICENSED):   run;
+
+NOTE: PROCEDURE SETINIT used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              333.00k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:57 AM
+      Step Count                        36  Switch Count  0
+      
+Original site validation data
+Current version: 9.04.01M4P110916
+Site name:    'HARVARD PILGRIM HEALTH CARE INSTITUTE LLC/FDA CDER'.
+Site number:  70152975.
+Expiration:   30DEC2017.
+Grace Period:  45 days (ending 13FEB2018).
+Warning Period: 47 days (ending 01APR2018).
+System birthday:   28FEB2017.
+Operating System:   WX64_WKS.
+Product expiration dates:
+---Base SAS Software                                                                                
+    30DEC2017  
+---SAS/STAT                                                                                         
+    30DEC2017  
+---SAS/GRAPH                                                                                        
+    30DEC2017  
+---SAS/ETS                                                                                          
+    30DEC2017  
+---SAS/IML                                                                                          
+    30DEC2017  
+---SAS/SHARE                                                                                        
+    30DEC2017  
+---SAS/CONNECT                                                                                      
+    30DEC2017  
+---SAS/GIS                                                                                          
+    30DEC2017  
+---SAS/SHARE*NET                                                                                    
+    30DEC2017  
+---SAS Enterprise Miner                                                                             
+    30DEC2017  
+---SAS/IntrNet                                                                                      
+    30DEC2017  
+---SAS/Secure 168-bit                                                                               
+    30DEC2017  
+---SAS/Secure Windows                                                                               
+    30DEC2017  
+---SAS Text Miner                                                                                   
+    30DEC2017  
+---SAS Enterprise Guide                                                                             
+    30DEC2017  
+---SAS/ACCESS Interface to PC Files                                                                 
+    30DEC2017  
+---SAS/ACCESS Interface to ODBC                                                                     
+    30DEC2017  
+---SAS/ACCESS Interface to MySQL                                                                    
+    30DEC2017  
+---Text Miner for Spanish                                                                           
+    30DEC2017  
+---SAS Enterprise Miner for Desktop                                                                 
+    30DEC2017  
+---SAS/IML Studio                                                                                   
+    30DEC2017  
+---SAS Workspace Server for Local Access                                                            
+    30DEC2017  
+---SAS/ACCESS to Hadoop                                                                             
+    30DEC2017  
+---High Performance Suite                                                                           
+    30DEC2017  
+---SAS Add-in for Microsoft Excel                                                                   
+    30DEC2017  
+
+MPRINT(MASTER_FLOW.LICENSED):   data licensed;
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+MLOGIC(LICENSED):  %DO loop beginning; index variable A; start value is 1; stop value is 10; by 
+      value is 1.  
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 1
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 1
+MPRINT(MASTER_FLOW.LICENSED):   BASE=1;
+MLOGIC(LICENSED):  %DO loop index variable A is now 2; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 2
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 2
+MPRINT(MASTER_FLOW.LICENSED):   STAT=1;
+MLOGIC(LICENSED):  %DO loop index variable A is now 3; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 3
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 3
+MPRINT(MASTER_FLOW.LICENSED):   GRAPH=1;
+MLOGIC(LICENSED):  %DO loop index variable A is now 4; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 4
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 4
+MPRINT(MASTER_FLOW.LICENSED):   ETS=1;
+MLOGIC(LICENSED):  %DO loop index variable A is now 5; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 5
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is FALSE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 5
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=-1 is FALSE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 5
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=0 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 5
+MPRINT(MASTER_FLOW.LICENSED):   AF=0;
+MLOGIC(LICENSED):  %DO loop index variable A is now 6; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 6
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 6
+MPRINT(MASTER_FLOW.LICENSED):   IML=1;
+MLOGIC(LICENSED):  %DO loop index variable A is now 7; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 7
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 7
+MPRINT(MASTER_FLOW.LICENSED):   CONNECT=1;
+MLOGIC(LICENSED):  %DO loop index variable A is now 8; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 8
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is FALSE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 8
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=-1 is FALSE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 8
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=0 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 8
+MPRINT(MASTER_FLOW.LICENSED):   ORACLE=0;
+MLOGIC(LICENSED):  %DO loop index variable A is now 9; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 9
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 9
+MPRINT(MASTER_FLOW.LICENSED):   ODBC=1;
+MLOGIC(LICENSED):  %DO loop index variable A is now 10; loop will iterate again.
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 10
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=1 is FALSE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 10
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=-1 is FALSE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 10
+MLOGIC(LICENSED):  %IF condition %sysprod(%scan(&comps.,&a.))=0 is TRUE
+SYMBOLGEN:  Macro variable COMPS resolves to base stat graph ets af iml connect oracle odbc teradata
+SYMBOLGEN:  Macro variable A resolves to 10
+MPRINT(MASTER_FLOW.LICENSED):   TERADATA=0;
+MLOGIC(LICENSED):  %DO loop index variable A is now 11; loop will not iterate again.
+MPRINT(MASTER_FLOW.LICENSED):   output;
+MPRINT(MASTER_FLOW.LICENSED):   run;
+
+NOTE: The data set WORK.LICENSED has 1 observations and 10 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              388.56k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        37  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LICENSED):   proc transpose data=licensed out=_licensed 
+(rename=(_NAME_=Component COL1=Value));
+MPRINT(MASTER_FLOW.LICENSED):   var _all_;
+MPRINT(MASTER_FLOW.LICENSED):   run;
+
+NOTE: There were 1 observations read from the data set WORK.LICENSED.
+NOTE: The data set WORK._LICENSED has 10 observations and 2 variables.
+NOTE: PROCEDURE TRANSPOSE used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              2515.71k
+      OS Memory           23032.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        38  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LICENSED):   data msoc.licensed (keep=Site Component Status);
+MPRINT(MASTER_FLOW.LICENSED):   length Site $6;
+MPRINT(MASTER_FLOW.LICENSED):   set _licensed;
+MPRINT(MASTER_FLOW.LICENSED):   length Status $25;
+MPRINT(MASTER_FLOW.LICENSED):   if value=1 then Status="Licensed";
+MPRINT(MASTER_FLOW.LICENSED):   else if value=0 then Status="Not licensed";
+MPRINT(MASTER_FLOW.LICENSED):   else if value=-1 then Status="Invalid product";
+MPRINT(MASTER_FLOW.LICENSED):   else Status="Other invalid product";
+SYMBOLGEN:  Macro variable DPID resolves to TR
+SYMBOLGEN:  Macro variable SITEID resolves to UVEN
+MPRINT(MASTER_FLOW.LICENSED):   Site="TRUVEN";
+MPRINT(MASTER_FLOW.LICENSED):   label component= ' ';
+MPRINT(MASTER_FLOW.LICENSED):   run;
+
+NOTE: There were 10 observations read from the data set WORK._LICENSED.
+NOTE: The data set MSOC.LICENSED has 10 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              549.84k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        39  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW.LICENSED):   proc datasets lib=work nodetails nolist;
+MPRINT(MASTER_FLOW.LICENSED):   delete licensed _licensed;
+MPRINT(MASTER_FLOW.LICENSED):   quit;
+
+NOTE: Deleting WORK.LICENSED (memtype=DATA).
+NOTE: Deleting WORK._LICENSED (memtype=DATA).
+NOTE: PROCEDURE DATASETS used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              230.93k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        40  Switch Count  0
+      
+
+MLOGIC(LICENSED):  Ending execution.
+MPRINT(MASTER_FLOW):  ;
+MLOGIC(MASTER_FLOW):  %PUT &syscc.
+SYMBOLGEN:  Macro variable SYSCC resolves to 0
+0
+SYMBOLGEN:  Macro variable SYSCC resolves to 0
+MLOGIC(MASTER_FLOW):  %IF condition %sysevalf(&syscc.>4) is FALSE
+MPRINT(MASTER_FLOW):   data control_flow ;
+MPRINT(MASTER_FLOW):   set infolder.control_flow ;
+MPRINT(MASTER_FLOW):   module = lowcase(module) ;
+MPRINT(MASTER_FLOW):   execute_flag = lowcase(execute_flag) ;
+MPRINT(MASTER_FLOW):   module_cat = lowcase(module_cat) ;
+MPRINT(MASTER_FLOW):   module_util = lowcase(module_util) ;
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable DEATHTABLE resolves to death
+MPRINT(MASTER_FLOW):   if module eq 'dth' and lengthn("death") = 0 then delete ;
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable CODTABLE resolves to 
+MPRINT(MASTER_FLOW):   else if module eq 'cod' and lengthn("") = 0 then delete ;
+SYMBOLGEN:  && resolves to &.
+SYMBOLGEN:  Macro variable LABTABLE resolves to 
+MPRINT(MASTER_FLOW):   else if module eq 'lab' and lengthn("") = 0 then delete ;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: There were 8 observations read from the data set INFOLDER.CONTROL_FLOW.
+NOTE: The data set WORK.CONTROL_FLOW has 8 observations and 7 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              576.81k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        41  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   proc sort data=control_flow;
+MPRINT(MASTER_FLOW):   by seqno;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: There were 8 observations read from the data set WORK.CONTROL_FLOW.
+NOTE: SAS sort was used.
+NOTE: The data set WORK.CONTROL_FLOW has 8 observations and 7 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.01 seconds
+      memory              685.59k
+      OS Memory           21240.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        42  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   proc sql noprint;
+MPRINT(MASTER_FLOW):   create table control_flow_1 as select * from control_flow where 
+lowcase(execute_flag) eq 'y' order by seqno ;
+NOTE: Table WORK.CONTROL_FLOW_1 created, with 5 rows and 7 columns.
+
+MPRINT(MASTER_FLOW):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              5329.25k
+      OS Memory           26104.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        43  Switch Count  0
+      
+
+MLOGIC(MASTER_FLOW):  %LOCAL  CORE UTIL
+MPRINT(MASTER_FLOW):   proc sql noprint;
+MPRINT(MASTER_FLOW):   select case when max(module_cat = 'core') then 1 else 0 end as Core , case 
+when max(module_util = 'y') then 1 else 0 end as Util into :Core , :Util from control_flow_1 ;
+MPRINT(MASTER_FLOW):   quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              5352.40k
+      OS Memory           26104.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        44  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   data control_flow_2;
+MPRINT(MASTER_FLOW):   set control_flow;
+MPRINT(MASTER_FLOW):   by seqno;
+SYMBOLGEN:  Macro variable CORE resolves to        1
+MPRINT(MASTER_FLOW):   if 1 eq 1 then do;
+MPRINT(MASTER_FLOW):   if module in ('l1', 'l2', 'dates') then do ;
+MPRINT(MASTER_FLOW):   if lowcase(execute_flag) eq 'y' then do;
+MPRINT(MASTER_FLOW):   output;
+MPRINT(MASTER_FLOW):   end;
+MPRINT(MASTER_FLOW):   end;
+MPRINT(MASTER_FLOW):   end;
+SYMBOLGEN:  Macro variable UTIL resolves to        0
+MPRINT(MASTER_FLOW):   if 0 eq 1 then do;
+MPRINT(MASTER_FLOW):   if module_util = 'y' then do;
+MPRINT(MASTER_FLOW):   output;
+MPRINT(MASTER_FLOW):   end;
+MPRINT(MASTER_FLOW):   end;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: There were 8 observations read from the data set WORK.CONTROL_FLOW.
+NOTE: The data set WORK.CONTROL_FLOW_2 has 2 observations and 7 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              624.40k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        45  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   data msoc.control_flow_3;
+MPRINT(MASTER_FLOW):   set control_flow_1 control_flow_2;
+MPRINT(MASTER_FLOW):   by seqno;
+MPRINT(MASTER_FLOW):   if first.seqno;
+MPRINT(MASTER_FLOW):   retain module_required 'y';
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: There were 5 observations read from the data set WORK.CONTROL_FLOW_1.
+NOTE: There were 2 observations read from the data set WORK.CONTROL_FLOW_2.
+NOTE: The data set MSOC.CONTROL_FLOW_3 has 5 observations and 8 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              787.93k
+      OS Memory           20980.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        46  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   options orientation=landscape linesize=max pagesize=75;
+SYMBOLGEN:  Macro variable MSOC resolves to a:/dev/test//test_qa_wp001_nsdp_v01/msoc/
+SYMBOLGEN:  Macro variable DT_TODAY resolves to 20180214
+MPRINT(MASTER_FLOW):   proc printto print="a:/dev/test//test_qa_wp001_nsdp_v01/msoc/module_execution_plan_20180214.log";
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              1291.96k
+      OS Memory           21748.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        47  Switch Count  0
+      
+
+SYMBOLGEN:  Macro variable SYSDATE resolves to 14FEB18
+SYMBOLGEN:  Macro variable SYSTIME resolves to 09:46
+MPRINT(MASTER_FLOW):   title "List of QA Modules that will be executed for this Request -- job executed on 14FEB18 at 09:46";
+MPRINT(MASTER_FLOW):   title3 'NOTE: Modules for optional tables are only selected if defined in common-components';
+MPRINT(MASTER_FLOW):   title4 "NOTE: If any 'utilization modules' are selected, all utilization modules will be selected";
+MPRINT(MASTER_FLOW):   title5 "NOTE: If any 'core' modules are selected, modules l1_l2 and dates will be selected";
+MPRINT(MASTER_FLOW):   proc print data=msoc.control_flow_3;
+MPRINT(MASTER_FLOW):   var module sascode module_cat module_util cc_table seqno;
+MPRINT(MASTER_FLOW):   run;
+
+NOTE: There were 5 observations read from the data set MSOC.CONTROL_FLOW_3.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              383.53k
+      OS Memory           21748.00k
+      Timestamp           02/14/2018 09:46:58 AM
+      Step Count                        48  Switch Count  0
+      
+
+MPRINT(MASTER_FLOW):   title;
+MPRINT(MASTER_FLOW):   proc printto;
+MPRINT(MASTER_FLOW):   run;
+
