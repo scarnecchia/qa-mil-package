@@ -167,14 +167,14 @@ options linesize=100 pagesize=50;
 \*--------------------------------------------------------------------------------------*/
 
 * Specify expected ETL # for this request (i.e. last approved ETL # incremented by 1) *;
-%let ReqETL = 1;
+%let ReqETL = <edit-expected-ETL-#>;
 
 * Specify project-id, workplan-type, workplan-id, unique-dpid, and version-id *;
-%let MSProjID =  test;
-%let MSWPType =  qa;
-%let MSWPID   =  wp001;
-%let MSDPID   =  nsdp;
-%let MSVerID  =  v01;
+%let MSProjID =  ;
+%let MSWPType =  ;
+%let MSWPID   =  ;
+%let MSDPID   =  ;
+%let MSVerID  =  ;
 
 %let dlm = _ ;
 

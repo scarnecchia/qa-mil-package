@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.0_mscdm_control_flow.sas                                                       |
 |                                                                                       |
-|  MIL QA PACKAGE VERSION: 1.0.0                                                            |                                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                            |                                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |
@@ -60,20 +60,30 @@
    *Clean work library;
   proc datasets lib=work nolist kill; quit; run;
 
-  /*%if %sysevalf(&syscc. > 4) %then %do;
-    data _null_;
-      putlog 75*'!';
+  /*include check to ensure MIL and MIS never queried during single package run*/
+	proc sql noprint;
+		select count(module),
+			   count(cc_table) 
+		into :Nmod trimmed, 
+		     :Ncctable trimmed
+		from infolder.control_flow
+		where upcase(execute_flag) eq "Y" and upcase(cc_table) ne "X";
+	quit;
+
+	%if &Nmod. gt 1 | &Ncctable. gt 1 %then %do;
+	  data _null_;
+      putlog 80*'!';
       putlog ' ';
-      putlog '==> MASTER_FLOW macro is aborting...a fatal problem occured prior to MASTER_FLOW';      
-      putlog "==>  Check program log &sasprograms.00.0_mscdm_data_qa_review_master_file.log.";      
-      putlog ' ';
-      putlog 75*'!'; 
+      putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in CONTROL_FLOW";      
+      putlog "==> The package is querying more than one table";
+      putlog ' '; 
+      putlog 80*'!';
     run; 
     %abort cancel 99 ;      
-  %end ;*/
-
+  %end ;
+		
  /*Initialize end_qa*/
- %let end_qa = 0;
+  %let end_qa = 0;
   %let protable=&proctable;
   %let dthtable=&deathtable;
 
@@ -103,66 +113,11 @@
 
 /* MASTER FLOW Step 1 - check ETL */
 
-   /* Check ETL number from a dataset and check it against common components */
-
-  %let ETLdata = ;
-  %IF %SYSFUNC(EXIST(mil.&&&tabid.table)) %THEN %DO;
-  proc contents data = mil.&&&tabid.table out = etlnum (keep = memlabel);
-  run;
-
-  data etlnum;
-  	 set etlnum;
-	 if _N_ = 1;
-	 if not missing(memlabel) and upcase(substr(strip(memlabel),1,3)) = "ETL" then 
-	 call symputx("etldata", substr(strip(memlabel),4));
-  run;
-  %END;
-     
-  %put =====>&etldata.;
-
-  data _null_;
-    putlog 75*'*';
-    putlog ' ';
-    putlog "=====> ETL from &&&tabid.table: &ETLdata.";
-    putlog ' ';
-    putlog "=====> Expected ETL for this QA review: &ETL.";
-    putlog ' ';
-    putlog 75*'*';
-    putlog ' ';
-  run;
-
-  %if "&ETLdata." = "" | %sysevalf(&ETLdata.-&ETL. ne 0) %then %do;
-    data _null_;
-      putlog 80*'!';
-      putlog ' ';
-      putlog "==> MASTER_FLOW macro is aborting due to an issue with the expected ETL number.";  
-      putlog ' ';
-      putlog "==> The Expected ETL should equal the current production ETL";
-      putlog ' ';
-      putlog "==> Ensure that ETL lable in &&&tabid.table is filled and ";
-      putlog "    and matches with the production ETL";
-      putlog ' '; 
-      putlog 80*'!';
-      putlog ' '; 
-    run; 
-    %abort cancel 99 ;      
-  %end ;
-
+ 
 
   %kill_directory (kill_list=dplocal msoc); 
 
 
-  data dplocal.&prefix.etl_version;  
-    length MSDPID $6 /*DPID $2 SiteID $4*/;
-	length ETL_: 8.;
-    msdpid=compress("&dpid.&siteid.");
-    /*dpid="&DPID.";
-    siteid="&SITEID.";*/
-    ETL_CC=&ETL.;
-	ETL_&tabid. = &etldata.;
-  run;   
-      
- 
 /*Create licensed product file*/
   %let comps=base stat graph ets af iml connect oracle odbc teradata;
   %put =====> comps = &comps.;
@@ -383,6 +338,7 @@
       put ' ';
       put 75*'-';
     run;
+	%move_files;
   %end;
     
   %local rc1 ;
@@ -438,6 +394,7 @@
   %end;
 
   %endmac: 
+
 %mend MASTER_FLOW;
 
 

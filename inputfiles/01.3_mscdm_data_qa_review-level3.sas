@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 99.2_mscdm_data_qa_review-level3.sas                                   |
 |                                                                                       |
-|  QA PACKAGE VERSION: 4.0.3                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create cross-table level 3 output datasets for   |
@@ -27,7 +27,7 @@
 /*---------------------------------------------------------------------------------*/
 %macro l2_flags_final;
   data temp_flag;
-    set dplocal.&prefix.all_l2_flags:;
+    set dplocal.&prefix.l2_mstr:;
   run;
 
   %ISDATA(dataset = temp_flag);
@@ -206,7 +206,7 @@
 
 
 	/*MLName, MFName linked to multiple rows of same values of CLName, CFName, but with different CPatID values*/
-	%if %sysfunc(exist(mil.&MISTABLE.)) %then %do;
+	%if "%lowcase(&tabidlist.)" = "mis" %then %do;
 
 		data temp1;
 			 set mil.&MISTABLE;
@@ -388,7 +388,7 @@
 			 retain fmtname "$&type.fmt" type 'C';
 			 	set &outdata. end = eof;
 				length start $255;
-				start = %if "&type." = "mother" %then cat(&var1.,&var2.); %else cat(&var1.);;
+				start = %if "&type." = "mother" %then cats(&var1.,&var2.); %else cats(&var1.);;
 				label = IDFileStatus&num.;
 				output;
 				if eof then do;
@@ -431,11 +431,11 @@
 			 /*yEAR*/
 			 If ADate ne . then do;
 					Year = put(year(adate), 4.);
-					Year_Month = cat(put(year(adate),4.),"_",put(month(adate),z2.));
+					Year_Month = cat(put(year(adate),4.),"-",put(month(adate),z2.));
 			end;
 			 else if Adate eq . and CBirth_date ne . then do;
 			 			Year = put(year(Cbirth_date), 4.);
-					Year_Month = cat(put(year(CBirth_date),4.),"_",put(month(Cbirth_date),z2.));
+					Year_Month = cat(put(year(CBirth_date),4.),"-",put(month(Cbirth_date),z2.));
 			end;
 
 			/*ICD 9 VERSION*/
@@ -460,7 +460,7 @@
 				else IDFilestatus = "N";
 			end; 
 
-			patid  = 1;
+			patient  = 1;
 
 			 if  not missing(mpatid) then do;
 	 			if age >= 10 & age <= 19 then Agegroup = "10-19";
@@ -474,14 +474,14 @@
 
 	proc means data = l3_temp  MISSING noprint;
 		class  Sex  EncType AgeGroup ICD_Ver Year_Month Year Birth_Type LinkageStatus ;
-		var patid;
-	output out = l3_temp_summ(drop = _freq_)sum(patid)=count;
+		var patient;
+	output out = l3_temp_summ(drop = _freq_)sum(patient)=count;
 	run;
 	/*Create dummy file for IDFILESTATUS*/
 	proc means data = l3_temp nway noprint;
 		class IDFilestatus;
-		var patid;
-	output out = idfile(drop = _freq_)sum(patid)=count;
+		var patient;
+	output out = idfile(drop = _freq_)sum(patient)=count;
 	run; 
 
 	data idfile_N;
@@ -497,30 +497,29 @@
 		  by IDFilestatus;
 		  length level $3;
 		  level = "001";
+		  
 	run;
 	
 
-	data msoc.l3_m_i_aggregate;
+	data msoc.&prefix.l3_m_i_aggregate;
 	retain level IDFilestatus LinkageStatus Birth_Type Year Year_Month ICD_Ver AgeGroup EncType Sex;
-	set l3_temp_summ
-		idfile_all (in = a);
+	set l3_temp_summ (in = a)
+		idfile_all (in = b);
 	length level $3;
-	if not a and level ne "000" then  
+	if _type_ eq 0 then level = "000";
+	else if not b then  
 	level = put(_type_+1, z3.);
 	format count comma9.0;
 	drop _type_;
 	run;
 
-	proc sort data = msoc.l3_m_i_aggregate;
+	proc sort data = msoc.&prefix.l3_m_i_aggregate;
 	by level;
 	run;
 %end;
 	
 %mend createl3table;
 %createl3table;
-
-
-
 
 /*---------------------------------------------------------------------------------*/
 /* Move specific files from DPLOCAL to MSOC                                        */
@@ -535,8 +534,8 @@
   	 proc sql;
     	select memname, count(memname) into :filelist separated by ' ', :filect trimmed
     	from dictionary.tables
-     where libname="DPLOCAL" and (memname eq "MIL_ALL_L1_L2_FLAGS" or memname eq "MIL_ALL_L3_FLAGS" or memname like "%SIGNATURE" 
-								 or memname like "MIL_CONTROL%" or memname like "MIL_ETL%" or memname like "MIL_LICENSED%")  
+     where libname="DPLOCAL" and (index(memname, "MSTR") = 0 and memname ne "MIL_ALL_L1_FLAGS" and memname ne "MIL_ALL_L1_FLAGS_MSTR"
+								  and memname ne "MIL_L2_MSTR" and memname ne "MIL_ALL_L3_FLAGS_MSTR")  
     	;
   	quit;
 
@@ -552,6 +551,12 @@
       drop table dplocal.&file.
       ;
     quit;
+
+		%if %index(upcase(&file.), SIGNATURE) > 0 %then %do;
+		data msoc.&file.;
+			 set msoc.&file. (drop = DPID SITEID);
+		run;
+		%end;
   	%end;
    %end;
 %mend;
@@ -574,12 +579,12 @@ quit;
 
 /* Delete unnecessary DPLOCAL datasets */
 proc datasets lib=dplocal nolist nowarn nodetails;
-  delete &ds. l2_nodup_: lab_testdates_ym ;
+  delete l2_nodup_: ;
 quit;
   
 %timestamp(&module._end);
 %timereport(&&&module._start,&&&module._end);
 
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
-* END 99.2_mscdm_data_qa_review_level3.sas                                              ;
+* END 01.3_mscdm_data_qa_review_level3.sas                                              ;
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;

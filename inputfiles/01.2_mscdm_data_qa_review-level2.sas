@@ -340,6 +340,7 @@
 			%put &checkvar.;
 			%checkrows(var = &checkvar);
 		%end;
+
 	
 	  data flag_&i.;
 	  	%if (&checkid.= 214 | &checkid. = 219 ) %then %do;
@@ -409,6 +410,32 @@
 	   %end;		
 	run;
 
+   /*Match Method*/
+	%if (&checkid.= 274 | &checkid. = 275 ) %then %do;
+		data flag_&i.;
+			set mil.&table;
+			%if "%lowcase(&link.)" = "y" %then 
+			 if not missing(mpatid) and not missing(cpatid);
+			%else %if "%lowcase(&link.)" = "n" %then 
+			 if missing(mpatid) or missing(cpatid);;
+			length message $300;
+			message = "";
+			flag_l2 = 0;
+			 if &checkid.= 274 then do;
+			 	if upcase(strip(MatchMethod)) not in ("RE","SI","LA","BC","OT") then do;
+				flag_l2 = 1;
+				message = cat("Linked: MPatid (",strip(Mpatid),") and EncounterID (",strip(EncounterID),") has invalid value of MatchMethod (",strip(MatchMethod),")");
+			    end;
+			 end;
+			 if &checkid.= 275 then do;
+			 	if upcase(strip(MatchMethod)) not in ("N1","N2","N3","NA") then do;
+				flag_l2 = 1;
+				message = cat("non-Linked: MPatid (",strip(Mpatid),") and EncounterID (",strip(EncounterID),") has invalid value of MatchMethod (",strip(MatchMethod),")");
+				end;
+			 end;
+			if flag_l2;
+		run;
+	%end;
 	/*proc sort data = flag_&i. nodupkey;
 		 by %do j = 1 %to 4; &&var&j.. %end; message;
 	run;*/
@@ -627,31 +654,6 @@
 /*  START Level 2 Macro                                                                */
 /*-------------------------------------------------------------------------------------*/
 %macro level2_abort (level=2);
-
-/*Aggregate existing l1 individual cross-table variable datasets by unique values */
-/*  proc sql noprint;
-    select lowcase(memname), count(memname) into :mem separated by " ", :exist trimmed
-    from dictionary.members
-    where libname='DPLOCAL' and memtype='DATA' and %str(substr(memname,1,1))="_"
-    ;
-  quit;
-  %do y=1 %to &exist.;
-    %let dsin=%scan(&mem.,&y.);
-    proc sql noprint;
-      create table dplocal.temp as
-      select *
-           , count(*) as count
-      from dplocal.&dsin.
-      group by 1
-      ;
-      drop table dplocal.&dsin.
-      ; 
-    quit;
-    proc datasets lib=dplocal memtype=data nolist nodetails nowarn;
-      change temp=&dsin.;
-    quit;
-  %end;*/ 
-
 /* Create the list of tables to to include for Level 2 Checks */
   proc sql noprint;
     select module
@@ -680,7 +682,7 @@
       *%l2_ds_crosstable;
     %end;
 
-    %else %if &l.=3 %then %do;
+    %else %if &l.=3 %then %do; /*will not execute for MI QA*/
       %l2_lkp_table (abortyn=n, crosstable=n);
     /* hard code for removing lab date check, which is called in the lab module after testdate is created*/
       data temp_l2_flags;
@@ -700,15 +702,14 @@
       from temp_l2_flags
       ; 
     quit; 
-	*remove this;
-	%put ==> &checkidlist. &checkct.;
+	
     
   /*-----------------------------------------------------------------------------------*/
   /* 1.3 - Loop through each CheckID and output temporary flags datasets by CheckID    */
   /*-----------------------------------------------------------------------------------*/
     %do c=1 %to &checkct.;
       %let checkid=%scan(&checkidlist.,&c.);
-	  %if (&checkid. ge 211 & &checkid. le 219) | (&checkid. ge 272 & &checkid. le 273) %then %do;
+	  %if (&checkid. ge 211 & &checkid. le 219) | (&checkid. ge 272 & &checkid. le 275) %then %do;
 	  	%str(%flag_211_219_27_);
 	  %end;
 	  %else %if &checkid. ge 201 & &checkid. le 208 %then %do;
@@ -758,7 +759,7 @@
       quit;
       /* For loops 1 and 2, end macro at current loop when first Abort=YN occurs and output 
          finalized L2 flags for DP review */
-        %set_ds (libin=dplocal, dsin_prefix=l2_flags_, libout=dplocal, dsout=&prefix.all_l2_flags); 
+        %set_ds (libin=dplocal, dsin_prefix=l2_flags_, libout=dplocal, dsout=&prefix.l2_mstr); 
 	    %if &abort_qa. ne 0 %then %do;   
 
         %let end_qa=1;
@@ -792,7 +793,6 @@
     delete tmp_: ;
   quit;
 %mend;
-%let level = 2;
 %level2_abort;
 
 %timestamp(&module._end);

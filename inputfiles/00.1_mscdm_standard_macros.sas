@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 00.1_mscdm_standard_macros.sas                                         |
 |                                                                                       |
-|  QA PACKAGE VERSION: 4.0.3                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store macros used repeatedly in QA programs      |
@@ -446,6 +446,35 @@
 /*-------------------------------------------------------------------------------*/
 /*  END ==> %abort_table                                                         */
 /*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
+/*  Used in L1 module to abort QA for table-level failures for length/type       */
+/*-------------------------------------------------------------------------------*/
+%macro abort_table2 (checkid=, logmsg=);
+  proc sql noprint;
+    create table DPLOCAL.&PREFIX.flags_l1_&checkid._&tabid. as
+    select upcase(a.flagid) as flagid
+         , a.flag_descr
+         , a.flagtype
+         , a.abortYN
+         , 99999 as count
+    from infolder.lkp_all_flags a, DPLOCAL.&PREFIX.temp_flag_11x_&tabid. b
+	where a.flagid = b.flagid
+	and lowcase(a.variable1) = lowcase(b.variable)
+	and lowcase(a.tableid)=lowcase("&tabid.") and checkid="&checkid."
+    ;
+  quit;
+  data _null_;
+    put 70*'!';
+    put 'ERR'"OR: %unquote(&logmsg.)"; 
+    put 70*'!';
+  run; 
+  %let abort_table=1;
+%mend abort_table2;
+/*-------------------------------------------------------------------------------*/
+/*  END ==> %abort_table                                                         */
+/*-------------------------------------------------------------------------------*/
+
 
 
 /*********************************************************************************/
