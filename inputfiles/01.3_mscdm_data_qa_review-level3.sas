@@ -193,7 +193,7 @@
 					select cats("%upcase(&tabid.)_",&level.,"_00_00-0_397") as flagid length =21
 						  ,cat("CPatid (",strip(Cpatid),"), CBirth_Date (",put(CBirth_Date, mmddyy10.),"): No linkage to mother/delivery was found; confirmation required")
 							as message length = 300
-						  ,cat("MPatID not linked to CPatID") as flag_descr length = 255
+						  ,cat("CPatID not linked to MPatID") as flag_descr length = 255
 						  ,"Warn" as Flagtype length = 4
 						  ,"N" as abortyn length = 1
 						  ,count(*) as count

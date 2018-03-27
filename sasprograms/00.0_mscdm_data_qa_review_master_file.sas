@@ -217,18 +217,13 @@ options msglevel=i ;
 options mprint mprintnest ;
 options errorcheck=strict errors=0 ;
 options merror serror ;
-options dsnferr dkricond=error dkrocond=error mergenoby=warn;
+options dkricond=error dkrocond=error mergenoby=warn;
 options dsoptions=nonote2err noquotelenmax ;
 options reuse=no ;
 options fullstimer ;
-
-options mprint mlogic symbolgen spool;
 ** for qa program;
 options nodsnferr fmtsearch=(dplocal);
-proc options group=memory;
-run;
-
-/*------------------------------------------------------------------------------------------------
+*------------------------------------------------------------------------------------------------
 * NOTES:
 *   For reasons of compatibility and standardization, paths must meet the following criteria:
 *     1- Starting with the request subdirectory, all subdirectory names must be specified in

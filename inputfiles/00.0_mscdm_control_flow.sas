@@ -60,29 +60,7 @@
    *Clean work library;
   proc datasets lib=work nolist kill; quit; run;
 
-  /*include check to ensure MIL and MIS never queried during single package run*/
-	proc sql noprint;
-		select count(module),
-			   count(cc_table) 
-		into :Nmod trimmed, 
-		     :Ncctable trimmed
-		from infolder.control_flow
-		where upcase(execute_flag) eq "Y" and upcase(cc_table) ne "X";
-	quit;
-
-	%if &Nmod. gt 1 | &Ncctable. gt 1 %then %do;
-	  data _null_;
-      putlog 80*'!';
-      putlog ' ';
-      putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in CONTROL_FLOW";      
-      putlog "==> The package is querying more than one table";
-      putlog ' '; 
-      putlog 80*'!';
-    run; 
-    %abort cancel 99 ;      
-  %end ;
-		
- /*Initialize end_qa*/
+   /*Initialize end_qa*/
   %let end_qa = 0;
   %let protable=&proctable;
   %let dthtable=&deathtable;
@@ -107,15 +85,86 @@
   proc printto log=runlog new;
   run; quit;
 
+/***************************************************************************/
+/*   Checks (1, 2, 3) prior to Module runs	                                       */	
+/***************************************************************************/
+/*1.Include check to ensure MIL and MIS never queried together 
+    during single package run*/
+	proc sql noprint;
+		select count(module),
+			   count(cc_table),
+			   lowcase(cc_table)
+		into :Nmod trimmed, 
+		     :Ncctable trimmed,
+			 :querytable trimmed			 
+		from infolder.control_flow
+		where upcase(execute_flag) eq "Y" and upcase(cc_table) ne "X";
+	quit;
+
+   %if &Nmod. gt 1 | &Ncctable. gt 1 %then %do;
+	  data _null_;
+      putlog 80*'!';
+      putlog ' ';
+      putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in CONTROL_FLOW";      
+      putlog "==> The package is querying more than one table";
+      putlog ' '; 
+      putlog 80*'!';
+    run; 
+    %abort cancel 99 ;      
+  %end ;
+/*2.If only 1 table is found include check for MIS variables if MIL table specified*/
+ /*If MIS variable is found in MIL table, abort the process*/ 
+  %else %do; 
+    %if "&querytable." eq "miltable" %then %do;
+  	  proc sql noprint;
+		select variable into :mis_vars separated by " "
+		from infolder.lkp_all_l1 a
+		where upcase(a.Tabid) = "MIS" 
+		 and 15 <= input(varid, 8.0) <= 25;
+     quit; 
+	 %let misflag = 0; /*initialize*/
+	    data _null_;
+		 set mil.&miltable.;
+		 if _n_ = 1 then do;
+		 	count = 0;
+			dsid = open("mil.&miltable.");
+		 	%do i = 1 %to %sysfunc(countw(&mis_vars.));
+		 		%let varname = %scan(&mis_vars., &i.);
+		 		if varnum(dsid,"&varname") > 0 then do;
+					count = count + 1;
+				call symputx("misflag", count);
+				end;
+			%end;
+			 rc= close(dsid);
+		 end;
+	   drop rc dsid;	
+	   run;
+	 %IF %EVAL(&misflag.) GT 0 %THEN %DO;
+	  	data _null_;
+      	 putlog 90*'!';
+      	 putlog ' ';
+      	 putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in MIL TABLE";      
+      	 putlog "==> The &miltable. contains &misflag. MI support variables";
+		 putlog "==> Please include the correct table. QA process is aborting.";
+      	 putlog ' '; 
+      	 putlog 90*'!';
+    	run; 
+    %abort cancel 99 ;  
+	%end;	
+  %end; /*end if querytable is MIL*/
+ %end; /*end of #2*/	
+
    /* Include Macros and Formats */
   %include "&INFOLDER.00.1_mscdm_standard_macros.sas" /nosource2;
-  %include "&INFOLDER.00.2_mscdm_formats.sas" /nosource2;       
+  %include "&INFOLDER.00.2_mscdm_formats.sas" /nosource2;        
 
-/* MASTER FLOW Step 1 - check ETL */
-
- 
-
+  
   %kill_directory (kill_list=dplocal msoc); 
+
+/*3.include logic to remove MSOC libname assignment from package that runs against MIS*/
+ %if "&querytable." eq "mistable" %then %do;
+ 	libname msoc clear;
+ %end;
 
 
 /*Create licensed product file*/

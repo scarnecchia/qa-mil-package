@@ -677,9 +677,8 @@
       *%l2_ds_enr_overlap;
     %end;
 
-    %else %if &l.=2 %then %do;
+    %else %if &l.=2 %then %do;	 
       %l2_lkp_table (abortyn=y, crosstable=y);
-      *%l2_ds_crosstable;
     %end;
 
     %else %if &l.=3 %then %do; /*will not execute for MI QA*/
