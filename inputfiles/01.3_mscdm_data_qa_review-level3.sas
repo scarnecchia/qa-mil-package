@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 99.2_mscdm_data_qa_review-level3.sas                                   |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 1.1.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create cross-table level 3 output datasets for   |
@@ -17,7 +17,12 @@
 |     Sentinel Coordinating Center                                                      |
 |     info@sentinelsystem.org                                                           |
 \*-------------------------------------------------------------------------------------*/
-
+*---------------------------------------------------------------------------------------
+*  CHANGE LOG: 
+*
+*   Version   Date       Initials      Comment 
+*   -------   --------   --------   ----------------------------------------------------
+*    1.1	04/04/18		RR		  Added table for deliveries only (MBL-44)
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
 *  PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER           ;
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
@@ -414,51 +419,95 @@
 		%let totalN = %eval(&N1.+&N2.);
 
 		%put ===>&totalN.;
+
+	/*Run macro twice 1) to create all aggregate table 2) to create aggregate table for deliveries only*/
+	%macro tables(where = , sort = , num = , outfile = , extravar = );
+	
+		proc sort data = mil.&&&tabid.table (where = (&where.)) out = mi&num. &sort.;
+			by mpatid encounterid;
+	    run;
+	
+		/*InfantsLinked: This is the count of distinct populated CPatIDs per MPatID/EncounterID*/		
+		%if %eval(&num.) = 2 %then %do;
+			proc sql;
+				 create table linkedcpatid as
+				 select mpatid, encounterid, count(distinct(cpatid)) as InfantsLinked length=3
+				 from mi&num.
+				 group by mpatid, encounterid
+				 order by mpatid, encounterid;
+			quit;
+		%end;
 			
-		proc sort data = mil.&&&tabid.table out = mi ;
-			by mpatid encounterid;
-	    run;		
+		data l3_temp&num.;
+			%if %eval(&num.) = 1 %then %do;
+				set mi&num.;
+				by mpatid encounterid;
+			%end;
+			%else %do;
+				merge mi&num.(in = a)
+					  linkedcpatid;
+				by mpatid encounterid;
+				if a;
+				if InfantsLinked = . then InfantsLinked = 0;
+			%end;
+			
+			length LinkageStatus $1 Year $4 YearMonth $7 ICD_Ver $1 AgeGroup $9;
+			Length IDFilestatus IDFilestatus1 %if %eval(&num.) = 1 %then IDFilestatus2; $1.;
 
-		data l3_temp;
-			set mi;
-			by mpatid encounterid;
-			length LinkageStatus $1 Year $4 Year_Month $7 ICD_Ver $1 AgeGroup $9;
-			Length IDFilestatus IDFilestatus1 IDFilestatus2 $1.;
-			 if not missing(mpatid) and not missing(cpatid) then LinkageStatus = "L";
-			 if not missing(mpatid) and missing(cpatid) then LinkageStatus  = "M";
-			 if missing(mpatid) and not missing(cpatid) then LinkageStatus = "C";
-
+			 %if %eval(&num.) = 1 %then %do; /*all*/
+			 	if not missing(mpatid) and not missing(cpatid) then LinkageStatus = "L";
+			 	if not missing(mpatid) and missing(cpatid) then LinkageStatus  = "M";
+			 	if missing(mpatid) and not missing(cpatid) then LinkageStatus = "C";
+			 %end;
+			 %if %eval(&num.) = 2 %then %do; /*deliveries only*/
+			 	if InfantsLinked >= 1 then LinkageStatus = "L";
+				if InfantsLinked = 0 then LinkageStatus = "M";
+			 %end;
 			 /*yEAR*/
 			 If ADate ne . then do;
 					Year = put(year(adate), 4.);
-					Year_Month = cat(put(year(adate),4.),"-",put(month(adate),z2.));
+					YearMonth = cat(put(year(adate),4.),"-",put(month(adate),z2.));
 			end;
-			 else if Adate eq . and CBirth_date ne . then do;
+			%if %eval(&num.) = 1 %then %do; /*all*/
+			  else if Adate eq . and CBirth_date ne . then do;
 			 			Year = put(year(Cbirth_date), 4.);
-					Year_Month = cat(put(year(CBirth_date),4.),"-",put(month(Cbirth_date),z2.));
-			end;
+					YearMonth = cat(put(year(CBirth_date),4.),"-",put(month(Cbirth_date),z2.));
+			 end;
+			%end;
 
 			/*ICD 9 VERSION*/
-			icd_date = COALESCE(ddate, adate, CBirth_date);
+			%if %eval(&num.) = 1 %then %do; /*all*/
+			  icd_date = COALESCE(ddate, adate, CBirth_date);
+			%end;
+			%if %eval(&num.) = 2 %then %do;  /*deliveries only*/
+			  icd_date = adate;
+			%end;
+
 			if icd_date le "30Sep2015"d then ICD_Ver = "9";
 			else if icd_date ge "01Oct2015"d then ICD_Ver = "0";
 
 			/*IDFilestatus*/
 			IDFilestatus1 = put(cats(mpatid,encounterid),$motherfmt.);
-			IDFilestatus2 = put(cats(cpatid),$childfmt.);
+			
+			%if %eval(&num.) = 1 %then %do; /*all*/
+			 IDFilestatus2 = put(cats(cpatid),$childfmt.);
 
-			/*UnLinked record*/
-			if  missing(cpatid) or  missing(mpatid) then do;
-			if IDFilestatus1 = "Y" or IDFilestatus2 = "Y" then IDFilestatus = "Y";
-			else if IDFilestatus1 = "E" or IDFilestatus2 = "E" then IDFilestatus = "E";
-			else IDFilestatus = "N";
-			end;
+			 /*UnLinked record*/
+			 if  missing(cpatid) or  missing(mpatid) then do;
+			 if IDFilestatus1 = "Y" or IDFilestatus2 = "Y" then IDFilestatus = "Y";
+			 else if IDFilestatus1 = "E" or IDFilestatus2 = "E" then IDFilestatus = "E";
+			 else IDFilestatus = "N";
+			 end;
 			/*Linked record*/
-			if not missing(cpatid) and not missing(mpatid) then do;
+			 if not missing(cpatid) and not missing(mpatid) then do;
 				if IDFilestatus1 = "Y" and IDFilestatus2 = "Y" then IDFilestatus = "Y";
 				else if IDFilestatus1 = "E" or IDFilestatus2 = "E" then IDFilestatus = "E";
 				else IDFilestatus = "N";
-			end; 
+			 end; 
+			%end;
+			%if %eval(&num.) = 2 %then %do;  /*deliveries only*/
+				IDFilestatus = IDFilestatus1;
+			%end;
 
 			patient  = 1;
 
@@ -470,52 +519,54 @@
 			end;
 			else Agegroup = "Infants";
 			drop icd_date ;
+		run;
 
 
-	proc means data = l3_temp  MISSING noprint;
-		class  Sex  EncType AgeGroup ICD_Ver Year_Month Year Birth_Type LinkageStatus ;
+		proc means data = l3_temp&num.  MISSING noprint;
+		class EncType AgeGroup ICD_Ver YearMonth Year Birth_Type LinkageStatus &extravar.;
 		var patient;
-	output out = l3_temp_summ(drop = _freq_)sum(patient)=count;
-	run;
-	/*Create dummy file for IDFILESTATUS*/
-	proc means data = l3_temp nway noprint;
+		output out = l3_temp_summ(drop = _freq_)sum(patient)=count;
+		run;
+		/*Create dummy file for IDFILESTATUS*/
+		proc means data = l3_temp&num. nway noprint;
 		class IDFilestatus;
 		var patient;
-	output out = idfile(drop = _freq_)sum(patient)=count;
-	run; 
+		output out = idfile(drop = _freq_)sum(patient)=count;
+		run; 
 
-	data idfile_N;
-	 length count 8. ;
-	 length IDFilestatus $1;
-	 IDFilestatus = "N";
-	 count = &TotalN;
-	run;
+		data idfile_N;
+	 	length count 8. ;
+	 	length IDFilestatus $1;
+	 	IDFilestatus = "N";
+	 	count = %if %eval(&num.) = 1 %then/*all*/&TotalN; %else %if %eval(&num.) = 2 %then &N1.;;
+		run;
 
-	data idfile_all;
+		data idfile_all;
 		 merge idfile
 		 		idfile_N;
 		  by IDFilestatus;
 		  length level $3;
 		  level = "001";
 		  
-	run;
-	
+		run;
+		data msoc.&outfile.;
+		retain level IDFilestatus LinkageStatus Birth_Type Year YearMonth ICD_Ver AgeGroup EncType &extravar.;
+		set l3_temp_summ (in = a)
+			idfile_all (in = b);
+		length level $3;
+		if _type_ eq 0 then level = "000";
+		else if not b then  
+		level = put(_type_+1, z3.);
+		format count comma9.0;
+		drop _type_;
+		run;
 
-	data msoc.&prefix.l3_m_i_aggregate;
-	retain level IDFilestatus LinkageStatus Birth_Type Year Year_Month ICD_Ver AgeGroup EncType Sex;
-	set l3_temp_summ (in = a)
-		idfile_all (in = b);
-	length level $3;
-	if _type_ eq 0 then level = "000";
-	else if not b then  
-	level = put(_type_+1, z3.);
-	format count comma9.0;
-	drop _type_;
-	run;
-
-	proc sort data = msoc.&prefix.l3_m_i_aggregate;
-	by level;
-	run;
+		proc sort data =  msoc.&outfile.;
+		by level IDFilestatus LinkageStatus Birth_Type Year YearMonth descending ICD_Ver AgeGroup EncType &extravar.;
+		run;
+  %mend tables;
+  %tables(where = 1, sort = , num = 1, outfile = &prefix.l3_m_i_aggregate, extravar = sex);	/*all aggregate table*/
+  %tables(where = %str(not missing(mpatid)), sort = nodupkey, num = 2, outfile = &prefix.l3_m_i_aggregate_deliv, extravar = InfantsLinked);/*deliveries only*/
 %end;
 	
 %mend createl3table;

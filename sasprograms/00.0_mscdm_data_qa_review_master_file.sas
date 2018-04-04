@@ -93,24 +93,24 @@ options linesize=100 pagesize=50;
 
 /* Edit macro variable Evaluate_MSCDM to specify path to directory with SCDM data tables 
    to be evaluated by this QA request */
-%let Evaluate_MSCDM = B:\mscdm\v6.01\Truven\etl02\sample_1pct;
+%let Evaluate_MSCDM = ;
 
 /* Name of the Mom Infant Linkage SAS dataset*/
-%let MILTABLE = MIL4;
+%let MILTABLE =;
 
 /* Edit macro variable Evaluate_MIL to specify path to directory with mom Infant
    linkage table to be evaluated by this QA request */
-%let Evaluate_MIL = A:\dev\test\test_qa_wp001_nsdp_v01;
+%let Evaluate_MIL = ;
 
 /* Name of the Mother deliveries SAS dataset from distributed code (residing at distributed code DPLOCAL folder) */
-%let deliveries = r01_mother_deliveries;
+%let deliveries = ;
 
 /*Name of the Infants SAS dataset from distributed code (residing at distributed code DPLOCAL folder)*/
-%let infants = r02_infants;
+%let infants = ;
 
 /* Edit macro variable Evaluate_DS to specify path to directory with Mother deliveries
    and infant table to be evaluated by this QA request */
-%let Evaluate_DS = A:\dev\test\mblink_ahr_wp001_dis_1.0.0\dplocal;
+%let Evaluate_DS = ;
 
 /*-------------------------------------------------------------------------------------*/
 /* Notes about SCDM table names defined in Common Components (CC)                      */
