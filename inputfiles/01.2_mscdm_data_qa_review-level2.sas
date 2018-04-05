@@ -45,7 +45,13 @@
 	quit;
 
 	proc sort data = temp2 out = dupout nouniquekey;
-	 by %do j = 1 %to 3; &&var&j. %end; ;
+		%if (&checkid.= 214 | &checkid. = 219 ) %then %do;
+			 by %do j = 1 %to 3; &&var&j. %end; ;
+		%end;
+		%else %do;
+			by %do j = 1 %to 4; &&var&j. %end; ;
+		%end;
+			
 	run;
 	
 	proc sql;

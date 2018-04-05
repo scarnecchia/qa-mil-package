@@ -532,6 +532,9 @@
       %if %eval(&nvars.=2) %then %do;
         %str( and lowcase(variable2)=lowcase("&var2.") )
       %end;
+	   %if %eval(&nvars.=3) %then %do;
+        %str( and lowcase(variable3)=lowcase("&var3.") )
+      %end;	  
       %str( %)%) as b where a.checkid=b.checkid)  
     %end;
 
