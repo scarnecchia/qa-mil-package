@@ -432,7 +432,8 @@
 			proc sql;
 				 create table linkedcpatid as
 				 select mpatid, encounterid, count(distinct(cpatid)) as InfantsLinked length=3
-				 from mi&num.
+				 from mil.&&&tabid.table 
+				 where not missing(mpatid)
 				 group by mpatid, encounterid
 				 order by mpatid, encounterid;
 			quit;
