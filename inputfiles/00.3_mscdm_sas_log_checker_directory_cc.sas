@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.3_scdm_sas_log_checker_directory_cc.sas                                        |
 |                                                                                       |
-|  QA PACKAGE VERSION: 4.0.3                                                            |
+|    MA QA PACKAGE VERSION: 1.1.1                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to pull SAS LOG files from a user-specified         |
@@ -33,10 +33,11 @@ run;
 
 %macro logcheck;
 
-	proc sql noprint;
-		 select module into: tabid trimmed
-		 from dplocal.&prefix.control_flow_3 (where = (cc_table ne 'X'));
-	quit;
+	proc sql;
+  	 select module into: tabid trimmed
+	 	from infolder.control_flow 
+		where cc_table ne "X" and execute_flag = "Y";
+  quit;
 
 	%if "%upcase(&tabid.)" = "MIL" %then %do;
 		 %let dirname = &msoc.;
@@ -166,7 +167,7 @@ run;
   ods _all_ close;
   options nonumber;
   ods escapechar="^";
-  ods pdf file=%lowcase("&dirname./&dpid.&siteid._mscdm_data_qa_logcheck.pdf") style=statdoc;
+  ods pdf file="&dirname./&dpid.&siteid._mscdm_data_qa_logcheck.pdf" style=statdoc;
   title1 "Summary of Log Messages for Directory &dirname.";
   title2 "Report Run Date: &DateStamp.";
   title3 " ";

@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.0_mscdm_control_flow.sas                                                       |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                            |                                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 1.1.1                                                            |                                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |
@@ -386,12 +386,11 @@
       put "==> We will now wrap up by creating a master signature file and running the log checker." ;
       put ' ';
       put 75*'-';
-    run;
-	%move_files;
+    run;	
   %end;
     
   %local rc1 ;
-  %include "&INFOLDER.00.4_mscdm_qasignaturerequest.sas"/nosource2;
+  *%include "&INFOLDER.00.4_mscdm_qasignaturerequest.sas"/nosource2;
   %let rc1 = &syscc. ;
  
   %let syscc = 0 ; /* reset rc to ensure that log checker can run */
