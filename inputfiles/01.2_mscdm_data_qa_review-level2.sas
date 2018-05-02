@@ -550,6 +550,17 @@
 
 	%end;
 	%if &checkid. = 208 %then %do;
+
+	  %if "%lowcase(&&&tab2.table)" = "demographic" %then %do;
+	  	data dem;
+			 set  mscdm.&&&tab2.table;
+			 if upcase(sex) in ('A','U') then sex = 'O';
+		run;
+		%let scdmtable = dem;
+	  %end;
+	  %else %do;
+	  	%let scdmtable = mscdm.&&&tab2.table;
+	  %end;
 		proc sql;
 			 create table flag_&i. as 
 			 select distinct a.&var1., 
@@ -567,7 +578,7 @@
 						) as message length=300,  
 				   "&tab1." as table1 length=3
 				  ,"&tab2." as table2 length=3 
-			from mil.&&&tab1.table a, mscdm.&&&tab2.table b 
+			from mil.&&&tab1.table a, &scdmtable. b 
 			where %if "%lowcase(&var1.)" = "mbirth_date" %then a.Mpatid = b.patid; 
 				 %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var1.)" = "ddate") %then a.encounterid = b.encounterid;
 				 %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then a.Cpatid = b.patid;
