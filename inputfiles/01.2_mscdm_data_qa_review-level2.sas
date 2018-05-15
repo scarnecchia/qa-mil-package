@@ -551,7 +551,7 @@
 	%end;
 	%if &checkid. = 208 %then %do;
 
-	  %if "%lowcase(&&&tab2.table)" = "demographic" %then %do;
+	  %if "%upcase(&tab2.)" = "DEM" %then %do;
 	  	data dem;
 			 set  mscdm.&&&tab2.table;
 			 if upcase(sex) in ('A','U') then sex = 'O';
