@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 00.1_mscdm_standard_macros.sas                                         |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 2.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store macros used repeatedly in QA programs      |
@@ -287,6 +287,27 @@
 /* END ==> %add_dpids_all_ds                                                     */
 /*-------------------------------------------------------------------------------*/
 
+
+/*********************************************************************************/
+/* START ==> %move_l3                                                   */
+/*********************************************************************************/
+/*  move l3_signature file to the msoc folder if QA is on MIl table 		     */
+/*-------------------------------------------------------------------------------*/
+%macro move_l3;
+	%ISDATA(dataset = dplocal.mil_l3_signature);
+	%IF (&NOBS. > 0) %THEN %DO;
+		 	 proc sql noprint;
+     			 create table msoc.mil_l3_signature as
+ 				 select *
+      			from dplocal.mil_l3_signature;
+      			drop table dplocal.mil_l3_signature;
+    		quit;
+	%END;
+%mend move_l3;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %move_l3                                                     */
+/*-------------------------------------------------------------------------------*/
+	
 
 /*********************************************************************************/
 /* START ==> %remove_labels                                                      */

@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     01.2_mscdm_data_qa_review-level2.sas                                              |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 2.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to perform critical level 2 data quality checks     |
@@ -491,6 +491,22 @@
 
 	 /*if variable1 is filled, then that variable must be present in table2*/
 	%if &checkid. = 201  %then %do;
+	/*DEV-1866*/
+	 %if "%upcase(&tab2.)" = "DEL" | "%upcase(&tab2.)" = "INF" %then %do;
+	     %if "%upcase(&tab2.)" = "DEL" %then %let reftable = &deliveries.;
+		 %else %let reftable = &infants.;
+	  	 proc sql noprint;
+	  	  create table flag_&i. as
+		  select distinct a.&var1. %if "%upcase(&tab2.)" = "DEL" %then, a.&var2. ;, "E" as IDFileStatus format=$1.
+		  from  mil.&&&tab1.table a left join DS.&reftable. b
+		  on a.&var1. = b.&var1.
+		  %if "%upcase(&tab2.)" = "DEL" %then %do;
+		  	and a.EncounterID = b.EncounterID
+		  %end;
+		  where not missing (a.&var1.) and b.&var1. is null;
+	 	quit;
+	 %end;
+	 %else %do;	  	
 	  proc sql noprint;
 	  	   create table flag_&i. as
 	  	   select distinct a.&var1.
@@ -499,6 +515,7 @@
 		   where not missing(a.&var1.) and 
 		   	b.&var2. is null;
 		quit;
+	  %end;
 
 		%ISDATA(dataset = flag_&i.);
 			data flag_&i.;
@@ -508,13 +525,84 @@
 				  table1 = "&tab1.";
 				  table2 = "&tab2.";
 				  %if &NOBS. > 0 %then %do;
-					message = cat("&var1. (",strip(&var1.),") not found in &&&tab2.table table");
+				    %if "%upcase(&tab2.)" = "DEL" %then %do;
+					  	message = cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.),") was found in &&&tab1.table but not found in deliveries table");
+					%end;
+					%else %if "%upcase(&tab2.)" = "INF" %then %do;
+					 	message = cat("&var1. (",strip(&var1.),") was found in &&&tab1.table but not found in Infants table");
+					%end;
+					%else %do;
+						message = cat("&var1. (",strip(&var1.),") not found in &&&tab2.table table");
+					%end;
 				  %end;
 				  %else %do; 
 					message = "";
 				%end;
-			run;
-	%end;
+			 run;
+			 %if &NOBS. > 0 %then %do;
+			 	%if "%upcase(&tab2.)" = "DEL" | "%upcase(&tab2.)" = "INF" %then %do;
+				   %ISDATA(dataset = dplocal.MIL_IDFileStatus_&VAR1.);
+				    %if &NOBS. = 0 %then %do;
+			 	 	   data dplocal.MIL_IDFileStatus_&VAR1.;
+				 	    set flag_&i. (drop = message table1 table2);
+					%end;
+					%else %do;
+						data dplocal.MIL_IDFileStatus_&VAR1.;
+				 	    set dplocal.MIL_IDFileStatus_&VAR1. flag_&i. (drop = message table1 table2);
+				  		run;
+					%end;
+				%end;
+			%end;
+	%end; /*end of 201*/
+	/*if variable1 is filled in table2, then that variable must be present in table2*/
+	%if &checkid. = 202  %then %do;
+	/*DEV-1866*/
+	     %if "%upcase(&tab2.)" = "DEL" %then %let reftable = &deliveries.;
+		 								%else %let reftable = &infants.;
+	 	proc sql noprint;
+	  	  create table flag_&i. as
+		  select distinct a.&var1. %if "%upcase(&tab2.)" = "DEL" %then, a.&var2. ;, "N" as IDFileStatus format=$1.
+		  from  DS.&reftable.  a left join mil.&&&tab1.table b
+		  on a.&var1. = b.&var1.
+		  %if "%upcase(&tab2.)" = "DEL" %then %do;
+		  	and a.EncounterID = b.EncounterID
+		  %end;
+		  where not missing (a.&var1.) and b.&var1. is null;
+	 	quit;
+
+		%ISDATA(dataset = flag_&i.);
+			data flag_&i.;
+				 set flag_&i.;
+				  length message $300;
+				  length table1 table2 $3;
+				  table1 = "&tab1.";
+				  table2 = "&tab2.";
+				  %if &NOBS. > 0 %then %do;
+				    %if "%upcase(&tab2.)" = "DEL" %then %do;
+					  message = cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.),") was found in deliveries but not found in &&&tab1.table table");
+					 %end;
+					%else %if "%upcase(&tab2.)" = "INF" %then %do;
+					  message = cat("&var1. (",strip(&var1.),") was found in Infants but not found in &&&tab1.table table");
+					%end;					
+				 %end;
+				  %else %do; 
+					message = "";
+				  %end;
+			 run;
+			  %if &NOBS. > 0 %then %do;
+				   %ISDATA(dataset = dplocal.MIL_IDFileStatus_&VAR1.);
+				    %if &NOBS. = 0 %then %do;
+			 	 	   data dplocal.MIL_IDFileStatus_&VAR1.;
+				 	    set flag_&i. (drop = message table1 table2);
+					%end;
+					%else %do;
+						data dplocal.MIL_IDFileStatus_&VAR1.;
+				 	    set dplocal.MIL_IDFileStatus_&VAR1. flag_&i. (drop = message table1 table2);
+				  		run;
+					%end;				
+			%end;
+	%end; /*end of 202*/
+
 	%if &checkid. = 203 %then %do;
 		proc contents data= mil.&&&tab1.table out=l2_cont_&tab1. noprint;
   		run;
@@ -777,6 +865,15 @@
          finalized L2 flags for DP review */
         %set_ds (libin=dplocal, dsin_prefix=l2_flags_, libout=dplocal, dsout=&prefix.l2_mstr); 
 	    %if &abort_qa. ne 0 %then %do;   
+
+		 /*aggregate counts for failed l2 flags*/
+		 proc sql noprint;
+		 	create table dplocal.&Prefix.all_l2_flags as
+    		select flagid, abortyn, flagtype, flag_descr, sum(count) as count format=comma15. informat=comma15.
+    		from dplocal.&prefix.l2_mstr (where=(lowcase(abortYN)='y'))
+    		group by 1,2,3,4
+    		order by 1,3;
+		quit;
 
         %let end_qa=1;
         %let l=999;

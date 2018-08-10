@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
-|  PROGRAM NAME: 99.2_mscdm_data_qa_review-level3.sas                                   |
+|  PROGRAM NAME: 01.3_mscdm_data_qa_review-level3.sas                                   |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 1.1.0                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 2.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create cross-table level 3 output datasets for   |
@@ -215,39 +215,30 @@
 
 		data temp1;
 			 set mil.&MISTABLE;
-			 length cpatidMname $255;
-			 length CName $41;
+			 length CName MName $41;
 			 if not missing(cpatid) and not missing(mpatid); /*Linked record*/
-			 cpatidMname = cats(strip(Cpatid),strip(lowcase(MFName)),":",strip(lowcase(MLName)));
+			 MName = cat(strip(MFName),":",strip(MLName)); 
 			 CName = cat(strip(CFName),":",strip(CLName));
 		run;
 
-	    proc sort data = temp1 nodupkey;
-			by CName cpatidMname;
+		/*output all duplicate keys*/
+		proc sort data = temp1 nouniquekey;
+		 by MName CName;
 		run;
 
-		data flag_1;
-			 set temp1;
-				by CName cpatidMname;
-			 length l_key $41;
-			 length count 3.;
-			 retain l_key count;
-			 
-			 if first.CName then do;
-			 	 l_key = cpatidMname;
-				 count = 1;
-			end;
-			else do;
-				 if l_key ne cpatidMname then count = count+1;
-				  l_key = cpatidMname;
-			end;
-			if first.CName and last.CName then delete;
-			run;
-
-
-		%ISDATA(dataset = flag_1);
-		%IF (&NOBS. > 0) %THEN %DO;
-		proc sql;
+		%ISDATA(dataset = temp1);
+			%IF (&NOBS. > 0) %THEN %DO;
+			  proc sql;
+			     create table flag_1 as 
+				 select count(distinct(CPatID)) as count, MFName, MLName, CFName, CLName
+				 from temp1
+				 group byMFName, MLName, CFName, CLName
+				 having calculated count > 1
+				 order by MFName, MLName, CFName, CLName;
+			  quit;
+			  %ISDATA(dataset = flag_1);
+			  %IF (&NOBS. > 0) %THEN %DO;
+			  proc sql;
 			   create table %str(dplocal.flag_l3_398_&tabid.) as
 			   	select	flagid, 
 						message,
@@ -265,49 +256,41 @@
 						  ,"Warn" as Flagtype length = 4
 						  ,"N" as abortyn length = 1
 						  ,1 as crows
+						  ,count as distinct_CPatid
 					 from flag_1
 					 )
 					group by  flagid,  message,  flag_descr, flagtype,  abortyn;
 					drop table flag_1;
 		     quit;
-		%END;
+			 %END;
+		  %END;
 
-	/*CLName, CFName linked to multiple rows of same MLName,MFName*/
+	/*CLName, CFName, CBirth_Date linked to multiple rows of same MLName,MFName*/
 	data temp2;
 			 set mil.&MISTABLE;
-			 length MName $41;
+			  length MName $41;
 			 length CName $41;
 			 if not missing(cpatid) and not missing(mpatid); /*Linked record*/
 			 CName = cat(strip(CFName),":",strip(CLName));
 			 MName = cat(strip(MFName),":",strip(MLName));
 		run;
 
-	    proc sort data = temp2 nodupkey;
-			by MName CName mpatid cpatid;
+	    proc sort data = temp2 nouniquekey;
+			by CName CBirth_date MName;
 		run;
-
-		data flag_2;
-			 set temp2;
-				by MName CName;
-			 length l_cname $41;
-			 length count 3.;
-			 retain l_cname count;
-			 
-			 if first.MName then do;
-			 	 l_cname = CName;
-				 count = 1;
-			end;
-			else do;
-				 if l_cname ne CName then count = count+1;
-				  l_cname = CName;
-			end;
-			if first.MName and last.MName then delete;
-			run;
-
-		
-		%ISDATA(dataset = flag_2);
+		%ISDATA(dataset = temp2);
 		%IF (&NOBS. > 0) %THEN %DO;
-		proc sql;
+		     proc sql;
+			     create table flag_2 as 
+				 select count(*) as count, CFName, CLName, CBirth_date, MFName, MLName
+				 from temp2
+				 group by CFName, CLName, CBirth_date, MFName, MLName
+				 having calculated count > 1
+				 order by CFName, CLName, CBirth_date, MFName, MLName;
+			  quit;
+			%ISDATA(dataset = flag_2);
+			%IF (&NOBS. > 0) %THEN %DO;
+			proc sql;
 			   create table %str(dplocal.flag_l3_399_&tabid.) as
 			   	select	flagid, 
 						message,
@@ -317,10 +300,11 @@
 						count(crows) as count
 				from (
 					select cats("%upcase(&tabid.)_",&level.,"_00_00-0_399") as flagid length =21
-						  ,cat("CLName (",strip(CLName),"), CFName (",strip(CFName),"):Linked to apparent multiple Mother/Delivery records of the same person MLName(",
+						  ,cat("CLName (",strip(CLName),"), CFName (",strip(CFName),"), CBirth_Date (", put(CBirth_date,mmddyy10.),
+								") :Linked to apparent multiple Mother/Delivery records of the same person MLName(",
 							   strip(MLName),"), MFName (",strip(MFName),")")
 							as message length = 300
-						  ,cat("CLName, CFName linked to multiple rows of MLName,MFName") as flag_descr length = 255
+						  ,cat("CLName, CFName, CBirth_Date linked to multiple rows of MLName,MFName") as flag_descr length = 255
 						  ,"Warn" as Flagtype length = 4
 						  ,"N" as abortyn length = 1
 						  ,1 as crows
@@ -329,8 +313,8 @@
 					group by  flagid,  message,  flag_descr, flagtype,  abortyn;
 					drop table flag_2;
 		     quit;
+			%END;
 		%END;
-
 	%end;		
 
 %mend suplinkage;
@@ -367,62 +351,13 @@
 
 	%if "%upcase(&tabid.)" = "MIL" %then %do;
 
-	%macro filestatus(indata=, outdata=, var1=, var2=, num=, type= );
-
-		proc sort data = mil.&&&tabid.table (where = (not missing(&var1.))) out = &type. nodupkey;
-			by &var1. &var2.;
-	    run;
-		proc sort data = ds.&indata. out = &indata. nodupkey;
-			by &var1. &var2.;
-
-		data &outdata.;
-			 merge &type. (in = link keep = &var1. &var2.)
-			 	   &indata. (in = del keep = &var1. &var2. );
-			 by &var1. &var2.;
-			 length IDFileStatus&num.  $1;
-			 if link and del then IDFileStatus&num. = "Y";
-			 if del and not link then IDFileStatus&num. = "N";
-			 if link and not del then IDFileStatus&num. = "E"; /*EXTRA*/
-		run;
-
-		proc sort data = &outdata. nodupkey;
-			 by &var1. &var2.;
-		run;
-
-		data &outdata.fmt;
-			 retain fmtname "$&type.fmt" type 'C';
-			 	set &outdata. end = eof;
-				length start $255;
-				start = %if "&type." = "mother" %then cats(&var1.,&var2.); %else cats(&var1.);;
-				label = IDFileStatus&num.;
-				output;
-				if eof then do;
-					 start = ' ';
-					 hlo = 'o';
-					 label = '';
-					 output;
-				end;
-		run;
-
-		proc format cntlin = &outdata.fmt library = work;
-		run;
-		%global N&num;
-		proc sql noprint;
-			 select count(*) as rows into: N&num. from &outdata. 
-			 where IDFileStatus&num. = "N";
-		quit;
-
-	%mend filestatus;
-	%filestatus(indata=&deliveries, outdata=mtemp, var1=mpatid, var2=encounterid, num=1, type= mother);
-	%filestatus(indata=&infants, outdata=ctemp, var1=cpatid, var2=, num=2, type= child);
-		
-		%let totalN = %eval(&N1.+&N2.);
-
-		%put ===>&totalN.;
-
 	/*Run macro twice 1) to create all aggregate table 2) to create aggregate table for deliveries only*/
-	%macro tables(where = , sort = , num = , outfile = , extravar = );
+	%macro tables(where = , sort = , num = , outfile = , extravar =, types= );
 	
+		/*total number of _type_ generated*/
+		%let Ntotal = %sysfunc(countw(&types.));
+
+		/*sort MIL table*/
 		proc sort data = mil.&&&tabid.table (where = (&where.)) out = mi&num. &sort.;
 			by mpatid encounterid;
 	    run;
@@ -453,7 +388,6 @@
 			%end;
 			
 			length LinkageStatus $1 Year $4 YearMonth $7 ICD_Ver $1 AgeGroup $9;
-			Length IDFilestatus IDFilestatus1 %if %eval(&num.) = 1 %then IDFilestatus2; $1.;
 
 			 %if %eval(&num.) = 1 %then %do; /*all*/
 			 	if not missing(mpatid) and not missing(cpatid) then LinkageStatus = "L";
@@ -487,31 +421,9 @@
 			if icd_date le "30Sep2015"d then ICD_Ver = "9";
 			else if icd_date ge "01Oct2015"d then ICD_Ver = "0";
 
-			/*IDFilestatus*/
-			IDFilestatus1 = put(cats(mpatid,encounterid),$motherfmt.);
-			
-			%if %eval(&num.) = 1 %then %do; /*all*/
-			 IDFilestatus2 = put(cats(cpatid),$childfmt.);
-
-			 /*UnLinked record*/
-			 if  missing(cpatid) or  missing(mpatid) then do;
-			 if IDFilestatus1 = "Y" or IDFilestatus2 = "Y" then IDFilestatus = "Y";
-			 else if IDFilestatus1 = "E" or IDFilestatus2 = "E" then IDFilestatus = "E";
-			 else IDFilestatus = "N";
-			 end;
-			/*Linked record*/
-			 if not missing(cpatid) and not missing(mpatid) then do;
-				if IDFilestatus1 = "Y" and IDFilestatus2 = "Y" then IDFilestatus = "Y";
-				else if IDFilestatus1 = "E" or IDFilestatus2 = "E" then IDFilestatus = "E";
-				else IDFilestatus = "N";
-			 end; 
-			%end;
-			%if %eval(&num.) = 2 %then %do;  /*deliveries only*/
-				IDFilestatus = IDFilestatus1;
-			%end;
-
 			patient  = 1;
 
+			/*Agegroup*/
 			 if  not missing(mpatid) then do;
 	 			if age >= 10 & age <= 19 then Agegroup = "10-19";
 	 			else if age >= 20 & age <= 44 then Agegroup = "20-44";
@@ -519,55 +431,87 @@
 				else Agegroup = "Other";
 			end;
 			else Agegroup = "Infants";
-			drop icd_date ;
+
+			%if &num. = 1 %then %do;
+			/*Days diff*/
+				length daysdiff $25;
+				if not missing(CBirth_date) and not missing(Adate) then do;
+				 diff = CBirth_date - Adate;
+				 daysdiff = put(diff, daysfmt.);
+				end;
+				else daysdiff = "09:NA";
+			%end;
+
+			drop icd_date;
 		run;
 
-
+		/*summarize across all vars*/
 		proc means data = l3_temp&num.  MISSING noprint;
-		class EncType AgeGroup ICD_Ver YearMonth Year Birth_Type LinkageStatus &extravar.;
-		var patient;
-		output out = l3_temp_summ(drop = _freq_)sum(patient)=count;
+		 class LinkageStatus Birth_Type Year YearMonth ICD_Ver AgeGroup EncType &extravar.;
+		 var patient;
+		 output out = l3_temp_summ(drop = _freq_)sum(patient)=count;
 		run;
-		/*Create dummy file for IDFILESTATUS*/
-		proc means data = l3_temp&num. nway noprint;
-		class IDFilestatus;
-		var patient;
-		output out = idfile(drop = _freq_)sum(patient)=count;
-		run; 
+		
 
-		data idfile_N;
-	 	length count 8. ;
-	 	length IDFilestatus $1;
-	 	IDFilestatus = "N";
-	 	count = %if %eval(&num.) = 1 %then/*all*/&TotalN; %else %if %eval(&num.) = 2 %then &N1.;;
-		run;
-
-		data idfile_all;
-		 merge idfile
-		 		idfile_N;
-		  by IDFilestatus;
-		  length level $3;
-		  level = "001";
-		  
-		run;
-		data msoc.&outfile.;
-		retain level IDFilestatus LinkageStatus Birth_Type Year YearMonth ICD_Ver AgeGroup EncType &extravar.;
-		set l3_temp_summ (in = a)
-			idfile_all (in = b);
-		length level $3;
-		if _type_ eq 0 then level = "000";
-		else if not b then  
-		level = put(_type_+1, z3.);
-		format count comma9.0;
-		drop _type_;
+		/*Algorithm to associate _type_ to variables used for stratification*/	
+		data typedesc;
+   	 		array x[&Ntotal.] (&types.);
+   	 		length p1-p&Ntotal. 8.;   	 		
+     		n=dim(x);
+     		sumtype = 0;
+     		%do k = 1 %to &Ntotal.;
+   	   		  ncomb=comb(n,&k.);
+   	          do j=1 to ncomb;
+        	    call allcomb(j, &k., of x[*]);
+	            %do m = 1 %to &k.;
+	  	  	       p&m. = x&m.;
+		 		   sumtype = sumtype+p&m.;
+	    		%end;
+	    		output;
+	    		sumtype = 0;
+      		  end;
+   		   %end;
+   			drop j n x: ncomb;
 		run;
 
-		proc sort data =  msoc.&outfile.;
-		by level IDFilestatus LinkageStatus Birth_Type Year YearMonth descending ICD_Ver AgeGroup EncType &extravar.;
+		data typedesc1 (keep = sumtype level level_desc);
+	 		set typedesc;
+	 		length level $4 level_desc $200;
+	 		%do i = 1 %to &Ntotal.;
+	 		   if not missing(p&i.) then do;
+			    level_desc = cat(strip(put(p&i., type&num.fmt.)),"    ",level_desc);
+			   end;
+			%end;
+			if DIVIDE(sumtype, 100) < 1 then 
+			level = strip(put(sumtype, z3.));
+			else level = strip(put(sumtype, BEST4.));
 		run;
+
+		proc sql;
+   			insert into typedesc1
+      		set sumtype = 0,
+				level = '000',
+          		level_desc='Overall';
+		 quit;
+
+		proc sql noprint;
+			create table msoc.&outfile. (drop = _type_) as
+			select b.level, b.level_desc, a.*
+			from  l3_temp_summ a, typedesc1 b
+			where a._type_ = b.sumtype
+			order by a._type_, b.level, b.level_desc;
+		quit;
+
+		proc sort data = msoc.&outfile.;
+			 by level level_desc LinkageStatus Birth_Type Year YearMonth ICD_Ver AgeGroup EncType &extravar.;
+		run;
+
+	
   %mend tables;
-  %tables(where = 1, sort = , num = 1, outfile = &prefix.l3_m_i_aggregate, extravar = sex);	/*all aggregate table*/
-  %tables(where = %str(not missing(mpatid)), sort = nodupkey, num = 2, outfile = &prefix.l3_m_i_aggregate_deliv, extravar = InfantsLinked);/*deliveries only*/
+  %tables(where = 1, sort = , num = 1, outfile = &prefix.l3_m_i_aggregate, extravar = sex DaysDiff MatchMethod, 
+		   types = %str(1 2 4 8 16 32 64 128 256 512));	/*all aggregate table*/
+  %tables(where = %str(not missing(mpatid)), sort = nodupkey, num = 2, outfile = &prefix.l3_m_i_aggregate_deliv, extravar = InfantsLinked,
+		   types  = %str(1 2 4 8 16 32 64 128));/*deliveries only*/
 %end;
 	
 %mend createl3table;
@@ -587,7 +531,7 @@
     	select memname, count(memname) into :filelist separated by ' ', :filect trimmed
     	from dictionary.tables
      where libname="DPLOCAL" and (index(memname, "MSTR") = 0 and memname ne "MIL_ALL_L1_FLAGS" and memname ne "MIL_ALL_L1_FLAGS_MSTR"
-								  and memname ne "MIL_L2_MSTR" and memname ne "MIL_ALL_L3_FLAGS_MSTR")  
+								  and memname ne "MIL_L2_MSTR" and memname ne "MIL_ALL_L3_FLAGS_MSTR" and memname ne "MIL_ALL_L2_FLAGS")  
     	;
   	quit;
 

@@ -3,7 +3,7 @@ options linesize=100 pagesize=50;
 /*--------------------------------------------------------------------------------------\
 | PROGRAM NAME: 00.0_mscdm_data_qa_review_master_file.sas                               |
 |                                                                                       |
-| MIL/MIS QA PACKAGE VERSION: 1.0.0                                                             |
+| MIL/MIS QA PACKAGE VERSION: 2.0.0                                                             |
 | DATE: 01/30/2018                                                                      |
 |---------------------------------------------------------------------------------------|
 | PURPOSE:                                                                              |
@@ -86,7 +86,7 @@ options linesize=100 pagesize=50;
 
 /* Edit macro variable MSCC to point to the directory containing the CC file .sas file */
 /* e.g. <full-path>\ms_common_components.sas */
-%let MSCC = B:\mscdm\v6.01\Truven\etl02\sample_1pct\common_components\ms_common_components.sas;
+%let MSCC = <edit-path>/ms_common_components.sas ;
 
 /* Include Common Components */
 %inc "&MSCC" /source2 ;   /* Please do not edit */
@@ -187,7 +187,7 @@ options linesize=100 pagesize=50;
 /*-------------------------------------------------------------------------*/
 /* NOTE: Programmer maintaining the QA code defines the following versions */
 /*-------------------------------------------------------------------------*/
-%let QAVer   = 1.0.0 ;  /* Current QA version needed for signature file */
+%let QAVer   = 2.0.0 ;  /* Current QA version needed for signature file */
 %let SCDMVer = 6.0.2 ;  /* Current SCDM version needed for signature file */
 
 /*-------------------------------------------------------------------------*/

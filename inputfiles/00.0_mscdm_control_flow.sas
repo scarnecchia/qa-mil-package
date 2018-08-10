@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.0_mscdm_control_flow.sas                                                       |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 1.1.1                                                            |                                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 2.0.0                                                            |                                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |
@@ -351,7 +351,7 @@
       %else %do;
         %SIGNATURE_END(&module)          
           proc printto;
-          run ;          
+          run ;    
       %end; 
     %end;
 
@@ -379,6 +379,9 @@
   run;
 
   %if &end_qa.=0 %then %do;
+  	%if "%upcase(&tabid.)" = "MIL" %then %do;
+		%move_l3;
+	%END;
     data _null;
       put 75*'-';
       put ' ';

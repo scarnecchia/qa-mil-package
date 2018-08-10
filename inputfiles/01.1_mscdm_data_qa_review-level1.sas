@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     01.1_mscdm_data_qa_review-level1.sas                                              |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 1.0.0                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 2.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to perform Level 1 data checks on MIL OR MIS       |
@@ -34,37 +34,6 @@
 	  	 %let templib = ds;
 	  %end;
 %mend assignlib;
-
-/*************************************************************************************/
-/** All values that are product of any combination of prime numbers (2,3,5,7,11,13,17) **/  
-/*************************************************************************************/
-%macro prime();
-%let prime = 2 3 5 7 11 13 17;
-data primeproduct;
-   array x[7] (2 3 5 7 11 13 17);
-   length p1-p7 8.;
-   call missing(p1, p2, p3, p4, p5, p6, p7);
-   n=dim(x);
-    primeproduct = 1;
-   %do k = 1 %to 7;
-   	ncomb=comb(n,&k.);
-   	do j=1 to ncomb;
-      call allcomb(j, &k., of x[*]);
-	  %do m = 1 %to &k.;
-	  	 p&m. = x&m.;
-		primeproduct = primeproduct*p&m.;
-	  %end;
-	 output;
-	  primeproduct = 1;
-   end;
-   %end;
-run;
-%global primes;
-proc sql noprint;
-	 select primeproduct into: primes separated by ' '
-	 from primeproduct;
-quit;
-%mend prime;
 
 %macro l1_table;
   %let newtablidlist = &tabidlist. del inf;
@@ -449,7 +418,7 @@ quit;
          , b.flagid
 		 , b.flag_descr
          , monotonic ( ) as row
-    from _lkp (where=(variable="&var.")) as a inner join _flags (where=(checkid in ('121','122','126','130','131','132','133'))) as b
+    from _lkp (where=(variable="&var.")) as a inner join _flags (where=(checkid in ('121','122','126','130','131','133'))) as b
     on lowcase(a.variable)=lowcase(b.variable1)
     ;
   quit;
@@ -515,17 +484,10 @@ quit;
       %let condition=%str(&var. lt &DP_mindate. | &var. gt &DP_maxdate.);
      %let value= put(&var.,mmddyy10.);
     %end;
-  /* Flag [TABID]_1_xx_00-0_132: Check that value must be a product of these primes: 2,3,5,7,11,13 */
-    %else %if &checkid.=132 %then %do;
-	  *Call prime product;
-	  %prime();
-      %let condition=%str(&var. not in (&primes.));
-      %let value=%str(&var. );
-    %end;
-
-	/* Flag [TABID]_1_xx_00-0_132: Check that value must only contain alpha, hyphen or apostrophe */
+ 
+	/* Flag [TABID]_1_xx_00-0_133: Check that value must only contain alpha, hyphen or apostrophe */
     %else %if &checkid.=133 %then %do;
-	   %let newvar = %SYSFUNC(COMPRESS(%LOWCASE(&VAR.), "abcdefjhijklmnopqrstuvwxyz"));
+	   %let newvar = %SYSFUNC(COMPRESS(%LOWCASE(&VAR.), "abcdefghijklmnopqrstuvwxyz"));
 	   %if %length(&newvar.) > 0 %then %do;
         %let condition=%str(notalpha(strip(&var.)) gt 0  | (anyalpha(strip(&var.)) gt 0 & index(strip(&newvar.), "-") eq 0 & index(strip(&newvar.), "'") eq 0
 														  & index(strip(&newvar.), ".") eq 0));

@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.2_mscdm_formats.sas                                                            |
 |                                                                                       |
-|  QA PACKAGE VERSION: 4.0.3                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 2.0.0                                                                     |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store file formats of variables.                 |
@@ -91,6 +91,43 @@ proc format library=dplocal;
   'O'='Overlap'
   'S'='Subset'
   ;
+run;
+
+/*format for daysdiff*/
+proc format library = dplocal;
+	value daysfmt
+	low--31 = "00:< -30 days"
+	-30--11 = "01:-11 through -30 days"
+	-10--4 = "02:-4 through -10 days"
+	-3--1 = "03:-1 through -3 days"
+	0 = "04:0 days"
+    1-3 = "05:1 through 3 days"
+    4-10 = "06:4 through 10 days"
+    11-30 = "07:11 through 30 days"
+	31-high = "08:> 30 days";
+
+	value type1fmt
+	 1 = "MatchMethod"
+	 2 = "DaysDiff"
+	 4 = "sex"
+	 8 = "EncType"
+	 16 = "AgeGroup"
+	 32 = "ICD_Ver"
+	 64 = "YearMonth"
+	 128 = "Year"
+	 256 = "Birth_Type"
+	 512 = "LinkageStatus";
+
+	 value type2fmt
+	 1 = "InfantsLinked"
+	 2 = "EncType"
+	 4 = "AgeGroup"
+	 8 = "ICD_Ver"
+	 16 = "YearMonth"
+	 32 = "Year"
+	 64 = "Birth_Type"
+	 128 = "LinkageStatus";
+
 run;
 
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
