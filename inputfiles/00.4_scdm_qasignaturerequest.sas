@@ -1,15 +1,15 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
-|     00.4_mscdm_qasignaturerequest.sas                                                 |
+|     00.4_scdm_qasignaturerequest.sas                                                  |
 |                                                                                       |
-|  QA PACKAGE VERSION: 4.0.3                                                            |
+|  QA PACKAGE VERSION: 2.1.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create request-level metadata "signature" files  |
 |                                                                                       |
 |---------------------------------------------------------------------------------------|
 |  PROGRAM INPUT:                                                                       |
-|     see 00.0_mscdm_data_qa_review_master_file.sas                                     |
+|     see 00.0_scdm_data_qa_review_master_file.sas                                      |
 |                                                                                       |
 |  PROGRAM OUTPUT:                                                                      |
 |     see Workplan PDF                                                                  |
@@ -25,9 +25,9 @@
 
 /*libname msoc "&msoc.";*/
 
-%MACRO MS_QASIGNATUREREQUEST;
+%MACRO QASIGNATUREREQUEST;
 
-/*--Get the names of all the SIGNATURE files in the MSOC folder--*/
+/*--Get the names of all the SIGNATURE files in the DPLOCAL folder--*/
   data _sigfiles;
    keep fname;
    length filref $8 fname $80; 
@@ -88,13 +88,13 @@ run;
 %DO F = 1 %TO &NFILS;
 
 data _tmp_signature; 
-   length DPID $ 4 SiteID $ 8 MSReqID $ 36 MSProjID $16 MSWPType MSWPID MSDPID MSVerID QAVer SCDMVer 
+   length DP $ 6 ReqID $ 36 ProjID $16 WPType WPID DPID VerID QAVer SCDMVer 
           OSAbbr OSName SASVersion $ 12 SASVersionLong $ 30 RunType NCPU $ 12;
    length Seconds 8; 
    set DPLOCAL.%SCAN(&FLIST,&F) end=eof;
-   retain DPID SiteID MSReqID MSProjID MSWPType MSWPID MSDPID MSVerID QAVer SCDMVer OSAbbr 
+   retain DP ReqID ProjID WPType WPID DPID VerID QAVer SCDMVer OSAbbr 
           OSName SASVersion SASVersionLong RunType NCPU Seconds;
-   keep   DPID SiteID MSReqID MSProjID MSWPType MSWPID MSDPID MSVerID QAVer SCDMVer OSAbbr 
+   keep   DP ReqID ProjID WPType WPID DPID VerID QAVer SCDMVer OSAbbr 
           OSName SASVersion SASVersionLong RunType NCPU Seconds;
 
    length svalue $ 49;
@@ -103,14 +103,13 @@ data _tmp_signature;
 
    svalue = strip(value);
    select (upcase(strip(variable)));
+      when ('DP') DP = svalue;
+      when ('REQID') REQID = svalue;
+      when ('PROJID') PROJID = svalue;
+      when ('WPTYPE') WPTYPE = svalue;
+      when ('WPID') WPID = svalue;
       when ('DPID') DPID = svalue;
-      when ('SITEID') SITEID = svalue;
-      when ('MSREQID') MSREQID = svalue;
-      when ('MSPROJID') MSPROJID = svalue;
-      when ('MSWPTYPE') MSWPTYPE = svalue;
-      when ('MSWPID') MSWPID = svalue;
-      when ('MSDPID') MSDPID = svalue;
-      when ('MSVERID') MSVERID = svalue;
+      when ('VERID') VERID = svalue;
       when ('QAVER') QAVer = svalue;
       when ('SCDMVER') SCDMVer= svalue;
       when ('OSABBR') OSAbbr = svalue;
@@ -156,7 +155,7 @@ proc transpose data=_signatures out=_signature(rename=_NAME_=Variable rename=COL
    var _ALL_;
 run;
 
-data dplocal.&prefix.alltable_signature; 
+data dplocal.alltable_signature_&mi.; 
   set _signature;
   value = strip(value);
   label variable = "Metadata Variable";
@@ -166,9 +165,9 @@ proc datasets lib=work nolist;
    delete _sigfiles _tmp_signature _all_sigs _sig1 _signatures _signature;
 quit;
 
-%mend ms_qasignaturerequest; 
-%ms_qasignaturerequest;
+%mend qasignaturerequest; 
+%qasignaturerequest;
 
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
-*  End 00.4_mscdm_qasignaturerequest.sas                                                ;
+*  End 00.4_scdm_qasignaturerequest.sas                                                 ;
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
