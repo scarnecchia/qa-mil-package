@@ -1,13 +1,13 @@
 /*-------------------------------------------------------------------------------------*\
-|  PROGRAM NAME: 00.1_mscdm_standard_macros.sas                                         |
+|  PROGRAM NAME: 00.1_scdm_standard_macros.sas                                          |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 2.0.0                                                            |
+|  MIL/MIS QA PACKAGE VERSION: 2.1.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store macros used repeatedly in QA programs      |
 |---------------------------------------------------------------------------------------|
 |  PROGRAM INPUT:                                                                       |
-|     see 00.0_mscdm_data_qa_review_master_file.sas                                     |
+|     see 00.0_scdm_data_qa_review_master_file.sas                                      |
 |                                                                                       |
 |  PROGRAM OUTPUT:                                                                      |
 |     see Workplan PDF                                                                  |
@@ -20,45 +20,48 @@
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
 *  PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER           ;
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
-               
-/*********************************************************************************/
-/* START ==> %licensed                                                           */
-/*********************************************************************************/
-/*  Used in Control Flow to determine available SAS products at DP site          */
 
-/*-------------------------------------------------------------------------------*/
-%macro licensed;
-  proc setinit;
-  run;
-  data licensed;
-    %do a=1 %to %sysfunc(countw(&comps.)); 
-      %if %sysprod(%scan(&comps.,&a.))=1 %then %upcase(%scan(&comps.,&a.))=1;
-      %else %if %sysprod(%scan(&comps.,&a.))=-1 %then %upcase(%scan(&comps.,&a.))=-1;
-      %else %if %sysprod(%scan(&comps.,&a.))=0 %then %upcase(%scan(&comps.,&a.))=0;;
-    %end;
-    output;
-  run;
-  proc transpose data=licensed out=_licensed (rename=(_NAME_=Component COL1=Value));
-    var _all_;
-  run;
-  data dplocal.&prefix.licensed (keep=Site Component Status);
-    length Site $6;
-    set _licensed;
-    length Status $25;
-    if value=1 then Status="Licensed";
-    else if value=0 then Status="Not licensed";
-    else if value=-1 then Status="Invalid product";
-    else Status="Other invalid product";
-    Site="&DPID.&SITEID.";
-    label component=' ';
-  run;
-  proc datasets lib=work nodetails nolist;
-    delete licensed _licensed;
-  quit;
-%mend licensed;
-/*-------------------------------------------------------------------------------*/
-/* END ==> %licensed                                                             */
-/*-------------------------------------------------------------------------------*/
+%macro assignlib;
+	*Different libnames for SCDM tables and mil tables. *;
+	%global templib;
+	 %if "%lowcase(&tabid.)" = "mil" or "%lowcase(&tabid.)" = "mis" %then %do; 
+  		%let templib = qadata;
+	  %end;
+	  %else %do;
+	  	 %let templib = mi;
+	  %end;
+%mend assignlib;
+
+/*************************************************************************************/
+/** All values that are product of any combination of prime numbers (2,3,5,7,11,13,17) **/  
+/*************************************************************************************/
+%macro prime();
+%let prime = 2 3 5 7 11 13 17;
+data primeproduct;
+   array x[7] (2 3 5 7 11 13 17);
+   length p1-p7 8.;
+   call missing(p1, p2, p3, p4, p5, p6, p7);
+   n=dim(x);
+    primeproduct = 1;
+   %do k = 1 %to 7;
+   	ncomb=comb(n,&k.);
+   	do j=1 to ncomb;
+      call allcomb(j, &k., of x[*]);
+	  %do m = 1 %to &k.;
+	  	 p&m. = x&m.;
+		primeproduct = primeproduct*p&m.;
+	  %end;
+	 output;
+	  primeproduct = 1;
+   end;
+   %end;
+run;
+%global primes;
+proc sql noprint;
+	 select primeproduct into: primes separated by ' '
+	 from primeproduct;
+quit;
+%mend prime;
 
 /*********************************************************************************/
 /* START ==> %ISDATA                                                             */
@@ -66,7 +69,6 @@
 /*  Macro to determine whether a dataset is empty or not;                        */
 /*-------------------------------------------------------------------------------*/
 %MACRO ISDATA(dataset=);
-
 %PUT =====> MACRO CALLED: ms_macros v1.0 => ISDATA;
 
 	%GLOBAL NOBS;
@@ -80,30 +82,29 @@
 %PUT &NOBS.;
 
 %put NOTE: ********END OF MACRO: ms_macros v1.0 => ISDATA ********;
-
 %MEND ISDATA;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %ISDATA                                                    		     */
+/* END ==> %ISDATA                                                        		     */
 /*-------------------------------------------------------------------------------*/
 
-
 /*********************************************************************************/
-/* START ==> %minmaxdate                                                             */
+/* START ==> %data_ranges                                                       */
 /*********************************************************************************/
-/** Min and Max dates for a dataset**/  
-/*************************************************************************************/
-%macro minmaxdate(variable=,dataset=);
- %global mindate maxdate;
-	proc sql noprint;
-		 select min(&&variable.) as mindate, 
-		 		max(&&variable.) as maxdate 
-		into :mindate,
-			 :maxdate
-		 from ds.&&dataset.;
-	quit;
-%mend minmaxdate;
+/**Minimum and Maximum date ranges for a dataset(note:not derived min/max dates)**/  
+/*********************************************************************************/
+%macro date_ranges (variable= ,dataset= );
+  %global date_min date_max;
+	 proc sql noprint;
+		  select min(&&variable.) as date_min 
+		 	     , max(&&variable.) as date_max 
+		  into :date_min trimmed
+       , :date_max trimmed
+		  from mi.&&dataset.
+    ;
+	 quit;
+%mend date_ranges;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %minmaxdate                                                    		     */
+/* END ==> %date_ranges                                                   		     */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -137,7 +138,7 @@
   options orientation=portrait 
           leftmargin=%str(.75in) rightmargin=%str(.75in) 
           topmargin=%str(.75in) bottommargin=%str(.75in);
-  ods pdf file="&DPLOCAL.&PREFIX.&msdpid._&module..pdf" style=sasweb startpage=now;
+  ods pdf file="&DPLOCAL.&dpid._&module._&mi..pdf" style=sasweb startpage=now;
 %mend ods_printlog_start;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %ods_printlog_start                                                   */
@@ -221,38 +222,37 @@
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
-/* START ==> %add_dpids_ds                                                       */
+/* START ==> %add_dpid_ds                                                        */
 /*********************************************************************************/
-/*  Used in all modules to add DPID and SITEID variables in a data step          */
+/*  Used in all modules to add DP identification variable in a data step         */
 /*-------------------------------------------------------------------------------*/
-%macro add_dpids_ds;
-    length DPID $2. SiteID $4.;
-    retain DPID "&dpid." SiteID "&siteid.";
-%mend add_dpids_ds;
+%macro add_dpid_ds;
+    length DP $6.;
+    retain DP "&dp.";
+%mend add_dpid_ds;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %add_dpids_ds                                                         */
+/* END ==> %add_dpid_ds                                                          */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
-/* START ==> %add_dpids_sql                                                      */
+/* START ==> %add_dpid_sql                                                       */
 /*********************************************************************************/
-/*  Used in all modules to add DPID and SITEID variables in proc sql             */
+/*  Used in all modules to add DP identification variable in proc sql            */
 /*-------------------------------------------------------------------------------*/
-%macro add_dpids_sql;
-    "&dpid." as DPID length=2
-  , "&siteid." as SiteID length=4
-%mend add_dpids_sql;
+%macro add_dpid_sql;
+    "&dp." as DP length=6
+%mend add_dpid_sql;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %add_dpids_sql                                                        */
+/* END ==> %add_dpid_sql                                                         */
 /*-------------------------------------------------------------------------------*/
 
 
 /*********************************************************************************/
-/* START ==> %add_dpids_all_ds                                                   */
+/* START ==> %add_dpid_all_ds                                                    */
 /*********************************************************************************/
-/*  Used in L3 to to add DPID and SITEID to all datasets in specified library    */
+/*  Used in L3 to to add DP identification to all datasets in specified library  */
 /*-------------------------------------------------------------------------------*/
-%macro add_dpids_all_ds (libin=, libout=);
+%macro add_dpid_all_ds (libin=, libout=);
 %local rc ct dsout lib i;
 %let lib=%upcase(&libin.);
   proc sql noprint;
@@ -272,40 +272,42 @@
     quit;
     %if %index(%sysfunc(lowcase(&ds.)), _signature) lt 1 %then %do; /* Exclude signature files */
       %let dsid = %sysfunc(open(&libin..&ds.)); /* assign and open dataset */
-      %let dpid_exist = %qsysfunc(varnum(&dsid.,dpid));  /* populate dpid_exist as variable number */
+      %let dpid_exist = %qsysfunc(varnum(&dsid.,dp));  /* populate dpid_exist as variable number */
       %let rc = %qsysfunc(close(&dsid.)); /* close dataset */
-      %if &dpid_exist = 0 %then %do;    /* Add DPID and SITEID if they do not exist in the dataset */ 
+      %if &dpid_exist = 0 %then %do;    /* Add DP ID if it does not exist in the dataset */ 
         data &libout..&ds.;
-          %add_dpids_ds
+          %add_dpid_ds
           set &libin..&ds.; 
         run;
       %end;
     %end;
   %end;
-%mend add_dpids_all_ds;
+%mend add_dpid_all_ds;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %add_dpids_all_ds                                                     */
+/* END ==> %add_dpid_all_ds                                                      */
 /*-------------------------------------------------------------------------------*/
 
 
 /*********************************************************************************/
-/* START ==> %move_l3                                                   */
+/* START ==> %move_l3                                                            */
 /*********************************************************************************/
-/*  move l3_signature file to the msoc folder if QA is on MIl table 		     */
+/*  move l3_signature file to the msoc folder if QA is on MIL table 		           */
 /*-------------------------------------------------------------------------------*/
 %macro move_l3;
-	%ISDATA(dataset = dplocal.mil_l3_signature);
-	%IF (&NOBS. > 0) %THEN %DO;
-		 	 proc sql noprint;
-     			 create table msoc.mil_l3_signature as
+	 %ISDATA(dataset = dplocal.l3_signature_mil);
+	 %IF (&NOBS. > 0) %THEN %DO;
+		 	proc sql noprint;
+      create table msoc.l3_signature_mil as
  				 select *
-      			from dplocal.mil_l3_signature;
-      			drop table dplocal.mil_l3_signature;
-    		quit;
-	%END;
+      from dplocal.l3_signature_mil
+      ;
+      drop table dplocal.l3_signature_mil
+      ;
+    quit;
+ 	%END;
 %mend move_l3;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %move_l3                                                     */
+/* END ==> %move_l3                                                              */
 /*-------------------------------------------------------------------------------*/
 	
 
@@ -376,7 +378,6 @@
 /*  Used in all table modules to combine datasets based on the specified prefix  */
 /*  but change column length of variable to the max length of all tables         */
 /*-------------------------------------------------------------------------------*/
-
 %macro set_ds_varlength (libin=, dsin_prefix=, libout=, dsout=, lengthvar=);
   %local prect libin dsin_pre vname i j vlen max;
   %let prect=%sysfunc(lengthc(%sysfunc(strip(%str(&dsin_prefix.)))));
@@ -448,13 +449,13 @@
 /*-------------------------------------------------------------------------------*/
 %macro abort_table (checkid=, logmsg=);
   proc sql noprint;
-    create table DPLOCAL.&PREFIX.flags_l1_&tabid. as
+    create table dplocal.flags_l1_&mi._&tabid. as
     select upcase(flagid) as flagid
          , flag_descr
          , flagtype
          , abortYN
          , 99999 as count
-    from infolder.lkp_all_flags (where=(lowcase(tableid)=lowcase("&tabid.") and checkid="&checkid."))
+    from infolder.lkp_mil_flags (where=(lowcase(tableid)=lowcase("&tabid.") and checkid="&checkid."))
     ;
   quit;
   data _null_;
@@ -473,13 +474,13 @@
 /*-------------------------------------------------------------------------------*/
 %macro abort_table2 (checkid=, logmsg=);
   proc sql noprint;
-    create table DPLOCAL.&PREFIX.flags_l1_&checkid._&tabid. as
+    create table DPLOCAL.flags_l1_&mi._&checkid._&tabid. as
     select upcase(a.flagid) as flagid
          , a.flag_descr
          , a.flagtype
          , a.abortYN
          , 99999 as count
-    from infolder.lkp_all_flags a, DPLOCAL.&PREFIX.temp_flag_11x_&tabid. b
+    from infolder.lkp_mil_flags a, DPLOCAL.temp_flag_11x_&tabid. b
 	where a.flagid = b.flagid
 	and lowcase(a.variable1) = lowcase(b.variable)
 	and lowcase(a.tableid)=lowcase("&tabid.") and checkid="&checkid."
@@ -498,9 +499,10 @@
 
 
 
+
 /*********************************************************************************/
 /* START ==> %get_flagid                                                         */
-/*********************************************************************************/
+/***************************************versionMIL ******************************************/
 /*  Used in L2 and table modules to add flagid, etc. to the flags dataset        */
 /*-------------------------------------------------------------------------------*/
 %macro get_flagid (ntabs=, nvars=); 
@@ -590,7 +592,6 @@
 /*  END ==> %get_flagid                                                          */
 /*-------------------------------------------------------------------------------*/
 
-
 /*********************************************************************************/
 /*  START ==> %obs_n_by_counttype                                                */
 /*********************************************************************************/
@@ -622,7 +623,7 @@
     select *      
          , substr(tableid,1,3) as Table1
          , substr(tableid,5,3) as Table2
-    from infolder.lkp_all_flags
+    from infolder.lkp_mil_flags
     where level="&level." 
     %if %lowcase(&abortyn.) ne %str( ) %then %do;
       %str( and lowcase(abortyn)=lowcase("&abortyn.") )
@@ -657,7 +658,7 @@
            , variable 
       into :keyvarlist separated by ' '
          , :group separated by ','
-      from (select * from infolder.lkp_all_l1 (where=(lowcase(tabid)="&tabid.")))
+      from (select * from infolder.lkp_mil_l1 (where=(lowcase(tabid)="&tabid.")))
       where upcase(keyvar)='K'
       ; 
     quit;
@@ -682,12 +683,12 @@
         %if %lowcase(&tabid.)=enr %then %do;
           proc sql noprint;
             select put(count_obs,best12.) into :nobs trimmed
-            from DPLOCAL.all_l1_nobs (where=(lowcase(tabid)=lowcase("&tabid.")))
+            from DPLOCAL.all_l1_nobs_mil (where=(lowcase(tabid)=lowcase("&tabid.")))
             ;
             create table DPLOCAL.l2_nodup_enr as
             select *
                  , count(*)
-            from mscdm.&table. (keep=&keyvarlist.)
+            from qadata.&table. (keep=&keyvarlist.)
             group by &group.
             ;
           quit;
@@ -697,7 +698,7 @@
           proc sql noprint;
             create table temp as
             select count(*) as dups
-            from mscdm.&table. (keep=&keyvarlist.)
+            from qadata.&table. (keep=&keyvarlist.)
             group by &group.
             having calculated dups > 1
             ;
@@ -850,7 +851,7 @@
   proc sql noprint;
     create table tmp_lkp as
     select tabid, variable, varid, varlength
-    from infolder.lkp_all_l1 
+    from infolder.lkp_mil_l1 
     where lowcase(tabid) in (&sql_tabidlist.) and crossvar='X'
     order by variable, tabid
     ;
@@ -893,8 +894,8 @@
         %end;
         %else %do;
           %let varexist=0;
-          %let ds=%str(mscdm.&table.);
-          %let lib=mscdm;
+          %let ds=%str(qadata.&table.);
+          %let lib=qadata;
         %end;
 
         %if varexist=0 %then %do;
@@ -910,7 +911,7 @@
         %end;
 
         proc sql noprint;
-          create table DPLOCAL.&PREFIX.tmp_length_&var._&tabid. as
+          create table DPLOCAL.tmp_length_&var._&tabid. as
           select "&tabid." as TabID length=3
                , "&var." as Variable length=21
                , lengthn(&var.) as ValueLength length=3
@@ -922,7 +923,7 @@
 
         %if %lowcase(&var.)=enctype %then %do;
           proc sql noprint;
-            create table DPLOCAL.&PREFIX.tmp_&var._&tabid. as
+            create table DPLOCAL.tmp_&var._&tabid. as
             select &var.
                  , count as %upcase(&tabid.) format=comma15.
             from DPLOCAL._&varid._&tabid.
@@ -933,7 +934,7 @@
         %end;
         %else %do;
           proc sql noprint;
-            create table DPLOCAL.&PREFIX.tmp_&var._&tabid. as
+            create table DPLOCAL.tmp_&var._&tabid. as
             select &var.
                  , '1' as %upcase(&tabid.) length=1
             from DPLOCAL._&varid._&tabid. (keep=&var.)
@@ -946,15 +947,15 @@
 
    /* finish below to create temporary varmatch by var tables */
       proc sql noprint;
-        create table DPLOCAL.&PREFIX.tmp_lkp_&var. as
+        create table dplocal.tmp_lkp_&var. as
         select distinct substr(tableid,1,3) as TabID1
              , substr(tableid,5,3) as TabID2
              , count(distinct calculated tabid1) as tablecount
-        from infolder.lkp_all_flags (where=(variable1="&var." and checkid in ("201","202")))
+        from infolder.lkp_mil_flags (where=(variable1="&var." and checkid in ("201","202")))
         group by 2
         ;
         select distinct tabid2, count(distinct tabid2) into :baselist separated by " ", :basect trimmed
-        from DPLOCAL.&PREFIX.tmp_lkp_&var.
+        from dplocal.tmp_lkp_&var.
         where lowcase(tabid1) in (&sql_tabidlist.)
         ;
       quit;
@@ -1205,12 +1206,12 @@
              , "&var2." as variable2 length=21
              , "&tabid1." as table1 
              , "&tabid2." as table2
-        from mscdm.&table1. (keep=patid &var1. where=(&var1. ne .)) as a full join
+        from qadata.&table1. (keep=patid &var1. where=(&var1. ne .)) as a full join
         %if %lowcase(&tabid2.) = %str(enr) %then %do;
           %str(dplocal.l2_nodup_enr (keep=patid &var2.))
         %end;
         %else %do;
-          %str(mscdm.&table2. (keep=patid &var2. where=(&var2. ne .)) )
+          %str(qadata.&table2. (keep=patid &var2. where=(&var2. ne .)) )
         %end;
         as b
         on a.patid=b.patid
@@ -1309,7 +1310,7 @@
           %str(dplocal.enr_invalid_dates (keep=&var1. &var2.))
         %end;
         %else %do;
-          %str(mscdm.&table. (keep=&var1. &var2. where=(&var1. ne . and &var2. ne . and &var1. &comp. &var2.)))
+          %str(qadata.&table. (keep=&var1. &var2. where=(&var1. ne . and &var2. ne . and &var1. &comp. &var2.)))
         %end;
         ;
       quit;
@@ -1522,7 +1523,7 @@
       quit;
 
       %table_name (n= );
-      %let dsin=mscdm.&table.;
+      %let dsin=qadata.&table.;
 
       %l2_flags_200_207;
 
@@ -1840,7 +1841,7 @@
 /*********************************************************************************/
 /* PROC MEANS WITH NWAY CLASS 1 VARIABLE ONLY + SPECIFIC FORMAT FOR THAT CLASSVAR*/
 /*********************************************************************************/
-%macro mscdm_means_nway_format_sum 
+%macro scdm_means_nway_format_sum 
   (libin=,dsin=,libout=,dsout=,keepvars=,vars=,classvars=,names=,format=,formatvar=,numobs=);
   proc means nway noprint data=&libin..&dsin.(obs=&numobs. keep=&keepvars.) missing;
     var &vars.;
@@ -1849,7 +1850,7 @@
     format &formatvar. &format..;
   run;
   %remove_labels(&libout.,&dsout.);
-%mend mscdm_means_nway_format_sum;
+%mend scdm_means_nway_format_sum;
 
 
 /*********************************************************************************/
@@ -1907,14 +1908,13 @@ data _NULL_;
 run;
 /*Create signature file*/
 data signature;
-   DPID="&DPID.";                                    
-   SiteID="&SITEID.";                                   
-   MSReqID="&MSReqID.";
-   MSProjID="&MSProjID.";
-   MSWPType="&MSWPType.";
-   MSWPID="&MSWPID.";
-   MSDPID="&MSDPID.";
-   MSVerID="&MSVerID.";
+   DP="&DP.";                                                                    
+   ReqID="&ReqID.";
+   ProjID="&ProjID.";
+   WPType="&WPType.";
+   WPID="&WPID.";
+   DPID="&DPID.";
+   VerID="&VerID.";
    QAVer="&QAVer.";
    SCDMVer="&SCDMVer.";
    Module="&MODULE."; 
@@ -1933,10 +1933,10 @@ data signature;
    output;
 run;
 
-proc transpose data=signature out=dplocal.&prefix.&MODULE._signature (rename=(_NAME_=Variable COL1=Value));
+proc transpose data=signature out=dplocal.&MODULE._signature_&mi. (rename=(_NAME_=Variable COL1=Value));
    var _ALL_;
 run;
-%remove_labels(dplocal,&prefix.&module._signature);
+%remove_labels(dplocal,&module._signature_&mi.);
 %MEND SIGNATURE_END; 
 
 
@@ -2195,7 +2195,7 @@ run;
   /* 2-C Save Final Dataset */
     options mergenoby=nowarn ;
     data msoc.MinMax_Dates;     
-      %add_dpids_ds
+      %add_dpid_ds
        merge minDate (keep=DP_MinDate)
            maxDate (keep=DP_MaxDate)
            transposed_minDates (drop= _:)
@@ -2291,5 +2291,5 @@ run;
 %mend get_dir_file_names ;
 
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
-* End 00.1_mscdm_standard_macros.sas                                              ;
+* End 00.1_scdm_standard_macros.sas                                               ;
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
