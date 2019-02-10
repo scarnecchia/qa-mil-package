@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.3_scdm_sas_log_checker_directory_cc.sas                                        |
 |                                                                                       |
-|    MA QA PACKAGE VERSION: 1.1.1                                                            |
+|    MA QA PACKAGE VERSION: 2.1.0                                                       |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to pull SAS LOG files from a user-specified         |
@@ -23,9 +23,6 @@
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
 *  PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER           ;
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
-
-
-
 
 data _null_;
   call symput('datestamp',put(datepart(datetime()),date9.));
@@ -69,7 +66,7 @@ run;
   data logs(keep=fname);
     set filenames;
     fname=strip(memname);
-    where index(upcase(memname),'.LOG');
+    where index(upcase(memname),"&dt_today..LOG");
   run;
 
   proc sql noprint;
@@ -167,7 +164,7 @@ run;
   ods _all_ close;
   options nonumber;
   ods escapechar="^";
-  ods pdf file="&dirname./&dpid.&siteid._mscdm_data_qa_logcheck.pdf" style=statdoc;
+  ods pdf file="&dirname./&dpid._scdm_data_qa_logcheck.pdf" style=statdoc;
   title1 "Summary of Log Messages for Directory &dirname.";
   title2 "Report Run Date: &DateStamp.";
   title3 " ";
