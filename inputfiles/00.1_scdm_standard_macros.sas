@@ -88,23 +88,57 @@ quit;
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
-/* START ==> %data_ranges                                                       */
+/* START ==> %copy_rename_ds                                                     */
 /*********************************************************************************/
-/**Minimum and Maximum date ranges for a dataset(note:not derived min/max dates)**/  
-/*********************************************************************************/
-%macro date_ranges (variable= ,dataset= );
-  %global date_min date_max;
-	 proc sql noprint;
-		  select min(&&variable.) as date_min 
-		 	     , max(&&variable.) as date_max 
-		  into :date_min trimmed
-       , :date_max trimmed
-		  from mi.&&dataset.
-    ;
-	 quit;
-%mend date_ranges;
+/*  Macro to copy and rename a dataset                                           */
 /*-------------------------------------------------------------------------------*/
-/* END ==> %date_ranges                                                   		     */
+%macro copy_rename_ds (libin=, dsin=, libout=, dsout=);
+  data &libout..&dsout.;
+    set &libin..&dsin.;
+  run;
+%mend copy_rename_ds;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %copy_rename_ds                                                		     */
+/*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
+/* START ==> %licensed                                                           */
+/*********************************************************************************/
+/*  Used in Control Flow to determine available SAS products at DP site          */
+/*-------------------------------------------------------------------------------*/
+%macro licensed;
+  proc setinit;
+  run;
+  %let ct=%sysfunc(countw(&comps,*));
+
+  proc sql noprint;
+   create table _licensed
+       (Component char(15),
+        temp num (3))
+
+   ;    
+   insert into _licensed
+   %do a=1 %to &ct.; 
+     values("%scan(%unquote(&comps),&a,*)", %sysprod(%scan(%unquote(&comps),&a,*)))
+   %end;
+   ;
+ quit;
+
+ proc sql noprint;
+   create table msoc.licensed as
+   select upcase(component) as Component
+        , case when temp=1 then "Licensed"
+               when temp=0 then "Not licensed"
+               when temp=-1 then "Invalid product"
+               else "Invalid product"
+          end as Status length=25
+   from _licensed
+   ;    
+ quit;
+
+%mend licensed;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %licensed                                                             */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -113,6 +147,7 @@ quit;
 /*  Deletes all existing SAS datasets if {dir}=y in Master program               */
 /*-------------------------------------------------------------------------------*/
 %macro kill_directory (kill_list=);
+  %local k;
   %do k=1 %to %sysfunc(countw(&kill_list.));
     %let dir=%scan(&kill_list.,&k.);
     %let kill=&&kill_dir_&dir.;
@@ -125,6 +160,26 @@ quit;
 %mend kill_directory;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %kill_directory                                                       */
+/*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
+/* START ==> %data_ranges                                                       */
+/*********************************************************************************/
+/**Minimum and Maximum date ranges for a dataset(note:not derived min/max dates)**/  
+/*********************************************************************************/
+%macro date_ranges (variable= ,dataset= );
+  %global date_min date_max;
+	 proc sql noprint;
+		  select min(&&variable.)  
+		 	     , max(&&variable.)
+		  into :date_min trimmed
+       , :date_max trimmed
+		  from qadata.&&dataset.
+    ;
+	 quit;
+%mend date_ranges;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %date_ranges                                                   		     */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -157,7 +212,6 @@ quit;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %ods_printlog_end                                                     */
 /*-------------------------------------------------------------------------------*/
-
 
 /*********************************************************************************/
 /* START ==> %timestamp                                                          */
@@ -455,7 +509,7 @@ quit;
          , flagtype
          , abortYN
          , 99999 as count
-    from infolder.lkp_mil_flags (where=(lowcase(tableid)=lowcase("&tabid.") and checkid="&checkid."))
+    from infolder.lkp_all_flags (where=(lowcase(tableid)=lowcase("&tabid.") and checkid="&checkid."))
     ;
   quit;
   data _null_;
@@ -480,7 +534,7 @@ quit;
          , a.flagtype
          , a.abortYN
          , 99999 as count
-    from infolder.lkp_mil_flags a, DPLOCAL.temp_flag_11x_&tabid. b
+    from infolder.lkp_all_flags a, DPLOCAL.temp_flag_11x_&tabid. b
 	where a.flagid = b.flagid
 	and lowcase(a.variable1) = lowcase(b.variable)
 	and lowcase(a.tableid)=lowcase("&tabid.") and checkid="&checkid."
@@ -623,7 +677,7 @@ quit;
     select *      
          , substr(tableid,1,3) as Table1
          , substr(tableid,5,3) as Table2
-    from infolder.lkp_mil_flags
+    from infolder.lkp_all_flags
     where level="&level." 
     %if %lowcase(&abortyn.) ne %str( ) %then %do;
       %str( and lowcase(abortyn)=lowcase("&abortyn.") )
@@ -658,7 +712,7 @@ quit;
            , variable 
       into :keyvarlist separated by ' '
          , :group separated by ','
-      from (select * from infolder.lkp_mil_l1 (where=(lowcase(tabid)="&tabid.")))
+      from (select * from infolder.lkp_all_l1 (where=(lowcase(tabid)="&tabid.")))
       where upcase(keyvar)='K'
       ; 
     quit;
@@ -851,7 +905,7 @@ quit;
   proc sql noprint;
     create table tmp_lkp as
     select tabid, variable, varid, varlength
-    from infolder.lkp_mil_l1 
+    from infolder.lkp_all_l1 
     where lowcase(tabid) in (&sql_tabidlist.) and crossvar='X'
     order by variable, tabid
     ;
@@ -886,7 +940,7 @@ quit;
         %let varid=%scan(&varidlist.,&b.);
         %table_name (n=);
         %local rc dsid varexist ds lib;
-    /* check and use existing datasets if variable exists, otherwise create new extracts from mscdm.{table} */
+    /* check and use existing datasets if variable exists, otherwise create new extracts from SCDM.{table} */
         %if %sysfunc(exist(DPLOCAL._&varid._&tabid.)) %then %do;
           %let varexist=1;
           %let ds=%str(DPLOCAL._&varid._&tabid.);
@@ -951,7 +1005,7 @@ quit;
         select distinct substr(tableid,1,3) as TabID1
              , substr(tableid,5,3) as TabID2
              , count(distinct calculated tabid1) as tablecount
-        from infolder.lkp_mil_flags (where=(variable1="&var." and checkid in ("201","202")))
+        from infolder.lkp_all_flags (where=(variable1="&var." and checkid in ("201","202")))
         group by 2
         ;
         select distinct tabid2, count(distinct tabid2) into :baselist separated by " ", :basect trimmed
@@ -1949,12 +2003,12 @@ run;
 * NAME:  ms_min_max_dates.sas
 *
 * PURPOSE:  
-*   Calculates min/max dates of data completeness for MSCDM Core tables and  
+*   Calculates min/max dates of data completeness for SCDM Core tables and  
 *   stores results in a SAS dataset.  This data will be used by Common-Components 
 *   to populate the MinDate and MaxDate parameters.
 *
 * MAJOR STEPS: 
-*   1- For each MSCDM Core table, use metadata from QA results to 
+*   1- For each SCDM Core table, use metadata from QA results to 
 *      A- calculate MaxDate as the largest date with at least X% of the prior 
 *         year-month row    
 *      B- calculate MinDate as the smallest date with at least X% of the next
@@ -1966,8 +2020,8 @@ run;
 *      C- create final dataset by merging datasets from Step 2-A and Step 2-B 
 *
 * KEY DEPENDENCIES/CONSTRAINTS:
-*   - Externally defined macro variables DPID and SITEID
-*   - Access to Infolder.lkp_all_minmax_dates that defines key macro variables
+*   - Externally defined macro variable &DP
+*   - Access to infolder.lkp_all_minmax_dates that defines key macro variables
 *   - Access to QA datasets with record counts by year-month
 *   - Date algorithm may not work well with all types of distributions 
 *     (Example: a distribution with a large drop proceeded or followed by a long 
