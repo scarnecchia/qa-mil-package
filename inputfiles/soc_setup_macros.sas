@@ -2,9 +2,10 @@
 /* Sentinel package of SAS macros to assist with environment setup      */
 /*                                                                      */
 /*   List of macros included in package                                 */
-/*     - SOC_CLEAN_PATHS  ... cleans & validates path-name(s)           */
-/*     - SOC_DIREXIST ... checks if directory exists                    */
-/*     - SOC_LIB ... conditionally assigns libname                      */
+/*     - SOC_CLEAN_PATHS... cleans & validates path-name(s)             */
+/*     - SOC_DIREXIST... checks if directory exists                     */
+/*     - SOC_LIB... conditionally assigns libname                       */
+/*     - SOC_QUOTEPATH... creates a quoted list of paths                */
 /*                                                                      */
 /*----------------------------------------------------------------------*/
 * CONTACT INFO: 
@@ -50,7 +51,6 @@
 	 %end ;
 
   /* remove any double spaces in the paths list and replace with single space */
-/*  %qcmpres(&paths)*/
   %let paths=%qsysfunc(translate(&paths,%str(/),%str(\)));
 
   %do j=1 %to %qsysfunc(countw(&paths.,%str( )));
@@ -87,8 +87,8 @@
   *------------------------------------------------------------------------------
   * HISTORY:
   *  Create date (mm/dd/yy):  08/27/13
-  *  Last modified date (mm/dd/yy): 
-  *  Verison: 1
+  *  Last modified date (mm/dd/yy): 01/31/19
+  *  Verison: 2
   *
   *  CHANGE LOG: 
   *
@@ -98,6 +98,7 @@
   *                        shared by Adrien Vallee (see below).  The original macro
   *                        has been modified to clear the filref after use.  It  
   *                        also issues abort cancel if dir is blank.
+  *      2      01/31/19   Renamed to "soc_direxists"
   *                        
   **********************************************************************************/  	  
   /* Original Author: Adrien Vallee */	
@@ -115,7 +116,9 @@
    %let rc = %qsysfunc(filename(fileref)) ;  
 %mend soc_dirExist;
 
-
+/* Create a quoted list from a space-delimited list of path names  
+   in order to concatenate paths for %soc_lib macro */
+/* e.g. list=/pathA/ /pathB/ ==> list="/pathA/" "/pathB/"  */
 %macro soc_quotepath(list);
   %local j d_exist path_ct path subpath temppath;
   %let list_ct=%qsysfunc(countw(&list,%str( )));
