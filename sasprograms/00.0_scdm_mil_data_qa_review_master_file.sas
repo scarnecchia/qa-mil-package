@@ -51,9 +51,9 @@ options linesize=100 pagesize=50;
 *        soc_setup_macros.sas
 * 
 *     Lookup tables:
-*        control_flow_mil.sas7bdat
-*        lkp_mil_flags.sas7bdat
-*        lkp_mil_l1.sas7bdat
+*        control_flow.sas7bdat
+*        lkp_all_flags.sas7bdat
+*        lkp_all_l1.sas7bdat
 *
 *   PROGRAM OUTPUT:  See documentation in DOCs subfolder of this request
 *            
@@ -110,7 +110,7 @@ options linesize=100 pagesize=50;
 /*-------------------------------------------------------------------------------------*/
 /* SECTION 1: Data Partner/Data Site programmer defines parameters in this section.			 */
 /*-------------------------------------------------------------------------------------*/
-/* 1a. Define path(s) to location of staged SCDM tables under review
+/* 1a. Define path to location of staged SCDM tables under review
        Example: %let Evaluate_MIL= //sentinel/etl22/PhaseB/ */
   %let Evaluate_MIL= <edit-path>/ ;
 
