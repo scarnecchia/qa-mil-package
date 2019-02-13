@@ -38,7 +38,7 @@ options linesize=100 pagesize=50;
 *        
 *     STAGED MIL SCDM table:
 *        qadata.MILTable (mother_infant_linkage)
-*	
+* 
 *     SAS programs:
 *        00.0_scdm_mil_control_flow.sas
 *        00.1_scdm_mil_standard_macros.sas
@@ -108,7 +108,7 @@ options linesize=100 pagesize=50;
 *---------------------------------------------------------------------------------------;
 
 /*-------------------------------------------------------------------------------------*/
-/* SECTION 1: Data Partner/Data Site programmer defines parameters in this section.			 */
+/* SECTION 1: Data Partner/Data Site programmer defines parameters in this section.    */
 /*-------------------------------------------------------------------------------------*/
 /* 1a. Define path to location of staged SCDM tables under review
        Example: %let Evaluate_MIL= //sentinel/etl22/PhaseB/ */
@@ -122,7 +122,7 @@ options linesize=100 pagesize=50;
 /* 1c. Specify the name of the staged SCDM MIL table, not including .sas7bdat. A default
        value has been entered. Edit if ETL-specific name is used at your site         
        Example: %let _MILTABLE= mother_infant_linkage;                                 */
-	 %let _MILTABLE= mother_infant_linkage;
+   %let _MILTABLE= mother_infant_linkage;
 
 /* 1d. Edit macro variable SCC to point to the directory containing the executed Phase A
        Common Components (CC) request associated with this ETL, INCLUDING the request-id. 
@@ -134,53 +134,53 @@ options linesize=100 pagesize=50;
 /* 1e. OPTIONAL: Organizations WITHOUT Common Components define parameters in this 
        section, leaving STEP 1d. above blank.                                          */
 
-	  /* _DP is a descriptive identifier for your organization. Specify a 3-6 UPPERCASE 
+    /* _DP is a descriptive identifier for your organization. Specify a 3-6 UPPERCASE 
       character abbreviation for _DP. Example: %let DP=ABCDE ;                         */
-	     %let _DP= ;
+       %let _DP= ;
 
-  	/* Specify the location of this request package, containing the 4 subfolders: dplocal,
+    /* Specify the location of this request package, containing the 4 subfolders: dplocal,
       msoc, inputfiles, and sasprograms */  
- 	 /* Example: %let packageroot = A:/sentinel/qa_mil_package/                          */
-	     %let _packageroot = ;
+   /* Example: %let packageroot = A:/sentinel/qa_mil_package/                          */
+       %let _packageroot = ;
 
-	  /* Specify the file path to the location of your Phase A Sentinel Common Data Model 
+    /* Specify the file path to the location of your Phase A Sentinel Common Data Model 
       (SCDM) datasets.  Example: %let prod_scdm=A:/sentinel/etl1/phaseA/scdm/ ;        */
-	     %let prod_scdm= ;
+       %let prod_scdm= ;
 
-	  /* The following metadata describe characteristics of your SCDM. If known, modify the
-      following parameters:		   
+    /* The following metadata describe characteristics of your SCDM. If known, modify the
+      following parameters:      
       /* DP_MinDate: Specify the overall SCDM minimum date in the format "DDMMMYYYY"d 
                      Default value is "01Jan2000"d                                     */
       %let _DP_MinDate="01Jan2000"d ;
 
       /* DP_MaxDate: Specify the overall SCDM maximum date in the format "DDMMMYYYY"d 
                     Default value is today's date (e.g. "&sysdate."d)                  */
-	     %let _DP_MaxDate = "&sysdate."d ;
+       %let _DP_MaxDate = "&sysdate."d ;
 
       /* ETL: Please enter the ETL version # for your current Phase A production SCDM. 
-              Default is 1	                                                            */
-     	%let _ETL_ = 1;
+              Default is 1                                                              */
+      %let _ETL_ = 1;
 
-     	/* Specify the name of each of the Sentinel Common Data Model tables, if different
+      /* Specify the name of each of the Sentinel Common Data Model tables, if different
          from the default values entered. Do NOT include '.sas7bdat'. DO NOT leave blank.
-         Example: %let _ENRTABLE=enrollment ;												                              */
-	     %let _ENRTABLE=enrollment;  *specify the enrollment table name    *;
-	     %let _DEMTABLE=demographic; *specify the demographic table name   *;
-	     %let _DISTABLE=dispensing;  *specify the rx dispensing table name *;
-	     %let _ENCTABLE=encounter;   *specify the encounter table name     *;
-      %let _DIATABLE=diagnosis;   *specify the diagnosis table name     *;
-	     %let _PROCTABLE=procedure;  *specify the procedure table name     *;
+         Example: %let _ENRTABLE=enrollment ;                                          */
+       %let _ENRTABLE=enrollment;  *specify the enrollment table name *;
+       %let _DEMTABLE=demographic; *specify the demographic table name *;
+       %let _DISTABLE=dispensing;  *specify the rx dispensing table name *;
+       %let _ENCTABLE=encounter;   *specify the encounter table name *;
+       %let _DIATABLE=diagnosis;   *specify the diagnosis table name *;
+       %let _PROCTABLE=procedure;  *specify the procedure table name *;
 
     /****************************************************************************\
-	     The following tables are optional. Leave BLANK if they are not available 
+       The following tables are optional. Leave BLANK if they are not available 
         at your site (DO NOT COMMENT OUT).
-	   \****************************************************************************/
-	     %let _DEATHTABLE=;		*specify the death table name          		  *;
-	     %let _CODTABLE=;    	*specify the cause of death table name 		  *; 
-	     %let _LABTABLE=;     	*specify the lab result table name     		  *;
-	     %let _VITTABLE=;     	*specify the vital signs table name    		  *;
-	     %let _IPHARMTABLE=;		*specify the inpatient pharmacy table name 	  *;
-	     %let _ITRANSTABLE=;  	*specify the inpatient transfusion table name *;
+     \****************************************************************************/
+       %let _DEATHTABLE=; *specify the death table name               *;
+       %let _CODTABLE=;   *specify the cause of death table name      *; 
+       %let _LABTABLE=;   *specify the lab result table name          *;
+       %let _VITTABLE=;   *specify the vital signs table name         *;
+       %let _IPHARMTABLE=; *specify the inpatient pharmacy table name    *;
+       %let _ITRANSTABLE=; *specify the inpatient transfusion table name *;
 
 /********************************** END OF SECTION 1 ***********************************/
 
@@ -209,9 +209,9 @@ options linesize=100 pagesize=50;
    %let VerID  = <edit-version> ;
  
    /* Create request-id delimiter - Default is underscore (_)                          */
-   %let dlm = _ ;  /* Do not edit */     
+   %let dlm = _ ;  /* Do not edit */  
 
-     /* Specify ETL # for this request (i.e., Same ETL # for Phase A SCDM tables)      */
+   /* Specify ETL # for this request (i.e., Same ETL # for Phase A SCDM tables)        */
    %let _ETL = <edit-ETL-#> ;
 
 ****************************************************************************************
@@ -241,6 +241,9 @@ options validvarname = v7;
 proc datasets lib=work kill memtype=data nolist nodetails;
 quit;
 
+/* Request-ID (must be lower case) */
+%let ReqID = %lowcase(&ProjID.&dlm.&WPType.&dlm.&WPID.&dlm.&DPID.&dlm.&VerID);
+
 /* Delete macro variable used as delimiter as no longer needed */
 %symdel dlm ;
 
@@ -249,30 +252,25 @@ quit;
   /*-----------------------------------------------------------------------------------*/
   /* If common components specified, define all file paths                             */
   /*-----------------------------------------------------------------------------------*/
-  %if "&SCC." ne " " %then %do;
+  %if %str("&SCC.") ne %str("") %then %do;
     %let ccbypass=N;
-    %global reqid;
-    /* Request-ID (must be lower case) */
-    %let ReqID = %lowcase(&ProjID.&dlm.&WPType.&dlm.&WPID.&dlm.&DPID.&dlm.&VerID);
-    /* Include Common Components */
-    %inc "&SCC./inputfiles/cc_utility/cc_macvars.sas" /nosource2 ;
-	  %end;
+    %inc "&SCC./inputfiles/cc_utility/cc_macvars.sas" /nosource2 ; /* Include CC  */
+  %end;
   /*-----------------------------------------------------------------------------------*/
   /* If common components NOT specified, define all file paths and CC macro parameters */
   /*-----------------------------------------------------------------------------------*/
-  %else %if "&SCC." = " " %then %do;
+  %else %if %str("&SCC.") = %str("") %then %do;
     %let ccbypass=Y;
   /*-----------------------------------------------------------------------------------*/
   /* Define all macro parameters as global - DO NOT EDIT                               */
-	   %global etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
+    %global etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
             enrtable demtable distable enctable diatable proctable  
             deathtable codtable labtable vittable ipharmtable itranstable phase miltable;
   /*-----------------------------------------------------------------------------------*/
     %inc "&_packageroot./inputfiles/soc_setup_macros.sas" /nosource2;
-
     /* Assign Macro variables*/
     %let dp=&_dp;
-	   %let etl=&_etl_;
+    %let etl=&_etl_;
     %let _etl=&_etl_;
     %let dp_mindate=_dp_mindate;
     %let dp_maxdate=_dp_maxdate;
@@ -289,11 +287,11 @@ quit;
     %let ipharmtable= &_ipharmtable;
     %let itranstable= &_itranstable;
 
-	 /* Define request specific subdirectories */
-	   %let DPLOCAL = %soc_clean_paths(&_packageroot./dplocal/) ;
-	   %let MSOC = %soc_clean_paths(&_packageroot./msoc/) ;         
-	   %let INFOLDER = %soc_clean_paths(&_packageroot./inputfiles/) ;
- 	  %let SASPROGRAMS = %soc_clean_paths(&_packageroot./sasprograms) ;
+   /* Define request specific subdirectories */
+    %let DPLOCAL = %soc_clean_paths(&_packageroot./dplocal/) ;
+    %let MSOC = %soc_clean_paths(&_packageroot./msoc/) ;         
+    %let INFOLDER = %soc_clean_paths(&_packageroot./inputfiles/) ;
+    %let SASPROGRAMS = %soc_clean_paths(&_packageroot./sasprograms) ;
     %let INDATA=%soc_clean_paths(&prod_scdm) ;
 
     %soc_lib(INDATA, &INDATA, options=%str(access=readonly))
@@ -303,7 +301,7 @@ quit;
 
 /* Clean up path (e.g. convert/add slashes if necessary) and validate that path exist */
 %let QADATA = %soc_clean_paths(&Evaluate_MIL. &DPL_MI) ;
-	
+  
 /* Assign libnames */
 /* %soc_lib(libref-name, path-name, options=%str(options-name=options-value)) */
 %soc_lib(DPLOCAL,&DPLOCAL)
