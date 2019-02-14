@@ -35,6 +35,8 @@ options linesize=100 pagesize=50;
 *        indata.CODTable   (cause_of_death, if available)
 *        indata.LabTable   (laboratory_results, if available)
 *        indata.VitTable   (vital_signs, if available)
+*        indata.iPharmtable (inpatient pharmacy, if available)
+*        indata.iTranstable (inpatient transfusion, if available)
 *        
 *     STAGED MIL SCDM table:
 *        qadata.MILTable (mother_infant_linkage)
