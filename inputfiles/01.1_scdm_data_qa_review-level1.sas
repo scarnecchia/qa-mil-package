@@ -9,7 +9,7 @@
 |     tables.                                                                           |                                              
 |---------------------------------------------------------------------------------------|
 |  PROGRAM INPUT:                                                                       |
-|     see 00.0_scdm_data_qa_review_master_file.sas                                      |
+|     see 00.0_scdm_mil_data_qa_review_master_file.sas                                  |
 |                                                                                       |
 |  PROGRAM OUTPUT:                                                                      |
 |     see Workplan PDF                                                                  |
@@ -28,14 +28,14 @@
   %let newtablidlist = &tabidlist. del inf;
   %let numtables = %sysfunc(countw(&newtablidlist.));
   %do j = 1 %to &numtables.;
-  		%let tabid=%scan(&newtablidlist.,&j.);
+    %let tabid=%scan(&newtablidlist.,&j.);
     %table_name (n= );
-		  %if &j. = 1 %then %do;
-		 	  %ds_exist_delete (lib=dplocal, ds=l1_cont_&tabid.);
-  	  	%ds_exist_delete (lib=dplocal, ds=l1_scdm_comp_&tabid.);
-  	  	%ds_exist_delete (lib=dplocal, ds=l1_record_count_&tabid.);
- 		   %ds_exist_delete (lib=dplocal, ds=l1_flags_&tabid.);
-	  	%end;
+    %if &j. = 1 %then %do;
+      %ds_exist_delete (lib=dplocal, ds=l1_cont_&tabid.);
+      %ds_exist_delete (lib=dplocal, ds=l1_scdm_comp_&tabid.);
+      %ds_exist_delete (lib=dplocal, ds=l1_record_count_&tabid.);
+      %ds_exist_delete (lib=dplocal, ds=l1_flags_&tabid.);
+    %end;
 /*************************************************************************************/
 /** 100 - Confirm that the table exists                                             **/
 /*************************************************************************************/
@@ -48,7 +48,7 @@
     %let abort_table=%eval(&abort_table.+1);
     %abort_table (checkid=100, 
                     logmsg=%nrstr(The %sysfunc(upcase(&table.)) table cannot be found!) );
-  	 %end;
+    %end;
 
   %else %do; 
 /*************************************************************************************/
@@ -59,7 +59,7 @@
     %let dsid=%sysfunc(open(qadata.&table.));
 
     %if &memtype.=data %then %let numobs=%sysfunc(attrn(&dsid.,nlobs));
-   	%else %do;
+    %else %do;
       data _null_;
         dsid = open("qadata.&table.", 'is');
         do while (fetch(dsid, 'noset') = 0);
@@ -67,38 +67,38 @@
         end;
         call symput('numobs',n);
         rc = close(dsid);
-       	stop;
+        stop;
       run;
     %end;
 
     %let nobs=%sysfunc(putn(&numobs.,comma18.));
-    	 data _null_;
-      	 put 70*'=';
-      	 put "===>  Number of observations in the &tabid. table: &nobs." ;
-      	 put 70*'=';
-    	 run;
+      data _null_;
+        put 70*'=';
+        put "===>  Number of observations in the &tabid. table: &nobs." ;
+        put 70*'=';
+      run;
 
-    	 data DPLOCAL.nobs_&tabid.;
+      data DPLOCAL.nobs_&tabid.;
         TabID=upcase("&tabid.");   
-      	 MemType="&memtype.";
-      	 Count_Obs=input(&numobs.,comma18.);
-    	 run;
+        MemType="&memtype.";
+        Count_Obs=input(&numobs.,comma18.);
+      run;
 
-    	 %if &numobs. le 1 %then %do;  
-      	 %let abort_table=%eval(&abort_table.+1);
-      	 %abort_table (checkid=101, 
+      %if &numobs. le 1 %then %do;  
+        %let abort_table=%eval(&abort_table.+1);
+        %abort_table (checkid=101, 
                    logmsg=%nrstr(The %sysfunc(upcase(&table.)) table contains &numobs. records)
                    );
-    	 %end;
-  	 %end;
+      %end;
+    %end;
   %end;
 %mend l1_table;
 
 /***************************************************************************************/
-/* Check ETL number in dataset label		                                                 */
+/* Check ETL number in dataset label                                                   */
 /***************************************************************************************/
 %macro etlcheck;
-	/* Check ETL number from a dataset and check it against common components */
+ /* Check ETL number from a dataset and check it against common components */
   %global ETLdata;
   %let ETLdata = ;
   %let tabid=%scan(&tabidlist.,&a.);
@@ -106,12 +106,12 @@
     proc contents data = mil.&&&tabid.table out = etlnum (keep = memlabel);
     run;
 
-  	 data etlnum;
-  	   set etlnum;
-	     if _N_ = 1;
-	     if not missing(memlabel) and upcase(substr(strip(memlabel),1,3)) = "ETL" then 
-	     call symputx("etldata", substr(strip(memlabel),4));
- 	  run;
+    data etlnum;
+      set etlnum;
+      if _N_ = 1;
+      if not missing(memlabel) and upcase(substr(strip(memlabel),1,3)) = "ETL" then 
+      call symputx("etldata", substr(strip(memlabel),4));
+    run;
    
     %put =====>&etldata.;
 
@@ -127,7 +127,7 @@
     run;
 
     %if "&ETLdata." = "" | %sysevalf(&ETLdata.-&ETL. ne 0) %then %do;
-	     proc sql noprint;
+      proc sql noprint;
         create table DPLOCAL.flags_l1_&tabid. as
         select upcase(flagid) as flagid
              , flag_descr
@@ -153,13 +153,13 @@
         putlog 80*'!';
         putlog ' '; 
       run;   
-	     %let abort_table=1;
+      %let abort_table=1;
     %end ;
     %else %do;
       data &logdir..etl_version;  
         length ETL_: 8.;
         ETL_CC=&ETL.;
-	       ETL_&tabid. = &etldata.;
+        ETL_&tabid. = &etldata.;
       run; 
     %end;
   %end;
@@ -246,7 +246,7 @@
       flagid=strip(upcase("&tabid._&level._"||varid||"_00-0_110"));
       count=99999;
       Value='NA';
-	  call symputx("flag110",1);
+   call symputx("flag110",1);
       output;
     end;    
     else do; /* Exclude missing SCDM variables from the remainder of the L1 checks */
@@ -255,7 +255,7 @@
         flagid=strip(upcase("&tabid._&level._"||varid||"_00-0_112"));
         count=1;
         Value=dp_type;
-		call symputx("flag112",1);
+  call symputx("flag112",1);
         output;
       end;
   /* 113: Check SCDM compliance for variable length */
@@ -263,7 +263,7 @@
         flagid=strip(upcase("&tabid._&level._"||varid||"_00-0_113"));
         count=99999;
         value=put(dp_length,3.);
-		call symputx("flag113",1);
+  call symputx("flag113",1);
         output;
       end;          
     end;
@@ -401,7 +401,7 @@
          , a.flagcondition
          , b.checkid
          , b.flagid
-		 , b.flag_descr
+   , b.flag_descr
          , monotonic ( ) as row
     from _lkp (where=(variable="&var.")) as a inner join _flags (where=(checkid in ('121','122','126','130','131','133'))) as b
     on lowcase(a.variable)=lowcase(b.variable1)
@@ -422,13 +422,13 @@
          , varlength
          , flagcondition
          , flagid
-		 , flag_descr
+   , flag_descr
          , checkid
     into :vtype
        , :vlength trimmed
        , :cond trimmed
        , :flagid trimmed
-	   , :flag_descr trimmed
+    , :flag_descr trimmed
        , :checkid trimmed
     from lkp_temp
     where row=&d.
@@ -442,11 +442,11 @@
     proc sql noprint;
       create table DPLOCAL.temp_flag_&checkid._&varid. as
       select "&flagid." as FlagID length=21
-	  	   , "&flag_descr." as Flag_Descr length=255 
+       , "&flag_descr." as Flag_Descr length=255 
            , strip("&var.") as Variable length=21
            , &var. as Value
-		   , MPatID
-		   , CPatID
+     , MPatID
+     , CPatID
       from DPLOCAL._&varid._&tabid. (where=(%unquote(&cond.)))
       ;
     quit; 
@@ -470,29 +470,29 @@
      %let value= put(&var.,mmddyy10.);
     %end;
  
-	/* Flag [TABID]_1_xx_00-0_133: Check that value must only contain alpha, hyphen or apostrophe */
+ /* Flag [TABID]_1_xx_00-0_133: Check that value must only contain alpha, hyphen or apostrophe */
     %else %if &checkid.=133 %then %do;
-	   %let newvar = %SYSFUNC(COMPRESS(%LOWCASE(&VAR.), "abcdefghijklmnopqrstuvwxyz"));
-	   %if %length(&newvar.) > 0 %then %do;
+    %let newvar = %SYSFUNC(COMPRESS(%LOWCASE(&VAR.), "abcdefghijklmnopqrstuvwxyz"));
+    %if %length(&newvar.) > 0 %then %do;
         %let condition=%str(notalpha(strip(&var.)) gt 0  | (anyalpha(strip(&var.)) gt 0 & index(strip(&newvar.), "-") eq 0 & index(strip(&newvar.), "'") eq 0
-														  & index(strip(&newvar.), ".") eq 0));
-	   %end;
-	  %else %do;
-	  	 %let condition=%str(notalpha(strip(&var.)) gt 0);
-	  %end;
-		
+                & index(strip(&newvar.), ".") eq 0));
+    %end;
+   %else %do;
+     %let condition=%str(notalpha(strip(&var.)) gt 0);
+   %end;
+  
       %let value=%str(&var. );
     %end;
-	
+ 
     proc sql noprint;
       create table DPLOCAL.temp_flag_&checkid._&varid. as
             select distinct "&flagid." as FlagID length=21
-				 ,"&flag_descr." as Flag_Descr length=255 
+     ,"&flag_descr." as Flag_Descr length=255 
                  ,strip("&var.") as Variable length=21
                  ,&value. as Value
-				 ,%if "%upcase(%sysfunc(substr(&var., 1, 1)))" = "C" %then CPatID;
-		   	 	  %else %if "%upcase(%sysfunc(substr(&var., 1, 1)))" = "M" & "%lowcase(&var.)" ne "matchmethod" %then MPatID;
-			 	 %else MPatID, CPatID;
+     ,%if "%upcase(%sysfunc(substr(&var., 1, 1)))" = "C" %then CPatID;
+          %else %if "%upcase(%sysfunc(substr(&var., 1, 1)))" = "M" & "%lowcase(&var.)" ne "matchmethod" %then MPatID;
+      %else MPatID, CPatID;
       from DPLOCAL._&varid._&tabid.(where=(&condition.))
       ;
     quit;
@@ -547,7 +547,7 @@
   
   %do a=1 %to &tabct.;
     %l1_table;
-	%etlcheck;
+ %etlcheck;
   %end; /* End of loop A */
 
   %set_ds (libin=dplocal, dsin_prefix=nobs_, libout=dplocal, dsout=all_l1_nobs);
@@ -559,10 +559,10 @@
   %else %do;
     %do b=1 %to &tabct.;
       %l1_variable;
-	  %if &abort_table. ne 0 %then %do;
-	  	 %set_ds (libin=dplocal, dsin_prefix=flags_l1_, libout=dplocal, dsout=all_l1_flags);
-  		%end;
-	  %else %do;
+   %if &abort_table. ne 0 %then %do;
+     %set_ds (libin=dplocal, dsin_prefix=flags_l1_, libout=dplocal, dsout=all_l1_flags);
+    %end;
+   %else %do;
       %do c=1 %to &varct.;
         %let checkct=0;
         %l1_value;
@@ -584,7 +584,7 @@
       /* Combine Level 1 temporary datasets into one dataset for each table */  
       %set_ds(libin=dplocal, dsin_prefix=temp_l1_recct_, libout=dplocal, dsout=l1_record_count_&tabid.);
       *%set_ds_varlength (libin=dplocal, dsin_prefix=l1_flags_, libout=dplocal, dsout=l1_tmp_flags_&tabid., lengthvar=Value);
-	%end; *end of the table did not abort;
+ %end; *end of the table did not abort;
     %end;/* end of loop b - by table */
  %end;
 /***************************************************************************************/
@@ -611,16 +611,16 @@
     %if %eval(&temp_nobs. gt 0) %then %do;
 
     *Save the patient-level file;
-	  proc sql noprint;
+   proc sql noprint;
       create table DPLOCAL.all_l1_flags_mstr as
       select distinct b.flagid
            , b.flag_descr
            , b.flagtype
            , b.abortYN           
            , b.variable1
-		         , a.value
+           , a.value
            , a.Mpatid 
-		         , a.CPatid          
+           , a.CPatid          
       from DPLOCAL.temp_flags as a left join infolder.lkp_all_flags (where=(level='1' and lowcase(flagYN)='y')) as b
         on lowcase(a.flagid)=lowcase(b.flagid)
       order by flagid
@@ -628,13 +628,13 @@
     quit;
 
 
-  	*Summarize temp_flags;
-  	 proc sql noprint;
-	 	   create table temp_flags as
-		    select flagid, variable, value, count(*) as count
-		    from DPLOCAL.temp_flags
-		    group by flagid, variable, value;
-	   quit;
+   *Summarize temp_flags;
+    proc sql noprint;
+      create table temp_flags as
+      select flagid, variable, value, count(*) as count
+      from DPLOCAL.temp_flags
+      group by flagid, variable, value;
+    quit;
 
  
     proc sql noprint;
@@ -659,10 +659,10 @@
   %end; *end of temps;
   %end; *end of table abort;
   %if &abort_table. ne 0 %then %do;
-  	/* Delete unnecessary DPLOCAL datasets */
-	   proc datasets lib=dplocal nolist nowarn nodetails;
-  		  delete &prefix.temp_flag_11: ;
-	   quit;
+   /* Delete unnecessary DPLOCAL datasets */
+    proc datasets lib=dplocal nolist nowarn nodetails;
+      delete &prefix.temp_flag_11: ;
+    quit;
   %end;
 
   %if %sysfunc(exist(DPLOCAL.all_l1_flags)) %then %do;

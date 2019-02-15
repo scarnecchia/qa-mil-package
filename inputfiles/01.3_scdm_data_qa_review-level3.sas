@@ -8,7 +8,7 @@
 |     all SCDM tables                                                                   |
 |---------------------------------------------------------------------------------------|
 |  PROGRAM INPUT:                                                                       |
-|     see 00.0_scdm_data_qa_review_master_file.sas                                      |
+|     see 00.0_scdm_mil_data_qa_review_master_file.sas                                  |
 |                                                                                       |
 |  PROGRAM OUTPUT:                                                                      |
 |     see Workplan PDF                                                                  |
