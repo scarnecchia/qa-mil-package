@@ -270,12 +270,13 @@ quit;
             deathtable codtable labtable vittable ipharmtable itranstable phase miltable;
   /*-----------------------------------------------------------------------------------*/
     %inc "&_packageroot./inputfiles/soc_setup_macros.sas" /nosource2;
+
     /* Assign Macro variables*/
     %let dp=&_dp;
     %let etl=&_etl_;
     %let _etl=&_etl_;
-    %let dp_mindate=_dp_mindate;
-    %let dp_maxdate=_dp_maxdate;
+    %let dp_mindate=&_dp_mindate;
+    %let dp_maxdate=&_dp_maxdate;
     %let enrtable= &_enrtable;
     %let demtable= &_demtable;
     %let distable= &_distable;
