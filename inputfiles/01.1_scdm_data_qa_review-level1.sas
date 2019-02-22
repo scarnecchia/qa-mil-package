@@ -102,8 +102,8 @@
   %global ETLdata;
   %let ETLdata = ;
   %let tabid=%scan(&tabidlist.,&a.);
-  %IF %SYSFUNC(EXIST(mil.&&&tabid.table)) %THEN %DO;
-    proc contents data = mil.&&&tabid.table out = etlnum (keep = memlabel);
+  %IF %SYSFUNC(EXIST(qadata.&&&tabid.table)) %THEN %DO;
+    proc contents data = qadata.&&&tabid.table out = etlnum (keep = memlabel);
     run;
 
     data etlnum;
