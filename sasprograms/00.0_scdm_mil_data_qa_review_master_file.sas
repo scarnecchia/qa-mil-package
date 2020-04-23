@@ -25,18 +25,21 @@ options linesize=100 pagesize=50;
 *
 *   PROGRAM INPUT:
 *     PRODUCTION SCDM tables that MIL table is derived from:
-*        indata.EnrTable   (enrollment)
-*        indata.DemTable   (demographic)
-*        indata.DisTable   (dispensing)
-*        indata.EncTable   (encounter)
-*        indata.DiaTable   (diagnosis)
-*        indata.ProcTable  (procedure)
-*        indata.DeathTable (death, if available)
-*        indata.CODTable   (cause_of_death, if available)
-*        indata.LabTable   (laboratory_results, if available)
-*        indata.VitTable   (vital_signs, if available)
+*        indata.EnrTable    (enrollment)
+*        indata.DemTable    (demographic)
+*        indata.DisTable    (dispensing)
+*        indata.EncTable    (encounter)
+*        indata.DiaTable    (diagnosis)
+*        indata.ProcTable   (procedure)
+*        indata.FacTable    (facility)
+*        indata.PvdTable    (provider)
+*        indata.DeathTable  (death, if available)
+*        indata.CODTable    (cause_of_death, if available)
+*        indata.LabTable    (laboratory_results, if available)
+*        indata.VitTable    (vital_signs, if available)
 *        indata.iPharmtable (inpatient pharmacy, if available)
 *        indata.iTranstable (inpatient transfusion, if available)
+*        indata.PreTable    (prescribing, if available)
 *        
 *     STAGED MIL SCDM table:
 *        qadata.MILTable (mother_infant_linkage)
@@ -66,8 +69,8 @@ options linesize=100 pagesize=50;
 *
 *----------------------------------------------------------------------------------------
 * HISTORY:
-*  Create date (mm/dd/yy): 05/01/2020
-*  Last modified date (mm/dd/yy): NA
+*  Create date (mm/dd/yy): 10/2018
+*  Last modified date (mm/dd/yy): 05/01/2020
 *  Version: 3.0.0
 *
 ****************************************************************************************/
@@ -293,7 +296,7 @@ quit;
     %let distable= &_distable;
     %let enctable= &_enctable;
     %let diatable= &_diatable;
-    %let proctable= &proctable;
+    %let proctable= &_proctable;
     %let deathtable= &_deathtable;
     %let codtable= &_codtable;
     %let labtable= &_labtable;
@@ -303,6 +306,11 @@ quit;
     %let pretable= &_pretable;
     %let factable= &_factable;
     %let pvdtable= &_pvdtable;
+
+    %symdel _etl _dp _dp_mindate _dp_maxdate _scdmver
+            _enrtable _demtable _distable _enctable _diatable _proctable _deathtable  
+            _codtable _labtable _vittable _ipharmtable _itranstable _phase
+            _pretable _pvdtable _factable;
 
    /* Define request specific subdirectories */
     %let DPLOCAL = %soc_clean_paths(&_packageroot./dplocal/) ;
