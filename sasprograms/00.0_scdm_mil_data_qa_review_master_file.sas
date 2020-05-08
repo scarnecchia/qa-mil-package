@@ -277,7 +277,7 @@ quit;
     %let ccbypass=Y;
   /*-----------------------------------------------------------------------------------*/
   /* Define all macro parameters as global - DO NOT EDIT                               */
-    %global etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
+    %global etl _etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
             enrtable demtable distable enctable diatable proctable deathtable  
             codtable labtable vittable ipharmtable itranstable phase miltable scdmver
             pretable pvdtable factable;
@@ -287,7 +287,7 @@ quit;
     /* Assign Macro variables*/
     %let dp=&_dp;
     %let etl=&_etl_;
-    %let _etl=&_etl_;
+    %let _etl=&_etl;
     %let scdmver=&_scdmver;
     %let dp_mindate=&_dp_mindate;
     %let dp_maxdate=&_dp_maxdate;
@@ -307,7 +307,7 @@ quit;
     %let factable= &_factable;
     %let pvdtable= &_pvdtable;
 
-    %symdel _etl _dp _dp_mindate _dp_maxdate _scdmver
+    %symdel  _dp _dp_mindate _dp_maxdate _scdmver
             _enrtable _demtable _distable _enctable _diatable _proctable _deathtable  
             _codtable _labtable _vittable _ipharmtable _itranstable _phase
             _pretable _pvdtable _factable;
