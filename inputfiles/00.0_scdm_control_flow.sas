@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.0_scdm_control_flow.sas                                                        |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 2.1.0                                                    |                                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |                                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |
@@ -73,9 +73,9 @@
   
  /* Setup Log */
   proc sql;
-  	 select module into :mi trimmed
-	 	 from infolder.control_flow 
-		  where cc_table ne "X" and execute_flag = "Y";
+     select module into :mi trimmed
+         from infolder.control_flow 
+          where cc_table ne "X" and execute_flag = "Y";
   quit;
 
   %if "&mi." = "mil" %then %let logdir = msoc; 
@@ -87,20 +87,20 @@
   run; quit;
 
 /***************************************************************************/
-/*   Checks ETL number and PHASE for consistency with CCR/CCA request      */	
+/*   Checks ETL number and PHASE for consistency with CCR/CCA request      */   
 /***************************************************************************/
   data _null_;
     putlog 75*'*';
     putlog ' ';
     putlog "=====> Current Production ETL/Phase from CC: &ETL.&phase.";
     putlog ' ';
-    putlog "=====> Expected ETL/Phase for this QA review: &ETL.B";
+    putlog "=====> Expected ETL/Phase for this QA review: &_ETL.B";
     putlog ' ';
     putlog 75*'*';
     putlog ' ';
   run;
 
-  %if %unquote(&_ETL.&phase) ne %unquote(&ETL.B) %then %do;
+  %if %unquote(&ETL.&phase) ne %unquote(&_ETL.B) %then %do;
     data _null_;
       putlog 80*'!';
       putlog ' ';
@@ -172,24 +172,24 @@
  
 
 /***************************************************************************/
-/*   Checks (1, 2, 3) prior to Module runs	                                */	
+/*   Checks (1, 2, 3) prior to Module runs                                  */  
 /***************************************************************************/
 /*1. Include check to ensure MIL and MIS never queried together 
     during single package run*/
-	 proc sql noprint;
-		  select count(module)
-		       , count(cc_table)
-			      , lowcase(cc_table)
-		  into :Nmod trimmed, 
-		       :Ncctable trimmed,
-			      :querytable trimmed			 
-	  	from infolder.control_flow
-		  where upcase(execute_flag) eq "Y" and upcase(cc_table) ne "X"
+     proc sql noprint;
+          select count(module)
+               , count(cc_table)
+                  , lowcase(cc_table)
+          into :Nmod trimmed, 
+               :Ncctable trimmed,
+                  :querytable trimmed            
+        from infolder.control_flow
+          where upcase(execute_flag) eq "Y" and upcase(cc_table) ne "X"
     ;
-	 quit;
+     quit;
 
   %if &Nmod. gt 1 | &Ncctable. gt 1 %then %do;
-	   data _null_;
+       data _null_;
       putlog 80*'!';
       putlog ' ';
       putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in CONTROL_FLOW";      
@@ -204,47 +204,47 @@
  /*If MIS variable is found in MIL table, abort the process*/ 
   %else %do; 
     %if "&querytable." eq "miltable" %then %do;
-  	   proc sql noprint;
-		      select variable into :mis_vars separated by " "
-		      from infolder.lkp_all_l1 a
-		      where upcase(a.Tabid) = "MIS" and 15 <= input(varid, 8.0) <= 25
+       proc sql noprint;
+              select variable into :mis_vars separated by " "
+              from infolder.lkp_all_l1 a
+              where upcase(a.Tabid) = "MIS" and 15 <= input(varid, 8.0) <= 25
         ;
       quit; 
-	     %let misflag = 0; /*initialize*/
-	     data _null_;
-		      set qadata.&miltable.;
-		      if _n_ = 1 then do;
-		 	      count = 0;
-		        dsid = open("qadata.&miltable.");
-		 	  %do i = 1 %to %sysfunc(countw(&mis_vars.));
-		 		   %let varname = %scan(&mis_vars., &i.);
-		 		     if varnum(dsid,"&varname") > 0 then do;
-					       count = count + 1;
-				        call symputx("misflag", count);
-				      end;
-		    %end;
-			       rc= close(dsid);
-		      end;
-	       drop rc dsid;	
-	     run;
-	     %IF %EVAL(&misflag.) GT 0 %THEN %DO;
-	  	    data _null_;
-      	   putlog 90*'!';
-      	   putlog ' ';
-      	   putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in MIL TABLE";      
-      	   putlog "==> The &miltable. contains &misflag. MI support variables";
-		        putlog "==> Please include the correct table. QA process is aborting.";
-      	   putlog ' '; 
-      	   putlog 90*'!';
-    	   run; 
+         %let misflag = 0; /*initialize*/
+         data _null_;
+              set qadata.&miltable.;
+              if _n_ = 1 then do;
+                  count = 0;
+                dsid = open("qadata.&miltable.");
+              %do i = 1 %to %sysfunc(countw(&mis_vars.));
+                   %let varname = %scan(&mis_vars., &i.);
+                     if varnum(dsid,"&varname") > 0 then do;
+                           count = count + 1;
+                        call symputx("misflag", count);
+                      end;
+            %end;
+                   rc= close(dsid);
+              end;
+           drop rc dsid;    
+         run;
+         %IF %EVAL(&misflag.) GT 0 %THEN %DO;
+            data _null_;
+           putlog 90*'!';
+           putlog ' ';
+           putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in MIL TABLE";      
+           putlog "==> The &miltable. contains &misflag. MI support variables";
+                putlog "==> Please include the correct table. QA process is aborting.";
+           putlog ' '; 
+           putlog 90*'!';
+           run; 
         %abort cancel 99 ;  
-	     %end;	
+         %end;  
     %end; /*end if querytable is MIL*/
-  %end; /*end of #2*/	
+  %end; /*end of #2*/   
 
 /*3.include logic to remove MSOC libname assignment from package that runs against MIS*/
   %if "&querytable." eq "mistable" %then %do;
- 	  libname msoc clear;
+      libname msoc clear;
   %end;
 
 /*Create licensed product file*/
@@ -455,9 +455,9 @@
   run;
 
   %if &end_qa.=0 %then %do;
-  	 %if "%upcase(&tabid.)" = "MIL" %then %do;
-		    %move_l3;
-	   %end;
+     %if "%upcase(&tabid.)" = "MIL" %then %do;
+            %move_l3;
+       %end;
     data _null;
       put 75*'-';
       put ' ';
@@ -465,7 +465,7 @@
       put "==> We will now wrap up by creating a master signature file and running the log checker." ;
       put ' ';
       put 75*'-';
-    run;	
+    run;    
   %end;
     
   %local rc1 ;
