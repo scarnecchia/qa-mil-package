@@ -126,18 +126,6 @@
       putlog ' ';
     run;
 
-    %if "&ETLdata." = "" | %sysevalf(&ETLdata.-&ETL. ne 0) %then %do;
-      proc sql noprint;
-        create table DPLOCAL.flags_l1_&tabid. as
-        select upcase(flagid) as flagid
-             , flag_descr
-             , flagtype
-             , abortYN
-             , 99999 as count
-        from infolder.lkp_all_flags (where=(lowcase(tableid)=lowcase("&tabid.") and checkid="102"))
-        ;
-      quit;
-
       data _null_;
         putlog 80*'!';
         putlog 'ERR'"OR: ";
