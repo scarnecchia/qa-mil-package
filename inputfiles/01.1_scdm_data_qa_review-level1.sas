@@ -126,6 +126,7 @@
       putlog ' ';
     run;
 
+  %if "&ETLdata." = "" | %sysevalf(&ETLdata.-&ETL. ne 0) %then %do;
       data _null_;
         putlog 80*'!';
         putlog 'ERR'"OR: ";
