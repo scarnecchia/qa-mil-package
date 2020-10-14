@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.3_scdm_sas_log_checker_directory_cc.sas                                        |
 |                                                                                       |
-|    MA QA PACKAGE VERSION: 2.1.0                                                       |
+|    MA QA PACKAGE VERSION: 3.0.0                                                       |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to pull SAS LOG files from a user-specified         |

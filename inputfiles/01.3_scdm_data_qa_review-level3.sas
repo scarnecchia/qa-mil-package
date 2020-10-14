@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 01.3_scdm_data_qa_review-level3.sas                                    |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 2.1.0                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create cross-table level 3 output datasets for   |

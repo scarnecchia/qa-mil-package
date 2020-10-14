@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 00.1_scdm_standard_macros.sas                                          |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 2.1.0                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store macros used repeatedly in QA programs      |

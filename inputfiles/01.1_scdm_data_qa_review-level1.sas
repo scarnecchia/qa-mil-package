@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     01.1_scdm_data_qa_review-level1.sas                                               |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 2.1.0                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to perform Level 1 data checks on MIL OR MIS       |
