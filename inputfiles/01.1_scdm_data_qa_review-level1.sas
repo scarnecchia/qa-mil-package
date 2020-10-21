@@ -1,8 +1,11 @@
+/* Direct log to module log in the msoc folder */
+proc printto log=modlog;
+run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     01.1_scdm_data_qa_review-level1.sas                                               |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |
+|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to perform Level 1 data checks on MIL OR MIS       |
@@ -39,26 +42,27 @@
 /*************************************************************************************/
 /** 100 - Confirm that the table exists                                             **/
 /*************************************************************************************/
-  %let memtype=null;
+    %let memtype=null;
 
-  %if %sysfunc(exist(qadata.&&table.,data)) %then %let memtype=data;
-  %else %if %sysfunc(exist(qadata.&&table.,view)) %then %let memtype=view;
+    %if %sysfunc(exist(qadata.&&table.,data)) %then %let memtype=data;
+    %else %if %sysfunc(exist(qadata.&&table.,view)) %then %let memtype=view;
 
-  %if &memtype.=null %then %do;
-    %let abort_table=%eval(&abort_table.+1);
-    %abort_table (checkid=100, 
+    %if &memtype.=null %then %do;
+      %let abort_loop= 1;
+      %let abort_table=%eval(&abort_table.+1);
+      %abort_table (checkid=100, 
                   logmsg=%nrstr(The %sysfunc(upcase(&table.)) table cannot be found!) );
     %end;
 
-  %else %do; 
+    %if %eval(&abort_loop.= 0) %then %do; *if no abend, run check 101;
 /*************************************************************************************/
 /** 101 - Confirm that the table is populated                                       **/  
 /*************************************************************************************/
     %local dsid numobs rc;
     %let numobs=0;
     %let dsid=%sysfunc(open(qadata.&table.));
-
     %if &memtype.=data %then %let numobs=%sysfunc(attrn(&dsid.,nlobs));
+
     %else %do;
       data _null_;
         dsid = open("qadata.&table.", 'is');
@@ -84,14 +88,70 @@
         Count_Obs=input(&numobs.,comma18.);
       run;
 
-      %if &numobs. le 1 %then %do;  
+      %if &numobs. lt 1 %then %do;  
         %let abort_table=%eval(&abort_table.+1);
+        %let abort_loop = 1;
         %abort_table (checkid=101, 
                    logmsg=%nrstr(The %sysfunc(upcase(&table.)) table contains &numobs. records)
                    );
       %end;
-    %end;
-  %end;
+    %end; /* end abort_loop=0 condition */
+ 
+    %if %eval(&j) = 1 %then %do;
+
+      %if %eval(&abort_loop.= 0) %then %do; /*if no abend, run check 102 */
+/*************************************************************************************/
+/** 102 - Confirm correct table sort order                                          **/  
+/*************************************************************************************/
+        %local sortvarlist sortOrderFlag;
+
+        proc sql noprint;
+          select variable
+            into :sortvarlist separated by " "
+          from infolder.lkp_all_l1 (where=(lowcase(tabid) = "&tabid." and 
+                                            not missing(sortorder)))
+          order by sortorder;
+          ;
+        quit;
+
+        * redirect log output of sort test in temp log file to be parsed;
+        filename sortlog "&dplocal.&tabid._sortchk.log";
+        proc printto log = sortlog new;
+        run;
+
+        proc sort data = qadata.&table(keep=&sortvarlist.) presorted out= _null_;
+          by &sortvarlist.;
+        run; 
+
+        * return log to default module log;
+        proc printto;* log = modlog; run;
+
+        %let sortOrderFlag= 0;
+        /* pull NOTES from temp log file to see if sort was verified */
+        data _null_;
+          length lines $80;
+          infile sortlog dlm='|';
+          input lines $;
+          if lowcase(substr(lines,1,5)) = "note:";
+          if find(lowcase(lines),"input data set is not in sorted order") then
+            call symput('sortOrderFlag','1');
+        run;      
+
+        /* if sort order is verified then delete temp log output */
+        %if %eval(&sortOrderFlag.) = 0 %then %do;
+          %let rc=%sysfunc(fdelete(sortlog));
+        %end;
+
+        /* if sort order not verified then retain log file and abort_table */
+        %if %eval(&sortOrderFlag) > 0 %then %do;
+          %let abort_table=%eval(&abort_table.+1);
+          %abort_table (checkid=102, 
+                 logmsg=%nrstr(The %sysfunc(upcase(&table.)) table is not sorted!)
+                   );
+        %end;
+      %end; /* end abort_loop=0 condition to run check 102 */
+    %end; /* end j=1 condition */
+  %end; /* end j loop */
 %mend l1_table;
 
 /***************************************************************************************/
@@ -145,7 +205,7 @@
       %let abort_table=1;
     %end ;
     %else %do;
-      data &logdir..etl_version;  
+      data msoc.etl_version;  
         length ETL_: 8.;
         ETL_CC=&ETL.;
         ETL_&tabid. = &etldata.;
@@ -167,13 +227,12 @@
     from infolder.lkp_all_flags (where=(lowcase(tableid)=lowcase("&tabid.") and level='1'))
     ;
   quit;
-
-  *assign different libnames;
-  %assignlib;
         
 /* Create proc contents file and output to dplocal */
   proc contents data=qadata.&table. out=l1_cont_temp noprint;
   run;
+
+  %table_size (libin=QADATA, dsin=&table., libout=work, dsout=l1_size_temp);  
 
   data DPLOCAL.l1_cont_&tabid.;
     length TABID $3;
@@ -188,7 +247,6 @@
     drop table l1_cont_temp
     ;
    quit;
-   %put &nobs.;
 
 /* Create table to check for SCDM variable-level compliance based on proc contents output */
   proc sql noprint;
@@ -248,7 +306,7 @@
         output;
       end;
   /* 113: Check SCDM compliance for variable length */
-      if ms_length ne 255 and ms_length ne dp_length then do;
+      if ms_length ne 0 and ms_length ne dp_length then do;
         flagid=strip(upcase("&tabid._&level._"||varid||"_00-0_113"));
         count=99999;
         value=put(dp_length,3.);
@@ -260,40 +318,35 @@
     keep flagid variable value count;
   run;
 
-  /*All Level 1 checks for variables including existence, type, and length are performed and, if any major issues are detected 
-    the process will abort*/
-  %macro abortmsmg(id=, msg=);
-   %if &&flag&id.. eq 1 %then %do;  
-      %let abort_table=%eval(&abort_table.+1);
-      %abort_table2 (checkid=&id., 
-                   logmsg=%nrstr(The %sysfunc(upcase(&table.)) &msg.)
-                   );
-    %end;
-  %mend abortmsmg;
-  %abortmsmg(id = 110, msg = %quote(has missing columns));
-  %abortmsmg(id = 112, msg = %quote(has one or more variable type that does not conform with Specification ));
-  %abortmsmg(id = 113, msg = %quote(has one or more variable length that does not conform with Specification ));
-
+  
   proc sql noprint;
     create table _lkp1 as
     select b.*
-         , case when (a.ms_length ne 255 and a.ms_length ne a.dp_length) then 'y'
+         , case when (a.dp_var="N") or (a.dp_length = .) OR 
+                     (a.ms_type ne a.dp_type) then 'y1'
+                when (a.ms_length ne 0) AND 
+                     (a.ms_length ne a.dp_length) then 'y2'
                 else 'n' 
-           end as exclude  
-    from DPLOCAL.l1_scdm_comp_&tabid. (where=(ms_var="Y" and dp_var="Y" and ms_type=dp_type)) as a 
+           end as exclude length=2  
+    from DPLOCAL.l1_scdm_comp_&tabid. (where=(ms_var="Y")) as a 
       left join infolder.lkp_all_l1 (where=(lowcase(tabid)=lowcase("&tabid."))) as b
     on a.var=b.variable
     order by b.varid
     ;
-    create table _lkp as
-    select *, monotonic ( ) as row
-    from _lkp1
-    ; 
-    drop table _lkp1
-    ;
-    select count(*) into :varct from _lkp
-    ;
-  quit; 
+    quit;
+
+    /* ascertain checks for l1_value macro */
+    proc sql noprint;
+      create table _lkp as
+        select *, monotonic ( ) as row
+      from _lkp1
+      ; 
+      drop table _lkp1
+      ;
+      select count(*) into :varct from _lkp
+      ;
+    quit;
+ 
 %mend l1_variable;
 
 
@@ -301,123 +354,160 @@
 /* 3 - Value-level L1 checks                                                           */
 /***************************************************************************************/
 %macro l1_value;
+/* SCDM v8.0.0 determine if valid var type = special_missing and 
+   add condition to check special missing values*/
   %local i;
   proc sql noprint;
     select varid
          , variable
          , exclude
+         , case when lowcase(ValidValueType) = "special_missing" then cat(trim(variable), " > .") 
+            else cat("not missing(", trim(variable),")") end 
     into :varid trimmed
        , :var trimmed
        , :exc trimmed
+       , :kcond trimmed
     from _lkp where row=&c.
     ;
   quit;
+  %if &exc. ne y1 %then %do;
+  /* initialize variable for count of populated (non-null) values */
+    %let popobs = 0;
+  /* initialize variable for count of non-null, non-special missing values */ 
+    %let nomiss=0;
+  /* initialize variable for count of special missing values */
+    %let spmiss=0;
+  /* initialize variable for count of null values */
+    %let miss=0;
+    %let flagct=0;
+    %let nodata=0;
 
-  %let notmiss=0;
-  proc sql noprint;
-    create table DPLOCAL._&varid._&tabid. as
-    select *
-    from qadata.&table. (keep= MPatID CPatID &var. where=(not missing(&var.)))
-    ; 
-  quit;
-  %let nomiss=&sqlobs.; 
-  %let miss=0;
-  %let flagct=0;
-  %let nodata=0;
-  %remove_labels(dplocal, _&varid._&tabid.);
+    proc sql noprint;
+      create table dplocal._&varid._&tabid. as
+        select *
+      from qadata.&table. (keep= mpatid cpatid &var.)
+      where &kcond.
+      ;
+    quit;
+    /* obtain the count of populated obs */
+    %let popobs = &sqlobs;
 
-  proc sql noprint;
-    create table DPLOCAL.temp_l1_recct_&varid. as
-    select upcase("&tabid.") as TabID length=3
-         , "&varid" as Varid length=2
-         , "&var." as Variable length=21
-         , input("&nomiss.",18.) as count format=comma18.
-         , count_obs-input("&nomiss.",18.) as Count_Null label="Null Record Count" format=comma18.
-         , (count_obs-input("&nomiss.",18.))/count_obs*100 as pct_null format=8.2 label="Percent Null"
-    from DPLOCAL.all_l1_nobs
-    where lowcase(tabid)="&tabid."
-    ;
-    select count_null, pct_null into :miss trimmed, :pct_null trimmed
-    from DPLOCAL.temp_l1_recct_&varid.
-    ;
-    create table _flags1 as
-    select *
-    from _flags (where=(varid="&varid."))
-    order by checkid
-    ;
-    select checkid, abortyn, count(checkid) into :flagslist separated by ' ', :abortlist separated by ' ', :flagct trimmed
-    from _flags1 (where=(checkid in ("111","120")))
-    ;
-  quit;
+    proc sql noprint;
+      /* get count of non-missing, non-special missing values */
+      select count(*) format=18. into :nomiss
+      from dplocal._&varid._&tabid.
+      where not missing(&var.)
+      ;
+    quit;
+    /* if special missing condition than get count of special missing values */
+    %let spmiss = %sysevalf(&popobs.-&nomiss.); 
+
+    %remove_labels(dplocal, _&varid._&tabid.);
+
+    proc sql noprint;
+      create table dplocal.temp_l1_recct_&varid. as
+      select upcase("&tabid.") as TabID length=3
+          , "&varid" as VarID length=2
+          , "&var." as Variable length=21
+          , count_obs label= "Count of Table Records" format=comma18.
+          , input("&nomiss.",18.) as count_nomiss 
+                label="Non-Missing Value Count" format=comma18. 
+          , input("&spmiss.",18.) as count_spmiss 
+                label="Special Missing Value Count" format=comma18.
+          , count_obs - sum(calculated count_nomiss, calculated count_spmiss) as count_null
+                label="Null Value Count" format=comma18.
+      from dplocal.all_l1_nobs
+      where lowcase(tabid)="&tabid."
+      ;
+      select put(count_null,15.) into :miss trimmed
+      from dplocal.temp_l1_recct_&varid.
+      ;
+    quit;
+
+    /* obtain flaglist for checkID in (111 120)*/
+    proc sql noprint;
+      create table _flags1 as
+        select *
+      from _flags (where=(varid="&varid."))
+      order by checkid
+      ;
+      select checkid
+        , abortyn
+        , count(checkid) 
+      into :flagslist separated by ' '
+        , :abortlist separated by ' '
+        , :flagct trimmed
+      from _flags1 (where=(checkid in ("111","120")))
+      ;
+    quit;
   
-  %if &miss. ne 0 /*or &flagct. ne 0 */%then %do;
-    %let count=0;
-    %do i=1 %to &flagct.;
-      %let checkid=%scan(&flagslist.,&i.);
-      %let abort=%scan(&abortlist.,&i.);
+  /* CheckID 111 - variable is not populated and 
+     CheckID 120 - variable contains null values */
+    %if &miss. ne 0 and &flagct. ne 0 %then %do;
+      %let count=0;
+      %do i=1 %to &flagct.;
+        %let checkid=%scan(&flagslist.,&i.);
+        %let abort=%scan(&abortlist.,&i.);
       /* 111 - variable is not populated */
-      %if &checkid.=111 %then %do;   
-        %if &pct_null.=100 %then %do;
-          %let count=99999;
-          %let i=%eval(&i.+&flagct.);
-          %let nodata=1;
+        %if &checkid.=111 %then %do;   
+          %if %sysevalf(&popobs.)=0 %then %do;
+            %let count=99999;
+            %let i=999; /* end loop if CheckID 111 is flagged to avoid redundant 111 and 120 flag */
+            %let nodata=1;
+          %end;
         %end;
-      %end;
-
       /* 120 - Variable contains null values */
-      %else %if &checkid.=120 %then %do;
-         %let count=&miss.;
-      %end;
-
-      proc sql noprint;
-        create table DPLOCAL.temp_flag_&checkid._&varid._&tabid. as 
-        select flagid length=21
-             , variable1 as Variable length=21
-             , '_null_' as Value
-             , input("&count.",comma15.) as count format=comma15.
-        from _flags1 (where=(checkid="&checkid."))
-        ;
-      quit;
-    %end; /* End of loop i */
-  %end; /* End of CheckID 111, 120 loop */
-  /* Excludes SCDM variables that are the wrong LENGTH or not pooulated (111), in addition 
-     to missing or wrong type, from the remainder of the L1 checks */   
-  proc sql noprint;
-    create table lkp_temp as
-    select a.vartype
-         , a.varlength
-         , a.validvaluetype
-         , a.flagcondition
-         , b.checkid
-         , b.flagid
-   , b.flag_descr
-         , monotonic ( ) as row
-    from _lkp (where=(variable="&var.")) as a inner join _flags (where=(checkid in ('121','122','126','130','131','133'))) as b
-    on lowcase(a.variable)=lowcase(b.variable1)
-    ;
-  quit;
-  %let checkct=&sqlobs.;
-  %if %sysevalf(&exc.=y or &nodata.=1) %then %do;
-    %let checkct=0;
-  %end;
+        %else %if &checkid.=120 %then %do;
+          %let count=%sysevalf(&miss.);
+        %end;
+        proc sql noprint;
+          create table DPLOCAL.temp_flag_&tabid._&varid._&varid. as 
+            select flagid length=21
+              , variable1 as Variable length=21
+              , '_null_' as Value
+              , input("&count.",comma18.) as count format=comma18.
+          from _flags1 (where=(checkid="&checkid."))
+          ;
+        quit;
+      %end; /* End of loop i */
+    %end; /* End miss ne 0 and flagct ne 0 condition */
+  /* Excludes SCDM variables that are the wrong LENGTH or not pooulated (111),
+     in addition to missing or wrong type, from the remainder of the L1 checks */   
+    proc sql noprint;
+      create table lkp_temp as
+        select a.vartype
+          , a.varlength
+          , a.validvaluetype
+          , a.flagcondition
+          , b.checkid
+          , b.flagid
+          , monotonic ( ) as row
+      from _lkp (where=(variable="&var.")) as a 
+      inner join _flags (where=(checkid in ('121','122','126','130','131','133'))) as b
+      on lowcase(a.variable)=lowcase(b.variable1)
+      ;
+    quit;
+    %let checkct=&sqlobs.;
+    %if %sysevalf(&exc. ne n or &nodata.=1) %then %do;
+      %let checkct=0;
+    %end;
+  %end; /* End exc ne y1 condition */
 %mend l1_value;
 
 /*************************************************************************************/
 /** 121,122,130-133 - Confirm that values comply with SCDM                          **/  
 /*************************************************************************************/
-%macro l1_value_121_13x;
+%macro l1_value_12x_13x;
   proc sql noprint; 
     select vartype
          , varlength
          , flagcondition
          , flagid
-   , flag_descr
          , checkid
     into :vtype
        , :vlength trimmed
        , :cond trimmed
        , :flagid trimmed
-    , :flag_descr trimmed
        , :checkid trimmed
     from lkp_temp
     where row=&d.
@@ -431,11 +521,8 @@
     proc sql noprint;
       create table DPLOCAL.temp_flag_&checkid._&varid. as
       select "&flagid." as FlagID length=21
-       , "&flag_descr." as Flag_Descr length=255 
            , strip("&var.") as Variable length=21
            , &var. as Value
-     , MPatID
-     , CPatID
       from DPLOCAL._&varid._&tabid. (where=(%unquote(&cond.)))
       ;
     quit; 
@@ -475,7 +562,6 @@
     proc sql noprint;
       create table DPLOCAL.temp_flag_&checkid._&varid. as
             select distinct "&flagid." as FlagID length=21
-                 , "&flag_descr." as Flag_Descr length=255 
                  , strip("&var.") as Variable length=21
                  , &value. as Value
                  , %if "%upcase(%sysfunc(substr(&var., 1, 1)))"="C" %then CPatID;
@@ -493,7 +579,7 @@
       ;
     quit;
   %end;
-%mend l1_value_121_13x; 
+%mend l1_value_12x_13x; 
 
 %macro level_1 (level=1);
   %let abort_table=0;
@@ -508,12 +594,12 @@
        , count(*) 
     into :tabidlist separated by ' '
        , :tabct trimmed
-    from &logdir..control_flow_3 (where=(/*execute_flag='y' and */cc_table ne 'X'))
+    from msoc.control_flow_3 (where=(/*execute_flag='y' and */cc_table ne 'X'))
     ;
-  quit;
-  %put &tabidlist.;
-  
+  quit; 
+
   %do a=1 %to &tabct.;
+    %let abort_loop = 0; /* initialize / reset abort_loop */
     %l1_table;
     %etlcheck;
   %end; /* End of loop A */
@@ -527,28 +613,24 @@
   %else %do;
     %do b=1 %to &tabct.;
       %l1_variable;
-      %if &abort_table. ne 0 %then %do;
-        %set_ds (libin=dplocal, dsin_prefix=flags_l1_, libout=dplocal, dsout=all_l1_flags);
-      %end;
-      %else %do;
         %do c=1 %to &varct.;
           %let checkct=0;
           %l1_value;
           %if &checkct. ne 0 %then %do;
             %do d=1 %to &checkct.; /* start of loop d - by checkid */
-              %l1_value_121_13x;
+              %l1_value_12x_13x;
             %end; /* end of loop d - by checkid*/
           %end;
           proc datasets lib=dplocal nolist nowarn nodetails;
             delete _&varid._&tabid.;
           quit;
         %end; /* end of loop c - by variable */
-      
       /* Combine Level 1 temporary datasets into one dataset for each table */  
-        %set_ds(libin=dplocal, dsin_prefix=temp_l1_recct_, libout=dplocal, dsout=l1_record_count_&tabid.);
-      %end; *end of the table did not abort;
+        %set_ds(libin=dplocal, dsin_prefix=temp_l1_recct_, 
+                libout=dplocal, dsout=l1_record_count_&tabid.);
     %end;/* end of loop b - by table */
-  %end;
+  %end; /* end of else condition */
+
 /***************************************************************************************/
 /* 3 - Combine like-named datasets by table into one dataset                           */
 /***************************************************************************************/  

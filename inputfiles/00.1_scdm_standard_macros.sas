@@ -275,6 +275,35 @@ quit;
 /* END ==> %table_name                                                           */
 /*-------------------------------------------------------------------------------*/
 
+/*-------------------------------------------------------------------------------*/
+/* START ==> %table_size                                                         */
+/*********************************************************************************/
+/*  Used in the L1 module retrieve the File Size of each SCDM table              */
+/*-------------------------------------------------------------------------------*/
+%macro table_size (libin=, dsin=, libout=, dsout=);
+  %local lib ds;
+  %let lib=%upcase(&libin.);
+  %let ds=%upcase(&dsin.);
+
+  proc sql noprint;
+    create table %bquote(&libout..&dsout.) as
+    select upcase("&tabid.") as tabid length=3
+         , memname
+         , filesize
+         , obslen
+         , nvar
+         , npage
+         , compress
+         , pcompress
+    from dictionary.tables
+    where libname="&lib." and MEMNAME="&ds."
+    ;
+  quit;
+%mend table_size;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %table_size                                                          */
+/*-------------------------------------------------------------------------------*/
+
 /*********************************************************************************/
 /* START ==> %add_dpid_ds                                                        */
 /*********************************************************************************/
