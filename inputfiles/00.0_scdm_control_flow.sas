@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.0_scdm_control_flow.sas                                                        |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |                                                                    |
+|  MIL QA PACKAGE VERSION: 3.0.0                                                    |                                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |
@@ -357,7 +357,7 @@
   run;
 
 /***************************************************************************/
-/*   Checks (1, 2, 3) prior to Module runs                                  */  
+/*   Checks (1, 2) prior to Module runs                                    */  
 /***************************************************************************/
 /*1. Include check to ensure MIL and MIS never queried together 
     during single package run*/
@@ -432,12 +432,6 @@
     %end; /* end if querytable is MIL*/
   %end; /* end of #2*/   
 
-/*3.include logic to remove MSOC libname assignment from package that runs against MIS*/
-  %if "&querytable." eq "mistable" %then %do;
-      libname msoc clear;
-  %end;
-
-
   /* Reset printto locations -- this method used to circumvent any file lock conflicts */     
   proc printto log=log; 
   run;     
@@ -488,8 +482,7 @@
     put 70*'-';
     put "Note: For module execution details, see module specific log files";          
     put 70*'-';
-    run; 
-
+  run; 
 
 /* MASTER_FLOW Step 6 - Loop through and execute each module in sequence */
   %local z module sascode;
