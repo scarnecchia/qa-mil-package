@@ -67,7 +67,7 @@
   %let dt_today = %sysfunc(putn("&sysdate."d, yymmddn8.));   
   
     /* Setup Log */
-  filename mainlog "&sasprograms.00.0_scdm_data_mil_qa_review_master_file.log ";
+  filename mainlog "&sasprograms.00.0_scdm_mil_data_qa_review_master_file.log ";
   filename runlog "&msoc./scdm_data_mil_qa_master_&dt_today..log";
   proc printto log=runlog new;
   run; quit;
@@ -507,7 +507,7 @@
         put 75*'-'; 
       run; 
 
-      filename modlog="&msoc.&module._&dt_today..log" new;
+      filename modlog "&msoc.&module._&dt_today..log" new;
       
       /* Direct include statement to master log in sasprograms folder */
       proc printto log=mainlog;

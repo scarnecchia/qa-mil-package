@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 00.1_scdm_standard_macros.sas                                          |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |
+|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store macros used repeatedly in QA programs      |
@@ -2016,10 +2016,11 @@ data signature;
    output;
 run;
 
-proc transpose data=signature out=dplocal.&MODULE._signature_&mi. (rename=(_NAME_=Variable COL1=Value));
+proc transpose data=signature out=dplocal.&MODULE._signature
+                    (rename=(_NAME_=Variable COL1=Value));
    var _ALL_;
 run;
-%remove_labels(dplocal,&module._signature_&mi.);
+%remove_labels(dplocal,&module._signature);
 %MEND SIGNATURE_END; 
 
 
