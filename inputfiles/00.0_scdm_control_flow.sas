@@ -357,10 +357,10 @@
   run;
 
 /***************************************************************************/
-/*   Checks (1, 2) prior to Module runs                                    */  
+/*   Checks (1, 2) prior to Module runs  - THINK THIS CAN BE REMOVED       */  
 /***************************************************************************/
 /*1. Include check to ensure MIL and MIS never queried together 
-    during single package run*/
+    during single package run
   proc sql noprint;
     select count(module)
          , count(cc_table)
@@ -384,9 +384,9 @@
     run; 
     %abort cancel 99 ;      
   %end ;
-
-/*2.If only 1 table is found include check for MIS variables if MIL table specified*/
- /*If MIS variable is found in MIL table, abort the process*/ 
+*/
+/*2.If only 1 table is found include check for MIS variables if MIL table specified
+ If MIS variable is found in MIL table, abort the process 
   %else %do; 
     %if "&querytable." eq "miltable" %then %do;
       proc sql noprint;
@@ -398,7 +398,7 @@
       %let miscnt = &sqlobs;
 
       %if %eval(&miscnt.) > 0 %then %do;
-        %let misflag = 0; /*initialize*/
+        %let misflag = 0; /*initialize
         data _null_;
           set qadata.&miltable.;
           if _n_ = 1 then do;
@@ -428,10 +428,10 @@
           run; 
           %abort cancel 99 ;  
         %end;  
-      %end; /* end if miscnt > 0 */ 
-    %end; /* end if querytable is MIL*/
-  %end; /* end of #2*/   
-
+      %end; * end if miscnt > 0;  
+    %end; * end if querytable is MIL*;
+  %end; * end of #2;   
+*/
   /* Reset printto locations -- this method used to circumvent any file lock conflicts */     
   proc printto log=log; 
   run;     
