@@ -645,9 +645,9 @@ run;quit;
       proc sql;
         create table flag_&i. as 
         select distinct a.&var1., 
-        cat(%if ("%lowcase(&var1.)" = "mbirth_date") %then "MPatID (",strip(mpatid),; 
-      %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var1.)" = "ddate") %then "EncounterID (",strip(a.encounterid),;
-      %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then "CpatID (",strip(a.cpatid),;
+        cat(%if ("%lowcase(&var1.)" = "mbirth_date") %then "MPatID (",mpatid,; 
+      %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var1.)" = "ddate") %then "EncounterID (",a.encounterid,;
+      %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then "CpatID (",a.cpatid,;
       "): &var1. (",%if %index(%lowcase(a.&var1.), date) > 0 %then put(a.&var1., mmddyy10.);
            %else strip(a.&var1.);
       ,") not equal to &&&tab2.table..&var2. (", 
