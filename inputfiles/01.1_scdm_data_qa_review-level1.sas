@@ -124,7 +124,7 @@ run;quit;
         run; 
 
         * return log to default module log;
-        proc printto;* log = modlog; run;
+        proc printto log = modlog; run;
 
         %let sortOrderFlag= 0;
         /* pull NOTES from temp log file to see if sort was verified */

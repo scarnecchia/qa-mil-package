@@ -1,8 +1,11 @@
+/* Direct log to module log in the msoc folder */
+proc printto log=modlog;
+run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     01.2_scdm_data_qa_review-level2.sas                                               |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |
+|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to perform critical level 2 data quality checks     |
@@ -25,7 +28,7 @@
 
 %timestamp(&module._start);
 /*********************************************************************************/
-/* START ==> %l2_dup                                                             */
+/* START ==> %l2_dup                NOT SURE IF STILL NEEDED (JV 10/27/2020)     */
 /*********************************************************************************/
 /* Intra-table check for two variables                                           */
 /*-------------------------------------------------------------------------------*/
@@ -283,12 +286,12 @@
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
-/* START ==> %flag_211_219_27_ :Mom-Infant Linkage table                         */
+/* START ==> %flag_217_219_27_ :Mom-Infant Linkage table                         */
 /*********************************************************************************/
 /* Duplicate rows for variable combination                                       */
 /* Variable differs across rows                                                  */ 
 /*-------------------------------------------------------------------------------*/
-%macro flag_211_219_27_;
+%macro flag_217_219_27_;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
@@ -312,7 +315,7 @@
              , variable2
              , variable3
              , variable4
-             , linked
+             , _linked
              , tableid 
              , flag_descr
         into :var1 trimmed
@@ -353,7 +356,7 @@
         length message $300;
         message = "";
         flag_l2= 0;
-      %if (&checkid. = 211 | &checkid. = 272 | &checkid. = 273 ) %then %do;
+      %if (&checkid. = 272 | &checkid. = 273 ) %then %do;
         %if &dups. > 0 %then %do;
           %if "%lowcase(&var1.)"= "clname" %then %do;
         message=cat("Cpatid (",strip(cpatid),"), &var1. (",strip(&var1.),
@@ -438,9 +441,9 @@
       %get_flagid (ntabs=1, nvars=&n.);
     %end;
   %end;
-%mend flag_211_219_27_;
+%mend flag_217_219_27_;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %flag_211_219                                                         */
+/* END ==> %flag_217_219_27_                                                     */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -753,7 +756,7 @@
          , quote(strip(module))
     into :tabidlist separated by ' '
        , :sql_tabidlist separated by ','
-    from &logdir..control_flow_3 (where=(execute_flag='y' and cc_table ne 'X'))
+    from msoc.control_flow_3 (where=(execute_flag='y' and cc_table ne 'X'))
     ;
   quit;
 /*-------------------------------------------------------------------------------------*/
@@ -766,14 +769,11 @@
    /*1:indicates no crosstable, and abort=y only*/
     %if &l.=1 %then %do;
       %l2_lkp_table (abortyn=, crosstable=n);
+      %l2_ds_nodupkey;
     %end;
 
     %else %if &l.=2 %then %do;  
       %l2_lkp_table (abortyn=y, crosstable=y);
-    %end;
-
-    %else %if &l.=3 %then %do; /*will not execute for MI QA*/
-      %l2_lkp_table (abortyn=n, crosstable=n);
     %end;
 
   /*-----------------------------------------------------------------------------------*/
@@ -793,8 +793,8 @@
   /*-----------------------------------------------------------------------------------*/
     %do c=1 %to &checkct.;
       %let checkid=%scan(&checkidlist.,&c.);
-      %if (&checkid. ge 211 & &checkid. le 219) | (&checkid. ge 272 & &checkid. le 275) %then %do;
-        %str(%flag_211_219_27_);
+      %if (&checkid. ge 217 & &checkid. le 219) | (&checkid. ge 272 & &checkid. le 275) %then %do;
+        %str(%flag_217_219_27_);
       %end;
       %else %if &checkid. ge 201 & &checkid. le 208 %then %do;
         %str(%flag_201_208);

@@ -580,32 +580,37 @@ quit;
 /*  END ==> %abort_table                                                         */
 /*-------------------------------------------------------------------------------*/
 
-
-
-
 /*********************************************************************************/
 /* START ==> %get_flagid                                                         */
 /***************************************versionMIL ******************************************/
 /*  Used in L2 and table modules to add flagid, etc. to the flags dataset        */
 /*-------------------------------------------------------------------------------*/
 %macro get_flagid (ntabs=, nvars=); 
-  proc contents data=flag_&i. out=proctemp (keep=name nobs);
+/* Determine if 'count' variable already exists in source table using proc contents*/
+  proc contents data=flag_&i. out=proctemp (keep=name nobs) noprint;
   run;
 
+  /* create a pre-populated macro variable for defense against empty flags datasets */
   %let temp_nobs=0;
+
+  /* create a count of nobs in the flags dataset */
   proc sql noprint;
     select distinct nobs into :temp_nobs trimmed
     from proctemp
     ;
   quit;
 
+  /*continue only if there is at least one row in the flags dataset */
   %if %eval(&temp_nobs. gt 0) %then %do;
+  /* create macro variable countyn, which equals the # of variables that contain the prefix 'count' */
     proc sql noprint;
       select count(name) into :countyn trimmed
       from proctemp
       where lowcase(substr(name,1,5))='count'
       ;
     quit;
+  /* If a count variable already exists (countyn=1) then populated macro var countvar with the name
+    of the count variable */
     %if &countyn. %then %do;
       proc sql noprint;
         select name into :countvar trimmed
@@ -614,36 +619,41 @@ quit;
         ;
       quit;
     %end;
+
+/* Join existing temp flags dataset with the flags lkp table to get the following 
+     variables: flagid, flag_descr, flagtype, abortyn */
     proc sql noprint;
-      drop table proctemp
-      ;
-      create table %str(flag_l2_&checkid._&tabid._&i.) as
+      create table 
+    /* name of new flags dataset will depend on macro variable ntabs */
+    %if %eval(&ntabs.=1) %then %do; %str(flag_l2_&checkid._&tabid._&i.) %end;
+    %else %if %eval(&ntabs.=2) %then %do; %str(flag_l2_&checkid._&tabid1._&tabid2._&i.) %end;
+      as
       select b.flagid
-           , a.message
-		   , %if &checkid. = 203 %then a.message as flag_descr length=255; %else b.flag_descr;
+           , b.flag_descr
            , b.flagtype
            , b.abortyn 
-    %if %eval(&countyn.) %then %do;
-      %str(, sum(a.&countvar.) as count)           
+  /* if a 'count' variable already exists in temp dataset, sum the values and rename as 'count' */
+    %if %eval(&countyn.) %then %do; 
+      %str(, sum(a.&countvar.) as count) 
     %end;
-    %else %do;
-      %str(, count(*) as count)
+  /* else count the rows and create variable 'count' */
+    %else %do; 
+      %str(, count(*) as count) 
     %end;
-      from %str((select *, "&checkid." as checkid from flag_&i.) as a )
+      from %str((select *, "&checkid." as checkid from flag_&i.) as a)
+  /* perform the join based on the number of SCDM tables and variables specified in ntabs and nvars */
+    /* if the flagid only references one SCDM table (e.g. Tabid=ENR) */
     %if %eval(&ntabs.=1) %then %do;  
-      %str( , temp_l2_flags %(where=%(checkid="&checkid." and lowcase(tableid)=lowcase("&tabid.") )
+                    %str(, temp_l2_flags %(where=%(checkid="&checkid." and lowcase(tableid)=lowcase("&tabid."))
       %if %eval(&nvars. gt 0) %then %do;  
         %str( and lowcase(variable1)=lowcase("&var1.") )
       %end;
       %if %eval(&nvars.=2) %then %do;
         %str( and lowcase(variable2)=lowcase("&var2.") )
       %end;
-	   %if %eval(&nvars.=3) %then %do;
-        %str( and lowcase(variable3)=lowcase("&var3.") )
-      %end;	  
       %str( %)%) as b where a.checkid=b.checkid)  
     %end;
-
+    /* if the flagid references 2 SCDM table (e.g. Tabid=DEM-ENR) */
     %else %if %eval(&ntabs.=2) %then %do; 
       %str( left join temp_l2_flags %(where=%(checkid="&checkid." )
       %if %eval(&nvars. gt 0) %then %do;
@@ -654,20 +664,16 @@ quit;
       %end;
       %str( %)%) as b on a.table1=b.table1 and a.table2=b.table2 )
     %end;
-	%if &checkid. = 219 %then %do;
-		%str( and  lowcase(variable4)=lowcase("&var4."))
-	%end;
-    %str(group by 1,2,3,4,5)
+    %str(group by 1,2,3,4)
       ;
-      drop table flag_&i.
+      drop table flag_&i., proctemp
       ;
     quit;
-
   %end;
 
   %else %do;
     proc datasets lib=work nolist nodetails nowarn;
-      delete flag_&i.;
+      delete flag_&i. proctemp;
     quit;
   %end;
 %mend get_flagid;
