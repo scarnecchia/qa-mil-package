@@ -466,7 +466,7 @@
 /* MASTER_FLOW Step 5 - Set up macro variable lists for processing each module */
   %local nmod module_list sascode_list;
 
-  proc sql;
+  proc sql noprint;
     select module
          , sascode
     into :module_list separated by ' '
