@@ -114,7 +114,7 @@
     %put ;              
     proc sql noprint;
       select etl into :ETL_VersionTable trimmed
-      from msoc.etl_version 
+      from qaresult.etl_version 
       ;
     quit;
     %put ;
