@@ -163,7 +163,7 @@ run;quit;
   %let ETLdata = ;
   %let tabid=%scan(&tabidlist.,&a.);
   %IF %SYSFUNC(EXIST(qadata.&&&tabid.table)) %THEN %DO;
-    proc contents data = qadata.&&&tabid.table out = etlnum (keep = memlabel);
+    proc contents data = qadata.&&&tabid.table noprint out = etlnum (keep = memlabel);
     run;
 
     data etlnum;
@@ -234,19 +234,24 @@ run;quit;
 
   %table_size (libin=QADATA, dsin=&table., libout=work, dsout=l1_size_temp);  
 
-  data DPLOCAL.l1_cont_&tabid.;
+  data DPLOCAL.l1_cont_temp;
     length TABID $3;
     set l1_cont_temp;
     tabid=upcase("&tabid.");
   run;
 
+  data dplocal.l1_cont_&tabid.;
+    merge dplocal.l1_cont_temp l1_size_temp;
+    by tabid memname;
+  run; 
+
   proc sql noprint;
+    drop table dplocal.l1_cont_temp, l1_size_temp
+    ;
     select put(count_obs,18.) into :nobs trimmed
     from DPLOCAL.all_l1_nobs (where=(lowcase(tabid)=lowcase("&tabid.")))
     ;
-    drop table l1_cont_temp
-    ;
-   quit;
+  quit;
 
 /* Create table to check for SCDM variable-level compliance based on proc contents output */
   proc sql noprint;
