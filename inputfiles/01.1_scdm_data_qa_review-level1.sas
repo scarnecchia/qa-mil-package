@@ -146,7 +146,7 @@ run;quit;
         %if %eval(&sortOrderFlag) > 0 %then %do;
           %let abort_table=%eval(&abort_table.+1);
           %abort_table (checkid=102, 
-                 logmsg=%nrstr(The %sysfunc(upcase(&table.)) table is not sorted!)
+                 logmsg=%nrstr(The %sysfunc(upcase(&table.)) table is not sorted correctly!)
                    );
         %end;
       %end; /* end abort_loop=0 condition to run check 102 */
