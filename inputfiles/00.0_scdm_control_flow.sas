@@ -542,7 +542,7 @@
           put " ";
           put 70*'!';
         run;  
-      %end ;  /* end-if execute if last module bombed */       
+      %end ;  /* end-if execute if last module failed */       
 
       %else %do;
         %SIGNATURE_END(&module)          
