@@ -244,6 +244,9 @@ run;quit;
 /* Create level 3 aggregate dataset                                                */
 /*---------------------------------------------------------------------------------*/
 %macro createl3table();
+  /* set maximum number of variables in summary stratifications */
+  %local stratmax;
+  %let stratmax = 3;
   /*Run macro twice 1) to create all aggregate table 
                     2) to create aggregate table for deliveries only*/
   %macro tables(where= , sort= , num= , outfile= , extravar=, types= );
@@ -368,6 +371,7 @@ run;quit;
     %end;
     if DIVIDE(sumtype, 100) < 1 then level = strip(put(sumtype, z3.));
       else level = strip(put(sumtype, BEST4.));
+    if countw(level_desc,"") le %eval(&stratmax.);
   run;
 
   proc sql;
