@@ -532,7 +532,7 @@ quit;
 /*-------------------------------------------------------------------------------*/
 %macro abort_table (checkid=, logmsg=);
   proc sql noprint;
-    create table dplocal.flags_l1_&mi._&tabid. as
+    create table dplocal.flags_l1_&tabid. as
     select upcase(flagid) as flagid
          , flag_descr
          , flagtype
@@ -557,7 +557,7 @@ quit;
 /*-------------------------------------------------------------------------------*/
 %macro abort_table2 (checkid=, logmsg=);
   proc sql noprint;
-    create table DPLOCAL.flags_l1_&mi._&checkid._&tabid. as
+    create table DPLOCAL.flags_l1_&checkid._&tabid. as
     select upcase(a.flagid) as flagid
          , a.flag_descr
          , a.flagtype
