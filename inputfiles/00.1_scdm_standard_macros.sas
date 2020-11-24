@@ -2736,7 +2736,7 @@ run;
       %l2_dup(l = &link.);
 
       %if (&checkid. = 219 ) %then %do;
-        %let checkvar = &var4.;
+        %let checkvar = &&var&n.;
         %put &checkvar.;
         %checkrows(var = &checkvar);
       %end;
