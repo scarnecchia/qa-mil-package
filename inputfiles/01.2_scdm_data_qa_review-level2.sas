@@ -1,5 +1,5 @@
 /* Direct log to module log in the msoc folder */
-proc printto log=modlog;
+proc printto log=modlog new;
 run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |

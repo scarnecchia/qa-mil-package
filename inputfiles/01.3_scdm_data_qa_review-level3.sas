@@ -1,5 +1,5 @@
 /* Direct log to module log in the msoc folder */
-proc printto log=modlog;
+proc printto log=modlog new;
 run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 01.3_scdm_data_qa_review-level3.sas                                    |
