@@ -377,14 +377,14 @@ quit;
 /*  move l3_signature file to the msoc folder if QA is on MIL table 		           */
 /*-------------------------------------------------------------------------------*/
 %macro move_l3;
-	 %ISDATA(dataset = dplocal.l3_signature_mil);
+	 %ISDATA(dataset = dplocal.l3_signature);
 	 %IF (&NOBS. > 0) %THEN %DO;
 		 	proc sql noprint;
-      create table msoc.l3_signature_mil as
+      create table msoc.l3_signature as
  				 select *
-      from dplocal.l3_signature_mil
+      from dplocal.l3_signature
       ;
-      drop table dplocal.l3_signature_mil
+      drop table dplocal.l3_signature
       ;
     quit;
  	%END;
