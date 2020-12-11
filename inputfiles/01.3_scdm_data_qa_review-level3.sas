@@ -4,7 +4,7 @@ run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 01.3_scdm_data_qa_review-level3.sas                                    |
 |                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
+|  MIL QA PACKAGE VERSION: 3.0.0                                                        |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create cross-table level 3 output datasets for   |
@@ -429,10 +429,10 @@ run;quit;
     %end;
 
     %local c i n;
-    %let macro_var_list=%upcase(DP|ETL|Phase|dp_mindate|dp_maxdate|
-                                enrtable|demtable|distable|enctable|diatable|proctable|
-                                deathtable|codtable|labtable|vittable|
-                                ipharmtable|itranstable|miltable);
+    %let macro_var_list=%upcase(DP|ETL|Phase|SCDMVer|dp_mindate|dp_maxdate|
+                              enrtable|demtable|distable|enctable|diatable|proctable|
+                              factable|pvdtable|deathtable|codtable|labtable|vittable|
+                              ipharmtable|itranstable|pretable|miltable);
     proc sql noprint;
       create table msoc.qa_cc_metadata (Variable char(32), Value char(255))
       ;  
