@@ -431,7 +431,7 @@
         put 75*'-'; 
       run; 
 
-      filename modlog "&msoc.&module._&dt_today..log" new;
+      filename modlog "&msoc.&module._&dt_today..log";
       
       /* Direct include statement to master log in sasprograms folder */
       proc printto log=mainlog;

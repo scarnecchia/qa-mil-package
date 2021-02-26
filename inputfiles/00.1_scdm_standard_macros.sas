@@ -2478,8 +2478,8 @@ run;
              , table2
         into :var1 trimmed
            , :var2 trimmed
-           , :tab1 trimmed
-           , :tab2 trimmed
+           , :tabid1 trimmed
+           , :tabid2 trimmed
         from temp
         where row=&i.
         ;
@@ -2488,15 +2488,15 @@ run;
    /*if variable1 is filled, then that variable must be present in table2*/
     %if &checkid. = 201  %then %do;
  /*DEV-1866*/
-      %if "%upcase(&tab2.)" = "DEL" | "%upcase(&tab2.)" = "INF" %then %do;
-        %if "%upcase(&tab2.)" = "DEL" %then %let reftable = &deltable.;
+      %if "%upcase(&tabid2.)" = "DEL" | "%upcase(&tabid2.)" = "INF" %then %do;
+        %if "%upcase(&tabid2.)" = "DEL" %then %let reftable = &deltable.;
         %else %let reftable = &inftable.;
       proc sql noprint;
         create table flag_&i. as
-        select distinct a.&var1. %if "%upcase(&tab2.)"="DEL" %then, a.&var2. ;, "E" as IDFileStatus format=$1.
-        from  qadata.&&&tab1.table a left join qadata.&reftable. b
+        select distinct a.&var1. %if "%upcase(&tabid2.)"="DEL" %then, a.&var2. ;, "E" as IDFileStatus format=$1.
+        from  qadata.&&&tabid1.table a left join qadata.&reftable. b
         on a.&var1. = b.&var1.
-        %if "%upcase(&tab2.)" = "DEL" %then %do;
+        %if "%upcase(&tabid2.)" = "DEL" %then %do;
           and a.EncounterID = b.EncounterID
         %end;
         where not missing (a.&var1.) and b.&var1. is null
@@ -2508,7 +2508,7 @@ run;
       proc sql noprint;
         create table flag_&i. as
         select distinct a.&var1.
-        from qadata.&&&tab1.table a left join indata.&&&tab2.table b
+        from qadata.&&&tabid1.table a left join indata.&&&tabid2.table b
         on a.&var1. = b.&var2.
         where not missing(a.&var1.) and b.&var2. is null
         ;
@@ -2520,17 +2520,20 @@ run;
         set flag_&i.;
         length message $300;
         length table1 table2 $3;
-        table1 = "&tab1.";
-        table2 = "&tab2.";
+        table1 = "&tabid1.";
+        table2 = "&tabid2.";
       %if &NOBS. > 0 %then %do;
-        %if "%upcase(&tab2.)" = "DEL" %then %do;
-        message=cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.),") was found in &&&tab1.table but not found in deliveries table");
+        %if "%upcase(&tabid2.)" = "DEL" %then %do;
+        message=cat("&var1. (",strip(&var1.),")/&var2.("
+            ,strip(&var2.),
+            ") was found in &&&tabid1.table but not found in deliveries table");
       %end;
-      %else %if "%upcase(&tab2.)" = "INF" %then %do;
-        message=cat("&var1. (",strip(&var1.),") was found in &&&tab1.table but not found in Infants table");
+      %else %if "%upcase(&tabid2.)" = "INF" %then %do;
+        message=cat("&var1. (",strip(&var1.)
+            ,") was found in &&&tabid1.table but not found in Infants table");
       %end;
       %else %do;
-        message=cat("&var1. (",strip(&var1.),") not found in &&&tab2.table table");
+        message=cat("&var1. (",strip(&var1.),") not found in &&&tabid2.table table");
       %end;
     %end;
     %else %do; 
@@ -2538,7 +2541,7 @@ run;
     %end;
       run;
     %if &NOBS. > 0 %then %do;
-      %if "%upcase(&tab2.)" = "DEL" | "%upcase(&tab2.)" = "INF" %then %do;
+      %if "%upcase(&tabid2.)" = "DEL" | "%upcase(&tabid2.)" = "INF" %then %do;
         %ISDATA(dataset = dplocal.MIL_IDFileStatus_&VAR1.);
         %if &NOBS. = 0 %then %do;
           data dplocal.MIL_IDFileStatus_&VAR1.;
@@ -2556,14 +2559,14 @@ run;
 
   %if &checkid. = 202  %then %do;
  /*if variable1 is filled in table2, then that variable must be present in table2*/
-    %if "%upcase(&tab2.)" = "DEL" %then %let reftable = &deltable.; /*DEV-1866*/
+    %if "%upcase(&tabid2.)" = "DEL" %then %let reftable = &deltable.; /*DEV-1866*/
     %else %let reftable = &inftable.;
     proc sql noprint;
       create table flag_&i. as
-      select distinct a.&var1. %if "%upcase(&tab2.)" = "DEL" %then, a.&var2. ;, "N" as IDFileStatus format=$1.
-      from  qadata.&reftable.  a left join qadata.&&&tab1.table b
+      select distinct a.&var1. %if "%upcase(&tabid2.)" = "DEL" %then, a.&var2. ;, "N" as IDFileStatus format=$1.
+      from  qadata.&reftable.  a left join qadata.&&&tabid1.table b
       on a.&var1. = b.&var1.
-      %if "%upcase(&tab2.)" = "DEL" %then %do;
+      %if "%upcase(&tabid2.)" = "DEL" %then %do;
         and a.EncounterID = b.EncounterID
       %end;
       where not missing (a.&var1.) and b.&var1. is null
@@ -2576,14 +2579,16 @@ run;
       set flag_&i.;
       length message $300;
       length table1 table2 $3;
-      table1 = "&tab1.";
-      table2 = "&tab2.";
+      table1 = "&tabid1.";
+      table2 = "&tabid2.";
       %if &NOBS. > 0 %then %do;
-        %if "%upcase(&tab2.)" = "DEL" %then %do;
-      message=cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.),") was found in deliveries but not found in &&&tab1.table table");
+        %if "%upcase(&tabid2.)" = "DEL" %then %do;
+      message=cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.)
+        ,") was found in deliveries but not found in &&&tabid1.table table");
       %end;
-      %else %if "%upcase(&tab2.)" = "INF" %then %do;
-      message=cat("&var1. (",strip(&var1.),") was found in Infants but not found in &&&tab1.table table");
+      %else %if "%upcase(&tabid2.)" = "INF" %then %do;
+      message=cat("&var1. (",strip(&var1.)
+        ,") was found in Infants but not found in &&&tabid1.table table");
       %end;     
     %end;
     %else %do; 
@@ -2607,20 +2612,20 @@ run;
   %end; /*end of 202*/
 
   %if &checkid. = 203 %then %do;
-    proc contents data= qadata.&&&tab1.table out=l2_cont_&tab1. noprint;
+    proc contents data= qadata.&&&tabid1.table out=l2_cont_&tabid1. noprint;
     run;
 
-    proc contents data = qadata.&&&tab2.table out = l2_cont_&tab2. noprint;
+    proc contents data = qadata.&&&tabid2.table out = l2_cont_&tabid2. noprint;
     run;
 
     proc sql noprint;
       create table flag_&i. as
-      select "&tab1." as table1 length=3
-           , "&tab2." as table2 length=3
+      select "&tabid1." as table1 length=3
+           , "&tabid2." as table2 length=3
            , a.length 
            , b.length as comp_length 
-      from l2_cont_&tab1. (keep = name type length) a 
-         , l2_cont_&tab2. (keep=name type length) b
+      from l2_cont_&tabid1. (keep = name type length) a 
+         , l2_cont_&tabid2. (keep=name type length) b
       where upcase(a.name) = "%upcase(&var1.)"
       and upcase(b.name) = "%upcase(&var2.)"
       ;
@@ -2632,7 +2637,7 @@ run;
       message = "";
       flag_l2= 0;
       if length ne comp_length then do;
-        message = cat("&var1. length differs from &var2. length in &&&tab2.table table");
+        message = cat("&var1. length differs from &var2. length in &&&tabid2.table table");
         flag_l2 = 1;
       end;
       if flag_l2;
@@ -2640,15 +2645,15 @@ run;
     %end;
 
     %if &checkid. = 208 %then %do;
-      %if "%upcase(&tab2.)" = "DEM" %then %do;
+      %if "%upcase(&tabid2.)" = "DEM" %then %do;
         data dem;
-          set indata.&&&tab2.table;
+          set indata.&&&tabid2.table;
           if upcase(sex) in ('A','U') then sex = 'O';
         run;
         %let scdmtable = dem;
       %end;
       %else %do;
-        %let scdmtable = indata.&&&tab2.table;
+        %let scdmtable = indata.&&&tabid2.table;
       %end;
       proc sql;
         create table flag_&i. as 
@@ -2658,16 +2663,16 @@ run;
       %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then "CpatID (",a.cpatid,;
       "): &var1. (",%if %index(%lowcase(a.&var1.), date) > 0 %then put(a.&var1., mmddyy10.);
            %else strip(a.&var1.);
-      ,") not equal to &&&tab2.table..&var2. (", 
+      ,") not equal to &&&tabid2.table..&var2. (", 
       %if %index(%lowcase(b.&var2.), date) > 0 %then put(b.&var2., mmddyy10.);
            %else strip(b.&var2.);,
-      %if "%lowcase(&var1.)" = "mbirth_date"  %then "), when linking Mpatid=&&&tab2.table..patid";
-      %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var2.)" = "ddate") %then "), when linking EncounterID=&&&tab2.table..EncounterID";
-      %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then "), when linking Cpatid=&&&tab2.table..patid";  
+      %if "%lowcase(&var1.)" = "mbirth_date"  %then "), when linking Mpatid=&&&tabid2.table..patid";
+      %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var2.)" = "ddate") %then "), when linking EncounterID=&&&tabid2.table..EncounterID";
+      %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then "), when linking Cpatid=&&&tabid2.table..patid";  
       ) as message length=300,  
-       "&tab1." as table1 length=3
-      ,"&tab2." as table2 length=3 
-        from qadata.&&&tab1.table a, &scdmtable. b 
+       "&tabid1." as table1 length=3
+      ,"&tabid2." as table2 length=3 
+        from qadata.&&&tabid1.table a, &scdmtable. b 
         where %if "%lowcase(&var1.)" = "mbirth_date" %then a.Mpatid = b.patid; 
      %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var1.)" = "ddate") %then a.encounterid = b.encounterid;
      %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then a.Cpatid = b.patid;
