@@ -25,18 +25,21 @@ options linesize=100 pagesize=50;
 *
 *   PROGRAM INPUT:
 *     PRODUCTION SCDM tables that MIL table is derived from:
-*        indata.EnrTable   (enrollment)
-*        indata.DemTable   (demographic)
-*        indata.DisTable   (dispensing)
-*        indata.EncTable   (encounter)
-*        indata.DiaTable   (diagnosis)
-*        indata.ProcTable  (procedure)
-*        indata.DeathTable (death, if available)
-*        indata.CODTable   (cause_of_death, if available)
-*        indata.LabTable   (laboratory_results, if available)
-*        indata.VitTable   (vital_signs, if available)
+*        indata.EnrTable    (enrollment)
+*        indata.DemTable    (demographic)
+*        indata.DisTable    (dispensing)
+*        indata.EncTable    (encounter)
+*        indata.DiaTable    (diagnosis)
+*        indata.ProcTable   (procedure)
+*        indata.FacTable    (facility)
+*        indata.PvdTable    (provider)
+*        indata.DeathTable  (death, if available)
+*        indata.CODTable    (cause_of_death, if available)
+*        indata.LabTable    (laboratory_results, if available)
+*        indata.VitTable    (vital_signs, if available)
 *        indata.iPharmtable (inpatient pharmacy, if available)
 *        indata.iTranstable (inpatient transfusion, if available)
+*        indata.PreTable    (prescribing, if available)
 *        
 *     STAGED MIL SCDM table:
 *        qadata.MILTable (mother_infant_linkage)
@@ -66,9 +69,9 @@ options linesize=100 pagesize=50;
 *
 *----------------------------------------------------------------------------------------
 * HISTORY:
-*  Create date (mm/dd/yy): 01/31/2019
-*  Last modified date (mm/dd/yy): NA
-*  Version: 2.1.0
+*  Create date (mm/dd/yy): 10/2018
+*  Last modified date (mm/dd/yy): 3/5/2021
+*  Version: 3.0.0
 *
 ****************************************************************************************/
 
@@ -163,26 +166,34 @@ options linesize=100 pagesize=50;
               Default is 1                                                              */
       %let _ETL_ = 1;
 
-      /* Specify the name of each of the Sentinel Common Data Model tables, if different
-         from the default values entered. Do NOT include '.sas7bdat'. DO NOT leave blank.
-         Example: %let _ENRTABLE=enrollment ;                                          */
-       %let _ENRTABLE=enrollment;  *specify the enrollment table name *;
-       %let _DEMTABLE=demographic; *specify the demographic table name *;
-       %let _DISTABLE=dispensing;  *specify the rx dispensing table name *;
-       %let _ENCTABLE=encounter;   *specify the encounter table name *;
-       %let _DIATABLE=diagnosis;   *specify the diagnosis table name *;
-       %let _PROCTABLE=procedure;  *specify the procedure table name *;
+    /* SCDMVer: Please enter the version of the SCDM associated ETL SCDM in 
+                  format #.#.# (e.g., 7.0.0)                                           */
+       %let _SCDMVer = ;
+
+    /* Specify the name of each of the Sentinel Common Data Model tables, if different
+       from the default values entered. Do NOT include '.sas7bdat'. DO NOT leave blank.
+       Example: %let _ENRTABLE=enrollment ;                                            */
+       %let _ENRTABLE= ; *specify the enrollment table name *;
+       %let _DEMTABLE= ; *specify the demographic table name *;
+       %let _DISTABLE= ; *specify the rx dispensing table name *;
+       %let _ENCTABLE= ; *specify the encounter table name *;
+       %let _DIATABLE= ; *specify the diagnosis table name *;
+       %let _PROCTABLE= ;*specify the procedure table name *;
+       %let _FACTABLE= ; *specify the facility table name *;
+       %let _PVDTABLE= ; *specify the provider table name *;
 
     /****************************************************************************\
        The following tables are optional. Leave BLANK if they are not available 
-        at your site (DO NOT COMMENT OUT).
-     \****************************************************************************/
-       %let _DEATHTABLE=; *specify the death table name               *;
-       %let _CODTABLE=;   *specify the cause of death table name      *; 
-       %let _LABTABLE=;   *specify the lab result table name          *;
-       %let _VITTABLE=;   *specify the vital signs table name         *;
-       %let _IPHARMTABLE=; *specify the inpatient pharmacy table name    *;
-       %let _ITRANSTABLE=; *specify the inpatient transfusion table name *;
+       at your site (DO NOT COMMENT OUT).
+    \****************************************************************************/
+       %let _DEATHTABLE= ;  *specify the death table name *;
+       %let _CODTABLE= ;    *specify the cause of death table name *; 
+       %let _LABTABLE= ;    *specify the lab result table name *;
+       %let _VITTABLE= ;    *specify the vital signs table name *;
+       %let _IPHARMTABLE= ; *specify the inpatient pharmacy table name *;
+       %let _ITRANSTABLE= ; *specify the inpatient transfusion table name *;
+       %let _PRETABLE= ;    *specify the prescribing table name */
+
 
 /********************************** END OF SECTION 1 ***********************************/
 
@@ -238,6 +249,7 @@ options reuse=no ;
 options fullstimer ;
 options missing = .;
 options validvarname = v7;
+options FMTERR;
    
 /* Create clean work environment */
 proc datasets lib=work kill memtype=data nolist nodetails;
@@ -265,16 +277,18 @@ quit;
     %let ccbypass=Y;
   /*-----------------------------------------------------------------------------------*/
   /* Define all macro parameters as global - DO NOT EDIT                               */
-    %global etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
-            enrtable demtable distable enctable diatable proctable  
-            deathtable codtable labtable vittable ipharmtable itranstable phase miltable;
+    %global etl _etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
+            enrtable demtable distable enctable diatable proctable deathtable  
+            codtable labtable vittable ipharmtable itranstable phase miltable scdmver
+            pretable pvdtable factable;
   /*-----------------------------------------------------------------------------------*/
     %inc "&_packageroot./inputfiles/soc_setup_macros.sas" /nosource2;
 
     /* Assign Macro variables*/
     %let dp=&_dp;
     %let etl=&_etl_;
-    %let _etl=&_etl_;
+    %let _etl=&_etl;
+    %let scdmver=&_scdmver;
     %let dp_mindate=&_dp_mindate;
     %let dp_maxdate=&_dp_maxdate;
     %let enrtable= &_enrtable;
@@ -282,13 +296,21 @@ quit;
     %let distable= &_distable;
     %let enctable= &_enctable;
     %let diatable= &_diatable;
-    %let proctable= &proctable;
+    %let proctable= &_proctable;
     %let deathtable= &_deathtable;
     %let codtable= &_codtable;
     %let labtable= &_labtable;
     %let vittable= &_vittable;
     %let ipharmtable= &_ipharmtable;
     %let itranstable= &_itranstable;
+    %let pretable= &_pretable;
+    %let factable= &_factable;
+    %let pvdtable= &_pvdtable;
+
+    %symdel  _dp _dp_mindate _dp_maxdate _scdmver
+            _enrtable _demtable _distable _enctable _diatable _proctable _deathtable  
+            _codtable _labtable _vittable _ipharmtable _itranstable _phase
+            _pretable _pvdtable _factable;
 
    /* Define request specific subdirectories */
     %let DPLOCAL = %soc_clean_paths(&_packageroot./dplocal/) ;
@@ -321,10 +343,10 @@ quit;
 /*--------------------------------------------------------------------------------------*/
 /* 1- Define package specific macro paramters                                           */
 /*--------------------------------------------------------------------------------------*/
-%global QAVer SCDMVer MaxObs deltable inftable irxtable protable dthtable;
+%global QAVer Phase MaxObs deltable inftable irxtable protable dthtable;
 
 %let protable=&proctable;
-%let dthtable=&deathtable;;
+%let dthtable=&deathtable;
 %let irxtable=&ipharmtable;
 %let txntable=&itranstable;
 
@@ -339,10 +361,7 @@ quit;
 %let Phase= B; 
 
 /* Current QA version needed for signature file */
-%let QAVer= 2.1.0;
-
-/* Current SCDM version needed for signature file */
-%let SCDMVer= 7.0.0; 
+%let QAVer= 3.0.0;
 
 /* Set Number of Observations for dplocal flags datasets */
 %let MaxObs= 500;

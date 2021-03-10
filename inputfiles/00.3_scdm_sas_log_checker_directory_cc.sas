@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.3_scdm_sas_log_checker_directory_cc.sas                                        |
 |                                                                                       |
-|    MA QA PACKAGE VERSION: 2.1.0                                                       |
+|  QA PACKAGE VERSION: 7.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to pull SAS LOG files from a user-specified         |
@@ -24,24 +24,13 @@
 *  PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATIONS CENTER           ;
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
 
+%let dirname = &msoc.;
+
 data _null_;
   call symput('datestamp',put(datepart(datetime()),date9.));
 run;
 
 %macro logcheck;
-
-	proc sql;
-  	 select module into: tabid trimmed
-	 	from infolder.control_flow 
-		where cc_table ne "X" and execute_flag = "Y";
-  quit;
-
-	%if "%upcase(&tabid.)" = "MIL" %then %do;
-		 %let dirname = &msoc.;
-	%end;
-	%else %do;
-		 %let dirname = &dplocal.;
-	%end;
 
   %macro getfnames(loc);
   filename _dir_ "%bquote(&loc.)";
@@ -164,6 +153,7 @@ run;
   ods _all_ close;
   options nonumber;
   ods escapechar="^";
+
   ods pdf file="&dirname./&dpid._scdm_data_qa_logcheck.pdf" style=statdoc;
   title1 "Summary of Log Messages for Directory &dirname.";
   title2 "Report Run Date: &DateStamp.";
@@ -172,7 +162,7 @@ run;
 
   proc report data=rep1 nowd headskip headline missing formchar(2)='_' spacing=2 split='~';
     column logname type message_no;
-    define logname / order "FILENAME" width=25 left flow;
+    define logname / order "FILENAME" width=27 left flow;
     define type / order "MESSAGE TYPE" width=30 left flow;
     define message_no / "NUMBER OF REPORTED MESSAGES" width=40 left flow;
     break after logname / skip;
@@ -180,7 +170,7 @@ run;
   title1 "Detailed Breakdown of Log Messages";
   proc report data=logall nowd headskip headline missing formchar(2)='_' spacing=2 split='~';
     column logname type message ;
-    define logname / order "FILENAME" width=25 left flow;
+    define logname / order "FILENAME" width=27 left flow;
     define type / order "MESSAGE TYPE" width=20 left flow;
     define message / "MESSAGE" width=30 left flow;
   run;

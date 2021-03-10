@@ -2,7 +2,7 @@
 |  PROGRAM NAME:                                                                        |
 |     00.2_scdm_formats                                                                 |
 |                                                                                       |
-|  MIL/MIS QA PACKAGE VERSION: 2.1.0                                                    |
+|  MIL/MIS QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store file formats of variables.                 |
