@@ -88,10 +88,10 @@ ________________________________________________________________
 
 |<b>Navigate to: |
 |------|
-|[<b>> SASPrograms]](../sasprograms)|
-|[<b>> MSOC]](../msoc)|
-|[<b>> DPLocal]](../dplocal)|
-|[<b>> InputFiles]](../inputfiles)|
-|[<b>> Docs]](../docs)|
-|[<b>> Home Page](../readme.md)|
+|[<b>> SASPrograms]](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/sasprograms?at=refs%2Fheads%2FDEV-16706)|
+|[<b>> MSOC]](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/msoc?at=refs%2Fheads%2FDEV-16706)|
+|[<b>> DPLocal]](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/dplocal?at=refs%2Fheads%2FDEV-16706)|
+|[<b>> InputFiles]](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/inputfiles?at=refs%2Fheads%2FDEV-16706)|
+|[<b>> Docs]](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/docs?at=refs%2Fheads%2FDEV-16706)|
+|[<b>> Home Page](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/readme.md?at=DEV-16706)|
 </span>
