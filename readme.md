@@ -88,10 +88,10 @@ ________________________________________________________________
 
 |<b>Navigate to: |
 |------|
-|[SASPrograms](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/sasprograms?at=refs%2Fheads%2FDEV-16706)|
-|[MSOC](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/msoc?at=refs%2Fheads%2FDEV-16706)|
-|[DPLOCAL](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/dplocal?at=refs%2Fheads%2FDEV-16706)|
-|[InputFiles](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/inputfiles?at=refs%2Fheads%2FDEV-16706)|
-|[Docs](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/docs?at=refs%2Fheads%2FDEV-16706)|
-|[Home Page](https://dev.sentinelsystem.org/projects/QA/repos/qa_mil_package/browse/readme.md?at=DEV-16706)|
+- Docs: [<b>folder where package specifiations can be found </b>](docs/readme.md) 
+- DPLocal: [<b>folder where datasets with patient identifiers are saved</b>](dplocal/readme.md)
+- InputFiles: [<b>folder that contains input files and lookup tables needed to run the request </b>](inputfiles/readme.md)
+- MSOC: [<b>folder where aggregated program results are saveds</b>](msoc/readme.md)
+- SAS Programs: [<b>folder with file(s) to be executed</b>](sasprograms/readme.md)
+
 </span>
