@@ -6,13 +6,14 @@
 
 ### Overview
 
-This document describes the program package used to perform quality assurance (QA) review and characterization of Mother Infant Linkage (MIL) data in the [Sentinel Common Data Model](https://dev.sentinelsystem.org/projects/SCDM/repos/sentinel_common_data_model/browse) (SCDM) format. This program package helps to ensure the data meets the necessary standards for data transformation consistency and quality.
+This document describes the program package used to perform quality assurance (QA) review and characterization of Mother Infant Linkage (MIL) data in the [Sentinel Common Data Model](https://dev.sentinelsystem.org/projects/SCDM/repos/sentinel_common_data_model/browse) (SCDM) format. 
 
-Analytic programs that are executed against data that is not in SCDM format will likely yield errors. Successful execution of the QA MIL package indicates that the source data adheres to SCDM rules. Note that data must be in the form of SAS&reg; datasets in order to use these analytic programs.
+This program package helps to ensure the data meets the necessary standards for data transformation consistency and quality. Successful execution of the QA MIL package indicates that the source data adheres to SCDM rules and can be used in analytic programs. 
 
-The specifications for the QA Package can be found in the [QA Documentation repository](https://dev.sentinelsystem.org/projects/SENTINEL/repos/sentinel-quality-assurance-documentation/browse).
+Note that data must be in the form of SAS&reg; datasets in order to use these analytic programs.
 
-#### To View Analytic Request Packages
+
+#### To View QA MIL Request Packages
 * Click the drop-down menu in the top left-hand corner 
 * Choose the Request ID representing the analysis of interest
 * Click the "..." button
@@ -28,18 +29,10 @@ The specifications for the QA Package can be found in the [QA Documentation repo
 
 ![Screenshot of master branch dropdown menu with download button](resources/dropdown-menu3.PNG)  
 
-
-#### Analytic Request Package Folder Structure  
-* <b> docs:</b> is where specifications are saved; specifications provide details about the request's the parameters, as well as information about each analytic scenario that is represented in the input files
-* <b> dplocal:</b> is where datasets with patient identifiers are saved (For more information about Sentinel's privacy standards, please refer to [The Sentinel System Principles and Policies](https://www.sentinelinitiative.org/principles-and-policies-privacy).)
-* <b> inputfiles:</b> contains SAS datasets specific to the given analysis; and lookup files that were created by the Sentinel Operations Center
-* <b> msoc:</b> is where program results are saved
-* <b> sasprograms:</b> contains the file(s) to be executed
-
 ### Folder Structure
 
 - **docs**: Contains specifications which details QA MIL functionality and provides a description of the datasets output by the QA MIL Package into the `dplocal` and `msoc` folders
-- **dplocal**: is where datasets with patient identifiers are saved. For more information about Sentinel's privacy standards, please refer to **[The Sentinel System Principles and Policies](https://www.sentinelinitiative.org/principles-and-policies-privacy)**
+- **dplocal**: is where datasets with patient identifiers are saved. For more information about Sentinel's privacy standards, please refer to **[The Sentinel System Principles and Policies] (https://www.sentinelinitiative.org/about/principles-policies)** 
 - **inputfiles**: is the subfolder containing all input files and lookup tables needed to execute a request. Input files contain information on what tables should be output and the type of analyses conducted on the variables in each table.
 - **msoc**: is where aggregated program results are saved
 - **sasprograms**: contains the file(s) to be executed
@@ -52,7 +45,7 @@ The specifications for the QA Package can be found in the [QA Documentation repo
 
 ### Getting Started
 
-- Review the QA Package Documentation (available **[here](https://dev.sentinelsystem.org/projects/SENTINEL/repos/sentinel-quality-assurance-documentation/browse?at=refs%2Ftags%2Fv7.0.0)**)
+- Review the QA MIL Package Documentation (available **[here](docs/Sentinel_Mother_Infant_Quality_Assurance_Package_3.0.0.docx)**)
 - Open `sasprograms\00.0_scdm_mil_data_qa_review_master_file.sas`
 - Go to section 1 of program header and specify the following parameters:
   - Define path(s)s to:
@@ -88,10 +81,10 @@ ________________________________________________________________
 
 |<b>Navigate to: |
 |------|
-- Docs: [<b>folder where package specifiations can be found </b>](docs/readme.md) 
-- DPLocal: [<b>folder where datasets with patient identifiers are saved</b>](dplocal/readme.md)
-- InputFiles: [<b>folder that contains input files and lookup tables needed to run the request </b>](inputfiles/readme.md)
-- MSOC: [<b>folder where aggregated program results are saveds</b>](msoc/readme.md)
-- SAS Programs: [<b>folder with file(s) to be executed</b>](sasprograms/readme.md)
-
+|[<b>> Docs: folder where package specifiations can be found](docs/readme.md)|
+|[<b>> DPLocal: folder where datasets with patient identifiers are saved](dplocal/readme.md)|
+|[<b>> InputFiles: folder that contains input files and lookup tables needed to run the request](inputfiles/readme.md)|
+|[<b>> MSOC: folder where aggregated program results are saveds](msoc/readme.md)|
+|[<b>> SAS Programs: folder with file(s) to be executed](sasprograms/readme.md)|
+|[<b>> Home Page](../readme.md)|
 </span>
