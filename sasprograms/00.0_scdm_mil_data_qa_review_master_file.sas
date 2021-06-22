@@ -4,8 +4,8 @@ options linesize=100 pagesize=50;
 *****************************************************************************************
 * NAME: 00.0_scdm_mil_data_qa_review_master_file.sas
 *
-* PURPOSE: The purpose of this program is to check the quality of data in the Common Data
-*   Model for the Sentinel Inititive (SCDM). Prior to conducting a statistical query,
+* PURPOSE: The purpose of this program is to check the quality of data in the Sentinel 
+*   Common Data Model(SCDM). Prior to conducting a statistical query,
 *   sufficient data screening methods should be used for all variables to identify
 *   miscoded, missing, or otherwise disorganized data. Some of the items to check for
 *   include: missing required fields,validating values, validating dates or date ranges,
@@ -341,7 +341,7 @@ quit;
 ****** NOTE: Programmer developing a packages writes the rest of the program below ******
 *****************************************************************************************;
 /*--------------------------------------------------------------------------------------*/
-/* 1- Define package specific macro paramters                                           */
+/* 1- Define package specific macro paramaters                                          */
 /*--------------------------------------------------------------------------------------*/
 %global QAVer Phase MaxObs deltable inftable irxtable protable dthtable;
 
