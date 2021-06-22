@@ -19,15 +19,15 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 * Click the "..." button
 * Select "Download" from the menu that appears
 
-![Screenshot of master branch dropdown menu closed](resources/dropdown-menu1.PNG)  
+![Screenshot of master branch dropdown menu closed](resources/dropdown-menu1.png)  
 
 <br>
 
-![Screenshot of master branch dropdown menu open](resources/dropdown-menu2.PNG)
+![Screenshot of master branch dropdown menu open](resources/dropdown-menu2.png)
 
 <br>
 
-![Screenshot of master branch dropdown menu with download button](resources/dropdown-menu3.PNG)  
+![Screenshot of master branch dropdown menu with download button](resources/dropdown-menu3.png)  
 
 ### Folder Structure
 
