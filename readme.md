@@ -86,5 +86,5 @@ ________________________________________________________________
 |[<b>> InputFiles: folder that contains input files and lookup tables needed to run the request](inputfiles/readme.md)|
 |[<b>> MSOC: folder where aggregated program results are saveds](msoc/readme.md)|
 |[<b>> SAS Programs: folder with file(s) to be executed](sasprograms/readme.md)|
-|[<b>> Home Page](../readme.md)|
+|[<b>> Home Page](readme.md)|
 </span>
