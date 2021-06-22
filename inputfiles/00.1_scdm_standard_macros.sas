@@ -2036,7 +2036,7 @@ run;
 
 
 /*********************************************************************************/
-/* Min/Max Dates macro copied and adapted for QA package                         */
+/* Min/Max Dates macro copied and adapted for Sentinel QA Program Package        */
 /*********************************************************************************/
 /**********************************************************************************
 *                             SENTINEL MACRO
@@ -2335,7 +2335,7 @@ run;
 %macro get_dir_file_names(
     type = ,           /* Specify a type to search [dir_name | file_name]  */
     root='./'   ,      /* Root to start search                             */
-    out=_data_  ,      /* Output data set with search results              */
+    out=_data_  ,      /* Output dataset with search results               */
     source=     ,      /* Value for optional SOURCE variable               */
     filter=1           /* directory/file filter                            */
     );
