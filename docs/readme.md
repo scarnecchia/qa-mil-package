@@ -9,5 +9,5 @@ While Sentinel does not directly support use of our tools, we welcome feedback, 
 <br>
 <br>
 <span id="navigationbar.csv">
-<b>Navigate to: [<b> Home Page](readme.md)
+<b>Navigate to: [<b> Home Page](../readme.md)
 </span>
