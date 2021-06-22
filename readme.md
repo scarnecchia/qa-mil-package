@@ -15,7 +15,7 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 
 #### To View QA MIL Request Packages
 * Click the drop-down menu in the top left-hand corner 
-* Choose the Request ID representing the analysis of interest
+* Choose the Request ID representing the package of interest
 * Click the "..." button
 * Select "Download" from the menu that appears
 
@@ -86,5 +86,4 @@ ________________________________________________________________
 |[<b>> InputFiles: folder that contains input files and lookup tables needed to run the request](inputfiles/readme.md)|
 |[<b>> MSOC: folder where aggregated program results are saveds](msoc/readme.md)|
 |[<b>> SAS Programs: folder with file(s) to be executed](sasprograms/readme.md)|
-|[<b>> Home Page](readme.md)|
 </span>
