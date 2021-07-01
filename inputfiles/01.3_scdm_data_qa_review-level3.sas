@@ -313,7 +313,7 @@ run;quit;
     if icd_date le "30Sep2015"d then ICD_Ver = "9";
       else if icd_date ge "01Oct2015"d then ICD_Ver = "0";
     patient  = 1;
-   /*Agegroup*/
+   /*Age group*/
     if  not missing(mpatid) then do;
       if age >= 10 & age <= 19 then Agegroup = "10-19";
         else if age >= 20 & age <= 44 then Agegroup = "20-44";
