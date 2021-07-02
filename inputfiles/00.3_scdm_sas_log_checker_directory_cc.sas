@@ -76,7 +76,7 @@ run;
 
     filename onef "&dirname./&fnami..log";
 
-/*Get info from LOGs*/
+/*Get info from log file*/
     data &fnami.(keep=type message logname where=(message ne ''));
       retain noerr 0;
       length string1 message $200. logname type $50.;
