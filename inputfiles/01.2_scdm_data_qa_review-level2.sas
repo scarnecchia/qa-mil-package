@@ -145,7 +145,7 @@ run;quit;
         data _null_;      
           putlog 70*'!';
           putlog 'ERR'"OR: The &module. module detected fatal L2 data flags"; 
-          putlog "       that require the QA package to abort";
+          putlog "       that require the Sentinel QA Program Package to abort";
           putlog 70*'!';
         run;
 
