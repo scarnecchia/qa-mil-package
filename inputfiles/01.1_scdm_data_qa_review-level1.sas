@@ -133,7 +133,7 @@ run;quit;
           infile sortlog dlm='|';
           input lines $;
           if lowcase(substr(lines,1,5)) = "note:";
-          if find(lowcase(lines),"input dataset is not in sorted order") then
+          if find(lowcase(lines),"input data set is not in sorted order") then
             call symput('sortOrderFlag','1');
         run;      
 
