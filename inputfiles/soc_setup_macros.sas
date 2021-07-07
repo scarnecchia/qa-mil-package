@@ -88,7 +88,7 @@
   * HISTORY:
   *  Create date (mm/dd/yy):  08/27/13
   *  Last modified date (mm/dd/yy): 01/31/19
-  *  Versoon: 2
+  *  Version: 2
   *
   *  CHANGE LOG: 
   *
