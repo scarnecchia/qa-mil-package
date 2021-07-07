@@ -341,7 +341,7 @@ quit;
 ****** NOTE: Programmer developing a packages writes the rest of the program below ******
 *****************************************************************************************;
 /*--------------------------------------------------------------------------------------*/
-/* 1- Define package specific macro paramaters                                          */
+/* 1- Define package specific macro parameters                                          */
 /*--------------------------------------------------------------------------------------*/
 %global QAVer Phase MaxObs deltable inftable irxtable protable dthtable;
 
