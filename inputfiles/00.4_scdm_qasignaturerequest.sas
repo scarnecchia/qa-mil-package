@@ -1,8 +1,6 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     00.4_scdm_qasignaturerequest.sas                                                  |
-|                                                                                       |
-|  QA PACKAGE VERSION: 3.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create request-level metadata "signature" files  |

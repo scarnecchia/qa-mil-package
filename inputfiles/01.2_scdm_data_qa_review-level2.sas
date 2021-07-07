@@ -4,8 +4,6 @@ run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     01.2_scdm_data_qa_review-level2.sas                                               |
-|                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to perform critical level 2 data quality checks     |

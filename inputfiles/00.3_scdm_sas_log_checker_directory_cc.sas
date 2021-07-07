@@ -1,8 +1,6 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     00.3_scdm_sas_log_checker_directory_cc.sas                                        |
-|                                                                                       |
-|  QA PACKAGE VERSION: 7.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to pull SAS LOG files from a user-specified         |

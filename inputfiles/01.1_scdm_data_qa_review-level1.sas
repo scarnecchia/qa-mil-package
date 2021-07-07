@@ -4,11 +4,9 @@ run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     01.1_scdm_data_qa_review-level1.sas                                               |
-|                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
-|     The purpose of this program is to perform Level 1 data checks on MIL OR MIS       |
+|     The purpose of this program is to perform Level 1 data checks on MIL              |
 |     tables.                                                                           |                                              
 |---------------------------------------------------------------------------------------|
 |  PROGRAM INPUT:                                                                       |

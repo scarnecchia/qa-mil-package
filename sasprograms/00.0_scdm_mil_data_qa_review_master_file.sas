@@ -70,8 +70,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 3/5/2021
-*  Version: 3.0.0
+*  Last modified date (mm/dd/yy): 7/29/2021
+*  Version: 3.0.1
 *
 ****************************************************************************************/
 
@@ -341,7 +341,7 @@ quit;
 ****** NOTE: Programmer developing a packages writes the rest of the program below ******
 *****************************************************************************************;
 /*--------------------------------------------------------------------------------------*/
-/* 1- Define package specific macro parameters                                          */
+/* 1- Define package specific macro paramaters                                          */
 /*--------------------------------------------------------------------------------------*/
 %global QAVer Phase MaxObs deltable inftable irxtable protable dthtable;
 

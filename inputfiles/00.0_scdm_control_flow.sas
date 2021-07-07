@@ -1,8 +1,6 @@
 /*--------------------------------------------------------------------------------------\
 |  PROGRAM NAME:                                                                        |
 |     00.0_scdm_control_flow.sas                                                        |
-|                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                        |                                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |

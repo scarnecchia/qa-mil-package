@@ -3,8 +3,6 @@ proc printto log=modlog new;
 run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 01.3_scdm_data_qa_review-level3.sas                                    |
-|                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                        |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create cross-table level 3 output datasets for   |
@@ -216,7 +214,7 @@ run;quit;
       ;
     quit;
   %end; /*end a loop */
-  /* REMOVED ALL MIS CHECKS v3.0.0*/
+
 %mend suplinkage;
 
 %macro level3();
