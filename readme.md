@@ -48,20 +48,19 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 - Review the QA MIL Package Documentation (available **[here](docs/Sentinel_Mother_Infant_Quality_Assurance_Package_3.0.0.docx)**)
 - Open `sasprograms\00.0_scdm_mil_data_qa_review_master_file.sas`
 - Go to section 1 of program header and specify the following parameters:
-  - Define path(s)s to:
-    - SCDM MIL table under review 
-	- Source files utilized to create SCDM MIL table 
-	- Common Components (CC) request associated with the ETL under review 
-	- This QA package, not including the request ID
-	- Location of previously approved Phase A SCDM tables 
-  - The Extract Transform Load (ETL) number for this request (prior ETL + 1)
-  - The SCDM version of the ETL under review
-  - The name of the SCDM datasets 
-  
+  - (1a) The path to SCDM MIL table under review 
+  - (1b) The path of the source files utilized to create SCDM MIL table (the `dplocal` folder of the prior Phase A QA Package run)
+  - (1c) The name of the MIL dataset   
+  - (1d) The path of the Common Components (CC) request associated with the ETL under review 
+  - If CC is unavailable at your organization you must complete section 1e with:
+	- The path of this QA package, not including the request ID
+	- The path to previously approved Phase A SCDM tables
+ 	- The Extract Transform Load (ETL) number for this request (prior ETL + 1)
+	- The SCDM version of the ETL under review
+  	- The names of the SCDM datasets
 - Go to section 2 of program header and specify the following parameters
   - Individual request ID tokens
   - Extract Transform Load (ETL) number for this request (prior ETL + 1)
-  
 - Close and run `00.0_scdm_mil_data_qa_review_master_file.sas` in batch mode
 
 ### Output
