@@ -49,10 +49,10 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 - Open `sasprograms\00.0_scdm_mil_data_qa_review_master_file.sas`
 - Go to section 1 of program header and specify the following parameters:
   - (1a) The path to SCDM MIL table under review 
-  - (1b) The path of the source files utilized to create SCDM MIL table (the DPLocal folder of the prior Phase A QA Package run)
+  - (1b) The path of the source files utilized to create SCDM MIL table (the `dplocal` folder of the prior Phase A QA Package run)
   - (1c) The name of the MIL dataset   
   - (1d) The path of the Common Components (CC) request associated with the ETL under review 
-  - If Common Components is unavailable at your organization you must complete section 1e with:
+  - If CC is unavailable at your organization you must complete section 1e with:
 	- The path of this QA package, not including the request ID
 	- The path to previously approved Phase A SCDM tables
  	- The Extract Transform Load (ETL) number for this request (prior ETL + 1)
