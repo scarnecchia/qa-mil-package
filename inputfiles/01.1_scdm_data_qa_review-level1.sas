@@ -4,11 +4,9 @@ run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     01.1_scdm_data_qa_review-level1.sas                                               |
-|                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
-|     The purpose of this program is to perform Level 1 data checks on MIL OR MIS       |
+|     The purpose of this program is to perform Level 1 data checks on MIL              |
 |     tables.                                                                           |                                              
 |---------------------------------------------------------------------------------------|
 |  PROGRAM INPUT:                                                                       |
@@ -54,7 +52,7 @@ run;quit;
                   logmsg=%nrstr(The %sysfunc(upcase(&table.)) table cannot be found!) );
     %end;
 
-    %if %eval(&abort_loop.= 0) %then %do; *if no abend, run check 101;
+    %if %eval(&abort_loop.= 0) %then %do; /*if no abend, run check 101*/
 /*************************************************************************************/
 /** 101 - Confirm that the table is populated                                       **/  
 /*************************************************************************************/
@@ -476,7 +474,7 @@ run;quit;
         quit;
       %end; /* End of loop i */
     %end; /* End miss ne 0 and flagct ne 0 condition */
-  /* Excludes SCDM variables that are the wrong LENGTH or not pooulated (111),
+  /* Excludes SCDM variables that are the wrong LENGTH or not populated (111),
      in addition to missing or wrong type, from the remainder of the L1 checks */   
     proc sql noprint;
       create table lkp_temp as
@@ -724,9 +722,10 @@ run;quit;
   proc datasets kill memtype=data lib=work nolist nowarn nodetails;
   run; quit;
 
-/***************************************************************************************/
-/* Evaluate flags dataset to determine if qa package should end due to L1 failure      */
-/***************************************************************************************/
+/*******************************************************************************************/
+/* Evaluate flags dataset to determine if Sentinel QA Program Package                      */ 
+/* should end due to L1 failure                                                            */
+/*******************************************************************************************/
   %put ==> Abort_qa: &abort_qa.;
 
   %if &abort_table. ne 0 or &abort_qa. ne 0 %then %do;
@@ -740,7 +739,7 @@ run;quit;
     data _null_;      
       putlog 70*'!';
       putlog 'ERR'"OR: The &module. module detected fatal L1 data flags"; 
-      putlog "       that require the QA package to abort";
+      putlog "       that require the Sentinel QA Program Package to abort";
       putlog 70*'!';
     run;
   %end;

@@ -88,7 +88,7 @@
   * HISTORY:
   *  Create date (mm/dd/yy):  08/27/13
   *  Last modified date (mm/dd/yy): 01/31/19
-  *  Verison: 2
+  *  Version: 2
   *
   *  CHANGE LOG: 
   *
@@ -96,7 +96,7 @@
   *   -------   --------   --------------------------------------------------------
   *      1      08/08/13   This is a modified version of a macro created and freely
   *                        shared by Adrien Vallee (see below).  The original macro
-  *                        has been modified to clear the filref after use.  It  
+  *                        has been modified to clear the fileref after use.  It  
   *                        also issues abort cancel if dir is blank.
   *      2      01/31/19   Renamed to "soc_direxists"
   *                        
@@ -112,7 +112,7 @@
    %local rc fileref return ; 
    %let rc = %qsysfunc(filename(fileref,&dir.)) ; 
    %let return = %qsysfunc(fexist(&fileref.)) ;  
-   &return  /* returns value to calling enivornment, like a function */
+   &return  /* returns value to calling environment, like a function */
    %let rc = %qsysfunc(filename(fileref)) ;  
 %mend soc_dirExist;
 
@@ -134,7 +134,7 @@
   %end;
   %let list=%qleft(&temppath);
 
-  &list /* returns value to calling enivornment, like a function */
+  &list /* returns value to calling environment, like a function */
 
 %mend soc_quotepath;
 
@@ -160,7 +160,7 @@
   * HISTORY:
   *  Create date (mm/dd/yy):  08/27/13
   *  Last modified date (mm/dd/yy): 01/11/19
-  *  Verison: 1
+  *  Version: 1
   **********************************************************************************/  
   %local libpaths;
 
