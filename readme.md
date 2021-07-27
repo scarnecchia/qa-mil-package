@@ -6,20 +6,20 @@
 
 ### Overview
 
-This document describes the program package used to perform quality assurance (QA) review and characterization of Mother Infant Linkage (MIL) data in the [Sentinel Common Data Model](https://dev.sentinelsystem.org/projects/SCDM/repos/sentinel_common_data_model/browse) (SCDM) format. 
+This document describes the program package used to perform quality assurance (QA) review and characterization of Mother Infant Linkage (MIL) data in the [Sentinel Common Data Model](https://dev.sentinelsystem.org/projects/SCDM/repos/sentinel_common_data_model/browse) (SCDM) format.
 
-This program package helps to ensure the data meets the necessary standards for data transformation consistency and quality. Successful execution of the QA MIL package indicates that the source data adheres to SCDM rules and can be used in analytic programs. 
+This program package helps to ensure the data meets the necessary standards for data transformation consistency and quality. Successful execution of the QA MIL package indicates that the source data adheres to SCDM rules and can be used in analytic programs.
 
 Note that data must be in the form of SAS&reg; datasets in order to use these analytic programs.
 
 
 #### To View QA MIL Request Packages
-* Click the drop-down menu in the top left-hand corner 
+* Click the drop-down menu in the top left-hand corner
 * Choose the Request ID representing the package of interest
 * Click the "..." button
 * Select "Download" from the menu that appears
 
-![Screenshot of master branch dropdown menu closed](resources/dropdown-menu1.png)  
+![Screenshot of master branch dropdown menu closed](resources/dropdown-menu1.png)
 
 <br>
 
@@ -27,7 +27,7 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 
 <br>
 
-![Screenshot of master branch dropdown menu with download button](resources/dropdown-menu3.png)  
+![Screenshot of master branch dropdown menu with download button](resources/dropdown-menu3.png)
 
 ### Folder Structure
 
@@ -40,24 +40,24 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 ### Requirements
 
 - UNIX/Linux or Windows environment
-- SAS version 9.4 or higher (as of OY 2021)
-- SCDM formatted data (Medicare Claims Synthetic Public Use Files are available in the Sentinel Common Data Model Format **[here](https://www.sentinelinitiative.org/sentinel/surveillance-tools/software-toolkits/Medicare-SynPUFs-in-SCDM)
+- SAS version 9.4 or higher
+- SCDM formatted data (Medicare Claims Synthetic Public Use Files are available in the Sentinel Common Data Model Format **[here](https://www.sentinelinitiative.org/sentinel/surveillance-tools/software-toolkits/Medicare-SynPUFs-in-SCDM)**)
 
 ### Getting Started
 
 - Review the QA MIL Package Documentation (available **[here](docs/Sentinel_Mother_Infant_Quality_Assurance_Package_3.0.0.docx)**)
 - Open `sasprograms\00.0_scdm_mil_data_qa_review_master_file.sas`
 - Go to section 1 of program header and specify the following parameters:
-  - (1a) The path to SCDM MIL table under review 
+  - (1a) The path to SCDM MIL table under review
   - (1b) The path of the source files utilized to create SCDM MIL table (the `dplocal` folder of the prior Phase A QA Package run)
-  - (1c) The name of the MIL dataset   
-  - (1d) The path of the Common Components (CC) request associated with the ETL under review 
+  - (1c) The name of the MIL dataset
+  - (1d) The path of the Common Components (CC) request associated with the ETL under review
   - If CC is unavailable at your organization you must complete section 1e with:
-	- The path of this QA package, not including the request ID
-	- The path to previously approved Phase A SCDM tables
- 	- The Extract Transform Load (ETL) number for this request (prior ETL + 1)
-	- The SCDM version of the ETL under review
-  	- The names of the SCDM datasets
+    - The path of this QA package, not including the request ID
+    - The path to previously approved Phase A SCDM tables
+     - The Extract Transform Load (ETL) number for this request (prior ETL + 1)
+    - The SCDM version of the ETL under review
+      - The names of the SCDM datasets
 - Go to section 2 of program header and specify the following parameters
   - Individual request ID tokens
   - Extract Transform Load (ETL) number for this request (prior ETL + 1)
@@ -65,24 +65,8 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 
 ### Output
 
-The program package generates a series of aggregated output tables that help determine whether the data conform to SCDM specifications, maintain integrity across variables and across tables, and trend as expected over time. Details on the output structure can be found in the documentation; details on how to interpret the output can be found in the data dictionary.
+The program package generates a series of aggregated output tables that help determine whether the data conform to SCDM specifications, maintain integrity across variables and across tables, and trend as expected over time. Details on the output structure can be found in the [Data Quality Review and Characterization Process and Programs Documentation](https://dev.sentinelsystem.org/projects/SENTINEL/repos/sentinel-quality-assurance-documentation/browse); details on how to interpret the output can be found in the data dictionary.
 
 ### Additional Information
 
 The Sentinel Operations Center has limited capacity to support use of our tools. However, we welcome feedback, comments, and suggestions pertaining to our documentation or tools. Email us **[here](mailto:info@sentinelsystem.org?subject=Git)**.
-
-<br>
-<br>
-________________________________________________________________
-
-<br>
-<span id="navigationbar.csv">
-
-|<b>Navigate to: |
-|------|
-|[<b>> Docs: folder where package specifiations can be found](docs/readme.md)|
-|[<b>> DPLocal: folder where datasets with patient identifiers are saved](dplocal/readme.md)|
-|[<b>> InputFiles: folder that contains input files and lookup tables needed to run the request](inputfiles/readme.md)|
-|[<b>> MSOC: folder where aggregated program results are saveds](msoc/readme.md)|
-|[<b>> SAS Programs: folder with file(s) to be executed](sasprograms/readme.md)|
-</span>
