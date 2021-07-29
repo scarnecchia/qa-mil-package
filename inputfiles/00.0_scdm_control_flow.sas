@@ -1,8 +1,6 @@
 /*--------------------------------------------------------------------------------------\
 |  PROGRAM NAME:                                                                        |
 |     00.0_scdm_control_flow.sas                                                        |
-|                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                    |                                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |
@@ -51,7 +49,7 @@
     data _null_;
       putlog 85*'!';
       putlog ' ';
-      putlog '==> MASTER_FLOW macro is aborting...a fatal problem occured prior to MASTER_FLOW';      
+      putlog '==> MASTER_FLOW macro is aborting...a fatal problem occurred prior to MASTER_FLOW';      
       putlog "==>  Check program log &sasprograms.00.0_scdm_mil_data_qa_review_master_file.log.";      
       putlog ' ';
       putlog 85*'!'; 
@@ -261,7 +259,7 @@
   %mend check_missing_tablenames;
   %check_missing_tablenames;
 
-  /* ensure that the site has NOT populated an unexpected table names in the master file */
+  /* ensure that the site has populated expected table names in the master file     */
   %macro check_extra_tablenames;
     %local t tabct abortct tablelist;
     %let tabct=0;
@@ -310,7 +308,7 @@
   %mend check_extra_tablenames;
   %check_extra_tablenames;
 
-/* MASTER_FLOW Step 3 - Retrieve modules explicitly chosen to run */
+/* MASTER_FLOW Step 3 - Retrieve modules explicitly chosen to run                   */
   proc sql noprint;
     create table control_flow_1 as
     select *
@@ -482,8 +480,8 @@
         put 75*'!';
         put ' ';
         put 'ERR'"OR: The &last_module. module has produced data check flags that";
-        put "         require the QA package to abort after creating a master"; 
-        put "         signature file and running the log checker.";
+        put "         require the Sentinel QA Program Package to abort after creating"; 
+        put "         a master signature file and running the log checker.";
         put ' ';
         put 75*'!';
       run;

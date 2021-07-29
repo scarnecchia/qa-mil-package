@@ -1,7 +1,5 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME: 00.1_scdm_standard_macros.sas                                          |
-|                                                                                       |
-|  MIL QA PACKAGE VERSION: 3.0.0                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store macros used repeatedly in QA programs      |
@@ -165,7 +163,8 @@ quit;
 /*********************************************************************************/
 /* START ==> %data_ranges                                                       */
 /*********************************************************************************/
-/**Minimum and Maximum date ranges for a dataset(note:not derived min/max dates)**/  
+/**Minimum and Maximum date ranges for a dataset                                **/ 
+/**  (note: not derived min/max dates)                                          **/  
 /*********************************************************************************/
 %macro date_ranges (variable= ,dataset= );
   %global date_min date_max;
@@ -179,7 +178,7 @@ quit;
 	 quit;
 %mend date_ranges;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %date_ranges                                                   		     */
+/* END ==> %date_ranges                                                   		 */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -2036,7 +2035,7 @@ run;
 
 
 /*********************************************************************************/
-/* Min/Max Dates macro copied and adapted for QA package                         */
+/* Min/Max Dates macro copied and adapted for Sentinel QA Program Package        */
 /*********************************************************************************/
 /**********************************************************************************
 *                             SENTINEL MACRO
@@ -2335,7 +2334,7 @@ run;
 %macro get_dir_file_names(
     type = ,           /* Specify a type to search [dir_name | file_name]  */
     root='./'   ,      /* Root to start search                             */
-    out=_data_  ,      /* Output data set with search results              */
+    out=_data_  ,      /* Output dataset with search results               */
     source=     ,      /* Value for optional SOURCE variable               */
     filter=1           /* directory/file filter                            */
     );

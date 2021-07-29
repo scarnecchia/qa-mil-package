@@ -1,8 +1,6 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     00.4_scdm_qasignaturerequest.sas                                                  |
-|                                                                                       |
-|  QA PACKAGE VERSION: 3.0.0                                                            |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create request-level metadata "signature" files  |
@@ -64,11 +62,9 @@ data _null_; set _sigfiles end=eof;
    retain strng;
    retain nfiles 0;
 
-   /*-Look for all files with the phase 'signature' in them, but only with mXXrX or mXXrXX run/scenario numbers
-      in the name.  If a req signature file had already been created, it will have an mXX in the name and,
-      therefore, [correctly] not included in the list of signature files being read in-*/
-
-   /* has phrase '_signature' and not the output file prefix 'allrun' from a prior run */
+   /*-Look for all files with the phrase 'signature' in them but exclude alltable version.
+      this is the name of the output signature file created by this code, was produced 
+      previously, and will be overwritten when the processing concludes -*/ 
    if index(lowcase(fname),'_signature') > 0 and
       index(lowcase(fname),'alltable') = 0 then do; 
          filname = substr(fname,1,index(fname,'.')-1);
