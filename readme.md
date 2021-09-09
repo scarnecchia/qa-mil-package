@@ -45,7 +45,7 @@ Note that data must be in the form of SAS&reg; datasets in order to use these an
 
 ### Getting Started
 
-- Review the QA MIL Package Documentation (available **[here](docs/Sentinel_Mother_Infant_Quality_Assurance_Package_3.0.0.docx)**)
+- Review the QA MIL Package Documentation (available **[here](docs/Sentinel_Mother_Infant_Quality_Assurance_Package.docx)**)
 - Open `sasprograms\00.0_scdm_mil_data_qa_review_master_file.sas`
 - Go to section 1 of program header and specify the following parameters:
   - (1a) The path to SCDM MIL table under review
