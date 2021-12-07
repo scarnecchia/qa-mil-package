@@ -44,7 +44,7 @@ run;quit;
 /*-------------------------------------------------------------------------------------*/
 /* 1 - Perform L2 1.intra-table and 2.cross-table datachecks where AbortYN='y' for     */
 /*-------------------------------------------------------------------------------------*/
-  %do l=1 %to 2;
+  %do l=1 %to 2; 
   /*-----------------------------------------------------------------------------------*/
   /* 1.1 - Create temporary lookup table                                               */
   /*-----------------------------------------------------------------------------------*/
@@ -78,8 +78,8 @@ run;quit;
       %if (&checkid. ge 217 & &checkid. le 219) | (&checkid. ge 272 & &checkid. le 275) %then %do;
         %str(%flag_217_219_27_);
       %end;
-      %else %if &checkid. ge 201 & &checkid. le 208 %then %do;
-        %str(%flag_201_208);
+      %else %if &checkid. ge 201 & &checkid. le 203 %then %do;
+        %str(%flag_201_203);
       %end;
       %else %do;
         %str(%flag_&checkid.);

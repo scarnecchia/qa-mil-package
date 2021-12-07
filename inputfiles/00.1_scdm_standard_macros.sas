@@ -2398,7 +2398,7 @@ run;
 %macro l2_dup(l = );
   %global dups;
   %let dups = 0;
-  proc sql;
+  proc sql noprint;
     create table temp2 as
     select * from qadata.&table.
     where 
@@ -2454,11 +2454,11 @@ run;
 * END ==> checkrows macro                                           *
 *-------------------------------------------------------------------*;
 /*********************************************************************************/
-/* START ==> %flag_201_208                                                       */
+/* START ==> %flag_201_203                                                       */
 /*********************************************************************************/
 /* Cross table checks                                                            */ 
 /*-------------------------------------------------------------------------------*/
-%macro flag_201_208;
+%macro flag_201_203 /minoperator;
   %local i;
   proc sql noprint;
     create table temp as
@@ -2484,166 +2484,214 @@ run;
         ;
       quit;
 
-   /*if variable1 is filled, then that variable must be present in table2*/
-    %if &checkid. = 201  %then %do;
- /*DEV-1866*/
-      %if "%upcase(&tabid2.)" = "DEL" | "%upcase(&tabid2.)" = "INF" %then %do;
-        %if "%upcase(&tabid2.)" = "DEL" %then %let reftable = &deltable.;
-        %else %let reftable = &inftable.;
-      proc sql noprint;
-        create table flag_&i. as
-        select distinct a.&var1. %if "%upcase(&tabid2.)"="DEL" %then, a.&var2. ;, "E" as IDFileStatus format=$1.
-        from  qadata.&&&tabid1.table a left join qadata.&reftable. b
-        on a.&var1. = b.&var1.
-        %if "%upcase(&tabid2.)" = "DEL" %then %do;
-          and a.EncounterID = b.EncounterID
-        %end;
-        where not missing (a.&var1.) and b.&var1. is null
-        ;
-      quit;
-      %end;
+      /*if variable1 is filled, then that variable must be present in table2*/
+      %if &checkid. = 201  %then %do;
+ 
+        %if %upcase(&tabid2.) in (DEL INF) %then %do;
+          %if %upcase(&tabid2.) = DEL %then %let reftable = &deltable.;
+            %else %let reftable = &inftable.;
 
-      %else %do;    
-      proc sql noprint;
-        create table flag_&i. as
-        select distinct a.&var1.
-        from qadata.&&&tabid1.table a left join indata.&&&tabid2.table b
-        on a.&var1. = b.&var2.
-        where not missing(a.&var1.) and b.&var2. is null
-        ;
-      quit;
-      %end;
+          proc sql noprint;
+            create table flag_&i. as
+              select distinct a.&var1. 
+                %if %upcase(&tabid2.)=DEL %then , a.&var2. ;
+               , "E" as IDFileStatus format=$1.
+            from  qadata.&&&tabid1.table a 
+            left join qadata.&reftable. b
+            on a.&var1. = b.&var1.
+            %if %upcase(&tabid2.) = DEL %then %do;
+              and a.EncounterID = b.EncounterID
+            %end;
+            where not missing (a.&var1.) and b.&var1. is null
+          ;
+          quit;
+        %end; /* end condition tabid in DEL, INF */ 
 
-      %ISDATA(dataset = flag_&i.);
-      data flag_&i.;
-        set flag_&i.;
-        length message $300;
-        length table1 table2 $3;
-        table1 = "&tabid1.";
-        table2 = "&tabid2.";
-      %if &NOBS. > 0 %then %do;
-        %if "%upcase(&tabid2.)" = "DEL" %then %do;
-        message=cat("&var1. (",strip(&var1.),")/&var2.("
-            ,strip(&var2.),
-            ") was found in &&&tabid1.table but not found in deliveries table");
-      %end;
-      %else %if "%upcase(&tabid2.)" = "INF" %then %do;
-        message=cat("&var1. (",strip(&var1.)
-            ,") was found in &&&tabid1.table but not found in Infants table");
-      %end;
-      %else %do;
-        message=cat("&var1. (",strip(&var1.),") not found in &&&tabid2.table table");
-      %end;
-    %end;
-    %else %do; 
-        message = "";
-    %end;
-      run;
-    %if &NOBS. > 0 %then %do;
-      %if "%upcase(&tabid2.)" = "DEL" | "%upcase(&tabid2.)" = "INF" %then %do;
-        %ISDATA(dataset = dplocal.MIL_IDFileStatus_&VAR1.);
-        %if &NOBS. = 0 %then %do;
-          data dplocal.MIL_IDFileStatus_&VAR1.;
-            set flag_&i. (drop = message table1 table2);
+        %else %do;    
+          proc sql noprint;
+            create table flag_&i. as
+              select distinct a.&var1.
+            from qadata.&&&tabid1.table a 
+            left join indata.&&&tabid2.table b
+            on a.&var1. = b.&var2.
+            where not missing(a.&var1.) and b.&var2. is null
+          ;
+          quit;
         %end;
-        %else %do;
-          data dplocal.MIL_IDFileStatus_&VAR1.;
-            set dplocal.MIL_IDFileStatus_&VAR1. flag_&i. (drop = message table1 table2);
-        %end;
+
+        %ISDATA(dataset = flag_&i.);
+
+        data flag_&i.;
+          set flag_&i.;
+          length message $300;
+          length table1 table2 $3;
+          table1 = "&tabid1.";
+          table2 = "&tabid2.";
+          %if &NOBS. > 0 %then %do;
+            %if %upcase(&tabid2.) = DEL %then %do;
+              message=cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.),
+                ") was found in &&&tabid1.table but not found in deliveries table");
+            %end;
+            %else %if "%upcase(&tabid2.)" = "INF" %then %do;
+              message=cat("&var1. (",strip(&var1.)
+              ,") was found in &&&tabid1.table but not found in Infants table");
+            %end;
+            %else %do;
+              message=cat("&var1. (",strip(&var1.),") not found in &&&tabid2.table table");
+            %end;
+          %end; /* END condition NOBS > 0 */
+           %else %do; 
+             message = "";
+           %end;
           run;
 
-      %end;
-    %end;
-  %end; /*end of 201*/
+        %if &NOBS. > 0 %then %do;
+          %if %upcase(&tabid2.) in (DEL INF) %then %do;
+            %ISDATA(dataset = dplocal.MIL_IDFileStatus_&VAR1.);
+            %if &NOBS. = 0 %then %do;
+              data dplocal.MIL_IDFileStatus_&VAR1.;
+                set flag_&i. (drop = message table1 table2);
+            %end;
+            %else %do;
+              data dplocal.MIL_IDFileStatus_&VAR1.;
+                set dplocal.MIL_IDFileStatus_&VAR1. flag_&i. (drop = message table1 table2);
+            %end;
+          %end; /* end condition table2 in (DEL INF) */  
+        %end; /* END Condition NOBS >0 */
+      %end; /*end of 201*/
 
-  %if &checkid. = 202  %then %do;
- /*if variable1 is filled in table2, then that variable must be present in table2*/
-    %if "%upcase(&tabid2.)" = "DEL" %then %let reftable = &deltable.; /*DEV-1866*/
-    %else %let reftable = &inftable.;
-    proc sql noprint;
-      create table flag_&i. as
-      select distinct a.&var1. %if "%upcase(&tabid2.)" = "DEL" %then, a.&var2. ;, "N" as IDFileStatus format=$1.
-      from  qadata.&reftable.  a left join qadata.&&&tabid1.table b
-      on a.&var1. = b.&var1.
-      %if "%upcase(&tabid2.)" = "DEL" %then %do;
-        and a.EncounterID = b.EncounterID
-      %end;
-      where not missing (a.&var1.) and b.&var1. is null
-      ;
-    quit;
+      %if &checkid. = 202  %then %do;
+      /*if variable1 is filled in table2, then that variable must be present in table2*/
+        %if "%upcase(&tabid2.)" = "DEL" %then %let reftable = &deltable.; /*DEV-1866*/
+          %else %let reftable = &inftable.;
+        proc sql noprint;
+          create table flag_&i. as
+            select distinct a.&var1. %if "%upcase(&tabid2.)" = "DEL" %then, a.&var2. ;
+                , "N" as IDFileStatus format=$1.
+          from  qadata.&reftable.  a left join qadata.&&&tabid1.table b
+          on a.&var1. = b.&var1.
+          %if "%upcase(&tabid2.)" = "DEL" %then %do;
+            and a.EncounterID = b.EncounterID
+          %end;
+          where not missing (a.&var1.) and b.&var1. is null
+          ;
+        quit;
 
-    %ISDATA(dataset = flag_&i.);
+        %ISDATA(dataset = flag_&i.);
 
-    data flag_&i.;
-      set flag_&i.;
-      length message $300;
-      length table1 table2 $3;
-      table1 = "&tabid1.";
-      table2 = "&tabid2.";
-      %if &NOBS. > 0 %then %do;
-        %if "%upcase(&tabid2.)" = "DEL" %then %do;
-      message=cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.)
-        ,") was found in deliveries but not found in &&&tabid1.table table");
-      %end;
-      %else %if "%upcase(&tabid2.)" = "INF" %then %do;
-      message=cat("&var1. (",strip(&var1.)
-        ,") was found in Infants but not found in &&&tabid1.table table");
-      %end;     
-    %end;
-    %else %do; 
-      message = "";
-    %end;
-    run;
-
-    %if &NOBS. > 0 %then %do;
-      %ISDATA(dataset = dplocal.MIL_IDFileStatus_&VAR1.);
-      %if &NOBS. = 0 %then %do;
-        data dplocal.MIL_IDFileStatus_&VAR1.;
-          set flag_&i. (drop = message table1 table2);
+        data flag_&i.;
+          set flag_&i.;
+          length message $300;
+          length table1 table2 $3;
+          table1 = "&tabid1.";
+          table2 = "&tabid2.";
+          %if &NOBS. > 0 %then %do;
+            %if "%upcase(&tabid2.)" = "DEL" %then %do;
+              message=cat("&var1. (",strip(&var1.),")/&var2.(",strip(&var2.)
+                        ,") was found in deliveries but not found in &&&tabid1.table table");
+            %end;
+            %else %if "%upcase(&tabid2.)" = "INF" %then %do;
+              message=cat("&var1. (",strip(&var1.)
+                        ,") was found in Infants but not found in &&&tabid1.table table");
+            %end;     
+          %end; /* end if NOBS>0 condition */
+          %else %do; 
+            message = "";
+          %end;
         run;
-      %end;
-      %else %do;
-        data dplocal.MIL_IDFileStatus_&VAR1.;
-          set dplocal.MIL_IDFileStatus_&VAR1. flag_&i. (drop = message table1 table2);
+
+        %if &NOBS. > 0 %then %do;
+          %ISDATA(dataset = dplocal.MIL_IDFileStatus_&VAR1.);
+          %if &NOBS. = 0 %then %do;
+            data dplocal.MIL_IDFileStatus_&VAR1.;
+              set flag_&i. (drop = message table1 table2);
+            run;
+          %end;
+          %else %do;
+            data dplocal.MIL_IDFileStatus_&VAR1.;
+              set dplocal.MIL_IDFileStatus_&VAR1. 
+                  flag_&i. (drop = message table1 table2);
+            run;
+          %end;    
+        %end; /* end condition NOBS >0 */
+      %end; /*end of 202*/
+
+      %if &checkid. = 203 %then %do;
+        proc contents data= qadata.&&&tabid1.table out=l2_cont_&tabid1. noprint;
         run;
-      %end;    
-    %end;
-  %end; /*end of 202*/
 
-  %if &checkid. = 203 %then %do;
-    proc contents data= qadata.&&&tabid1.table out=l2_cont_&tabid1. noprint;
-    run;
+        proc contents data = qadata.&&&tabid2.table out = l2_cont_&tabid2. noprint;
+        run;
 
-    proc contents data = qadata.&&&tabid2.table out = l2_cont_&tabid2. noprint;
-    run;
-
-    proc sql noprint;
-      create table flag_&i. as
-      select "&tabid1." as table1 length=3
-           , "&tabid2." as table2 length=3
-           , a.length 
-           , b.length as comp_length 
-      from l2_cont_&tabid1. (keep = name type length) a 
-         , l2_cont_&tabid2. (keep=name type length) b
-      where upcase(a.name) = "%upcase(&var1.)"
-      and upcase(b.name) = "%upcase(&var2.)"
-      ;
-    quit;
+        proc sql noprint;
+          create table flag_&i. as
+            select "&tabid1." as table1 length=3
+                 , "&tabid2." as table2 length=3
+                 , a.length 
+                 , b.length as comp_length 
+          from l2_cont_&tabid1. (keep = name type length) a 
+             , l2_cont_&tabid2. (keep=name type length) b
+          where upcase(a.name) = "%upcase(&var1.)"
+          and upcase(b.name) = "%upcase(&var2.)"
+          ;
+        quit;
   
-    data flag_&i.;
-      set flag_&i.;
-      length message $300;
-      message = "";
-      flag_l2= 0;
-      if length ne comp_length then do;
-        message = cat("&var1. length differs from &var2. length in &&&tabid2.table table");
-        flag_l2 = 1;
-      end;
-      if flag_l2;
-      run;
-    %end;
+        data flag_&i.;
+          set flag_&i.;
+          length message $300;
+          message = "";
+          flag_l2= 0;
+          if length ne comp_length then do;
+            message = cat("&var1. length differs from &var2. length in &&&tabid2.table table");
+            flag_l2 = 1;
+          end;
+          if flag_l2;
+        run;
+      %end; /* end condition if checkid=203 */
+    %end; /* end i-loop */
+  %end; /* end condition ct > 0 */ 
+  %get_flagid;
+%mend flag_201_203;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %flag_201_203                                                         */
+/*-------------------------------------------------------------------------------*/
 
-    %if &checkid. = 208 %then %do;
+/*-------------------------------------------------------------------------------*/
+/* START ==> %flag_208                                                           */
+/*-------------------------------------------------------------------------------*/
+%macro flag_208;
+  %local i;
+  proc sql noprint;
+    create table temp as
+    select monotonic ( ) as row, *
+    from temp_l2_flags (where=(checkid="&checkid.")) 
+    ;
+  quit;
+  %let ct=&sqlobs.;
+
+  %if &ct. > 0 %then %do; 
+    %do i=1 %to &ct.;
+      proc sql noprint;
+        select variable1
+             , variable2
+             , variable3
+             , variable4
+             , table1
+             , table2
+             , flag_descr
+        into :var1 trimmed
+           , :var2 trimmed
+           , :var3 trimmed
+           , :var4 trimmed
+           , :tabid1 trimmed
+           , :tabid2 trimmed
+           , :flag_descr trimmed
+        from temp
+        where row=&i.
+        ;
+      quit;
+
+      /* If comparing MIL to DEM sex value, convert DEM ('A','U') to 'O' for consistency */ 
       %if "%upcase(&tabid2.)" = "DEM" %then %do;
         data dem;
           set indata.&&&tabid2.table;
@@ -2654,38 +2702,26 @@ run;
       %else %do;
         %let scdmtable = indata.&&&tabid2.table;
       %end;
+
       proc sql;
         create table flag_&i. as 
-        select distinct a.&var1., 
-        cat(%if ("%lowcase(&var1.)" = "mbirth_date") %then "MPatID (",mpatid,; 
-      %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var1.)" = "ddate") %then "EncounterID (",a.encounterid,;
-      %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then "CpatID (",a.cpatid,;
-      "): &var1. (",%if %index(%lowcase(a.&var1.), date) > 0 %then put(a.&var1., mmddyy10.);
-           %else strip(a.&var1.);
-      ,") not equal to &&&tabid2.table..&var2. (", 
-      %if %index(%lowcase(b.&var2.), date) > 0 %then put(b.&var2., mmddyy10.);
-           %else strip(b.&var2.);,
-      %if "%lowcase(&var1.)" = "mbirth_date"  %then "), when linking Mpatid=&&&tabid2.table..patid";
-      %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var2.)" = "ddate") %then "), when linking EncounterID=&&&tabid2.table..EncounterID";
-      %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then "), when linking Cpatid=&&&tabid2.table..patid";  
-      ) as message length=300,  
-       "&tabid1." as table1 length=3
-      ,"&tabid2." as table2 length=3 
+        select distinct a.&var1.
+            , "&flag_descr" as message length=300
+            , "&tabid1." as table1 length=3
+            , "&tabid2." as table2 length=3 
         from qadata.&&&tabid1.table a, &scdmtable. b 
-        where %if "%lowcase(&var1.)" = "mbirth_date" %then a.Mpatid = b.patid; 
-     %else %if ("%lowcase(&var1.)" = "adate" | "%lowcase(&var1.)" = "ddate") %then a.encounterid = b.encounterid;
-     %else %if ("%lowcase(&var1.)" = "sex" | "%lowcase(&var1.)" = "cbirth_date") %then a.Cpatid = b.patid;
-        and a.&var1. ne b.&var2. and not missing(a.&var1.)
+        where a.&var3. = b.&var4. AND 
+              (a.&var1. ne b.&var2. and not missing(a.&var1.))
         ;
       quit;
-      %end;
-    %get_flagid (ntabs=2, nvars=2);
-    %end;/*end of 203*/
-  %end;  
-%mend flag_201_208;
+      %get_flagid (ntabs=2, nvars=2);
+    %end; /* end i-loop */
+  %end;/* end condition count>0 */
+%mend flag_208; 
 /*-------------------------------------------------------------------------------*/
-/* END ==> %flag_201_208                                                         */
+/* END ==> %flag_208                                                           */
 /*-------------------------------------------------------------------------------*/
+
 /*********************************************************************************/
 /* START ==> %flag_217_219_27_ :Mom-Infant Linkage table                         */
 /*********************************************************************************/
@@ -2703,9 +2739,10 @@ run;
 
   data temp;
     set temp;
-  %do i = 1 %to 4;
-    variable&i. = tranwrd(variable&i., "NA", " ");
-  %end;
+    array vars variable:;
+    do i = 1 to dim(vars); 
+      vars(i) = tranwrd(vars(i), "NA", " ");
+    end;
   run;
 
   %global var1 var2 var3 var4 link tabid;
