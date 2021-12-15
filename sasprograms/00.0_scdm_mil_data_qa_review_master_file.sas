@@ -70,8 +70,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 7/29/2021
-*  Version: 3.0.1
+*  Last modified date (mm/dd/yy): 11/19/2021
+*  Version: 3.1.0
 *
 ****************************************************************************************/
 
@@ -361,7 +361,7 @@ quit;
 %let Phase= B; 
 
 /* Current QA version needed for signature file */
-%let QAVer= 3.0.0;
+%let QAVer= 3.1.0;
 
 /* Set Number of Observations for dplocal flags datasets */
 %let MaxObs= 500;
