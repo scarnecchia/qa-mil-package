@@ -70,8 +70,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 11/19/2021
-*  Version: 3.1.0
+*  Last modified date (mm/dd/yy): 12/29/2021
+*  Version: 3.1.1
 *
 ****************************************************************************************/
 
@@ -217,7 +217,7 @@ options linesize=100 pagesize=50;
    /* Specify project-ID, workplan-type, workplan-ID, workplan-type, dpid, version-ID  */
    %let ProjID = <edit-project-id> ;
    %let WPType = <edit-workplan-type> ;
-   %let WPID   = <edid-workplan-id> ;
+   %let WPID   = <edit-workplan-id> ;
    %let DPID   = <edit-dpid> ;
    %let VerID  = <edit-version> ;
  
@@ -361,7 +361,7 @@ quit;
 %let Phase= B; 
 
 /* Current QA version needed for signature file */
-%let QAVer= 3.1.0;
+%let QAVer= 3.1.1;
 
 /* Set Number of Observations for dplocal flags datasets */
 %let MaxObs= 500;
