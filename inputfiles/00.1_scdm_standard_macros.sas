@@ -2512,7 +2512,7 @@ run;
             create table flag_&i. as
               select distinct a.&var1.
             from qadata.&&&tabid1.table a 
-            left join qadata.&&&tabid2.table b
+            left join indata.&&&tabid2.table b
             on a.&var1. = b.&var2.
             where not missing(a.&var1.) and b.&var2. is null
           ;
@@ -2694,13 +2694,15 @@ run;
       /* If comparing MIL to DEM sex value, convert DEM ('A','U') to 'O' for consistency */ 
       %if "%upcase(&tabid2.)" = "DEM" %then %do;
         data dem;
-          set qadata.&&&tabid2.table;
+          set indata.&&&tabid2.table;
           if upcase(sex) in ('A','U') then sex = 'O';
         run;
         %let scdmtable = dem;
       %end;
       %else %do;
-        %let scdmtable = qadata.&&&tabid2.table;
+        %if %upcase(&tabid2.) = ENC %then %let reflib = indata;
+          %else %let reflib = qadata; 
+        %let scdmtable = &reflib..&&&tabid2.table;
       %end;
 
       proc sql;

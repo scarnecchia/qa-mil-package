@@ -70,8 +70,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 12/29/2021
-*  Version: 3.1.1
+*  Last modified date (mm/dd/yy): 1/31/2022
+*  Version: 3.1.2
 *
 ****************************************************************************************/
 
@@ -117,12 +117,12 @@ options linesize=100 pagesize=50;
 /*-------------------------------------------------------------------------------------*/
 /* 1a. Define path to location of staged SCDM tables under review
        Example: %let Evaluate_MIL= //sentinel/etl22/PhaseB/ */
-  %let Evaluate_MIL= <edit-path>/ ;
+  %let Evaluate_MIL= <edit-path>;
 
 /* 1b. Define path to location of Mother-Infant ID results in DPLOCAL created by either
        an executed QA (qar) or MI ID (mir) package 
        Example: %let DPL_MI= //sentinel/etl22/PhaseA/soc_qar_wp001_xxxx_v01/dplocal/   */
-  %let DPL_MI= <edit-root>/dplocal/;
+  %let DPL_MI= <edit-path>;
 
 /* 1c. Specify the name of the staged SCDM MIL table, not including .sas7bdat. A default
        value has been entered. Edit if ETL-specific name is used at your site         
@@ -133,7 +133,7 @@ options linesize=100 pagesize=50;
        Common Components (CC) request associated with this ETL, INCLUDING the request-id. 
        Example: %let SCC = /<root>/soc_cca_wp001_xxxx_v01/
        NOTE: ORGANIZATIONS WITHOUT CC SHOULD LEAVE BLANK AND SKIP TO STEP 1e.          */
-  %let SCC = <edit-root>/<edit-CC-A-request-ID>/ ;
+  %let SCC = <edit-path> ;
  
 /***************************************************************************************/
 /* 1e. OPTIONAL: Organizations WITHOUT Common Components define parameters in this 
@@ -215,17 +215,17 @@ options linesize=100 pagesize=50;
   *  The example values above would produce Request-ID --> soc_qmr_wp001_soc_v01 ;
  /*------------------------------------------------------------------------------------*/
    /* Specify project-ID, workplan-type, workplan-ID, workplan-type, dpid, version-ID  */
-   %let ProjID = <edit-project-id> ;
-   %let WPType = <edit-workplan-type> ;
-   %let WPID   = <edit-workplan-id> ;
-   %let DPID   = <edit-dpid> ;
-   %let VerID  = <edit-version> ;
+   %let ProjID = <edit-projid>;
+   %let WPType = <edit-wptype>;
+   %let WPID   = <edit-wpid>;
+   %let DPID   = <edit-dpid>;
+   %let VerID  = <edit-verid>;
  
    /* Create request-id delimiter - Default is underscore (_)                          */
    %let dlm = _ ;  /* Do not edit */  
 
    /* Specify ETL # for this request (i.e., Same ETL # for Phase A SCDM tables)        */
-   %let _ETL = <edit-ETL-#> ;
+   %let _ETL = <edit-etl#> ;
 
 ****************************************************************************************
 *******                             END OF USER INPUT                             ******
