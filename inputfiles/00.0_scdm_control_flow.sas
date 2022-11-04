@@ -158,11 +158,6 @@
   proc print data=msoc.etl_version;
   run;        
   title ; 
- 
-/*Create licensed product file*/
-  %let comps=base*stat*graph*%nrstr(acc-pc files)*ets*af*iml*connect*oracle*odbc*teradata;
-  %put =====> comps = %unquote(&comps);
-  %licensed
 
   %put &syscc.;
   %if %sysevalf(&syscc.>4) %then %do;
