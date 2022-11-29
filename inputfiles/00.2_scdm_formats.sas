@@ -35,6 +35,17 @@ proc format library=dplocal;
   65-<75  = "09. 65-74 yrs"
   75-high = "10. 75+ yrs"
   ;
+  value agecat_days
+  .        = "00. Missing"
+  low-<0   = "01. < 0 days"
+  0-30     = "02. 0-30 days"
+  31-60    = "03. 31-60 days"
+  61-120   = "04. 61-120 days"
+  121-180  = "05. 121-180 days"
+  181-270  = "06. 181-270 days"
+  271-365  = "07. 271-365 days" 
+  366-high = "08. > 366 days"
+  ;
   value $enr_overlap
   'D'='Duplicate'
   'O'='Overlap'
@@ -44,38 +55,38 @@ run;
 
 /*format for daysdiff*/
 proc format library = dplocal;
-	value daysfmt
-	low--31 = "00:< -30 days"
-	-30--11 = "01:-11 through -30 days"
-	-10--4 = "02:-4 through -10 days"
-	-3--1 = "03:-1 through -3 days"
-	0 = "04:0 days"
+  value daysfmt
+  low--31 = "00:< -30 days"
+  -30--11 = "01:-11 through -30 days"
+  -10--4 = "02:-4 through -10 days"
+  -3--1 = "03:-1 through -3 days"
+  0 = "04:0 days"
     1-3 = "05:1 through 3 days"
     4-10 = "06:4 through 10 days"
     11-30 = "07:11 through 30 days"
-	31-high = "08:> 30 days";
+  31-high = "08:> 30 days";
 
-	value type1fmt
-	 1 = "MatchMethod"
-	 2 = "DaysDiff"
-	 4 = "sex"
-	 8 = "EncType"
-	 16 = "AgeGroup"
-	 32 = "ICD_Ver"
-	 64 = "YearMonth"
-	 128 = "Year"
-	 256 = "Birth_Type"
-	 512 = "LinkageStatus";
+  value type1fmt
+   1 = "MatchMethod"
+   2 = "DaysDiff"
+   4 = "sex"
+   8 = "EncType"
+   16 = "AgeGroup"
+   32 = "ICD_Ver"
+   64 = "YearMonth"
+   128 = "Year"
+   256 = "Birth_Type"
+   512 = "LinkageStatus";
 
-	 value type2fmt
-	 1 = "InfantsLinked"
-	 2 = "EncType"
-	 4 = "AgeGroup"
-	 8 = "ICD_Ver"
-	 16 = "YearMonth"
-	 32 = "Year"
-	 64 = "Birth_Type"
-	 128 = "LinkageStatus";
+   value type2fmt
+   1 = "InfantsLinked"
+   2 = "EncType"
+   4 = "AgeGroup"
+   8 = "ICD_Ver"
+   16 = "YearMonth"
+   32 = "Year"
+   64 = "Birth_Type"
+   128 = "LinkageStatus";
 
 run;
 
