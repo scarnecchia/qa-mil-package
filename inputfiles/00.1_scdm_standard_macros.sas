@@ -3108,21 +3108,15 @@ run;
 /*-------------------------------------------------------------------------------*/
 %macro days_dist_by_yr;
   proc sql noprint;
-    create table agedays as
-    select cpatid
-          ,cenr_start - cbirth_date as agedays
-          ,year(cbirth_date) as year_cbirth_date 
-          ,put(calculated agedays, agecat_days.) as agedays_grp
-    from qadata.&table.
-    where cpatid ne . 
+    create table msoc.mil_l2_cenrstart_agedays_cat as 
+    select year(cbirth_date) as year_cbirth_date 
+          ,put(cenr_start - cbirth_date, agecat_days.) as agedays_grp
+          ,count(distinct cpatid) as count 
+    from qadata.&table.(keep=cpatid cenr_start cbirth_date)
+    where not missing(cpatid)
+    group by calculated year_cbirth_date, calculated agedays_grp
+    order by year_cbirth_date, agedays_grp
     ;
-    create table msoc.mil_l2_cenrstart_agedays_cat as
-    select   year_cbirth_date
-           , agedays_grp
-           , count(distinct cpatid) as count
-    from agedays
-    group by year_cbirth_date, agedays_grp
-    order by year_cbirth_date, agedays_grp; 
   quit;
 %mend days_dist_by_yr;
 /*-------------------------------------------------------------------------------*/
