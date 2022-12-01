@@ -44,7 +44,7 @@ proc format library=dplocal;
   121-180  = "05. 121-180 days"
   181-270  = "06. 181-270 days"
   271-365  = "07. 271-365 days" 
-  366-high = "08. > 366 days"
+  366-high = "08. >= 366 days"
   ;
   value $enr_overlap
   'D'='Duplicate'
