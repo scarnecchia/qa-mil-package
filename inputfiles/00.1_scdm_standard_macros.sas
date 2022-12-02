@@ -3110,12 +3110,12 @@ run;
   proc sql noprint;
     create table msoc.mil_l2_cenrstart_agedays_cat as 
     select year(cbirth_date) as year_cbirth_date 
-          ,put(cenr_start - cbirth_date, agecat_days.) as agedays_grp
+          ,put(cenr_start - cbirth_date, agecat_days.) as agedays_group
           ,count(distinct cpatid) as count 
     from qadata.&table.(keep=cpatid cenr_start cbirth_date)
     where not missing(cpatid)
-    group by calculated year_cbirth_date, calculated agedays_grp
-    order by year_cbirth_date, agedays_grp
+    group by calculated year_cbirth_date, calculated agedays_group
+    order by year_cbirth_date, agedays_group
     ;
   quit;
 %mend days_dist_by_yr;
