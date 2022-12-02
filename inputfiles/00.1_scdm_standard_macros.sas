@@ -20,14 +20,14 @@
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
 
 %macro assignlib;
-	*Different libnames for SCDM tables and mil tables. *;
-	%global templib;
-	 %if "%lowcase(&tabid.)" = "mil" or "%lowcase(&tabid.)" = "mis" %then %do; 
-  		%let templib = qadata;
-	  %end;
-	  %else %do;
-	  	 %let templib = mi;
-	  %end;
+  *Different libnames for SCDM tables and mil tables. *;
+  %global templib;
+   %if "%lowcase(&tabid.)" = "mil" or "%lowcase(&tabid.)" = "mis" %then %do; 
+      %let templib = qadata;
+    %end;
+    %else %do;
+       %let templib = mi;
+    %end;
 %mend assignlib;
 
 /*************************************************************************************/
@@ -42,22 +42,22 @@ data primeproduct;
    n=dim(x);
     primeproduct = 1;
    %do k = 1 %to 7;
-   	ncomb=comb(n,&k.);
-   	do j=1 to ncomb;
+    ncomb=comb(n,&k.);
+    do j=1 to ncomb;
       call allcomb(j, &k., of x[*]);
-	  %do m = 1 %to &k.;
-	  	 p&m. = x&m.;
-		primeproduct = primeproduct*p&m.;
-	  %end;
-	 output;
-	  primeproduct = 1;
+    %do m = 1 %to &k.;
+       p&m. = x&m.;
+    primeproduct = primeproduct*p&m.;
+    %end;
+   output;
+    primeproduct = 1;
    end;
    %end;
 run;
 %global primes;
 proc sql noprint;
-	 select primeproduct into: primes separated by ' '
-	 from primeproduct;
+   select primeproduct into: primes separated by ' '
+   from primeproduct;
 quit;
 %mend prime;
 
@@ -69,20 +69,20 @@ quit;
 %MACRO ISDATA(dataset=);
 %PUT =====> MACRO CALLED: ms_macros v1.0 => ISDATA;
 
-	%GLOBAL NOBS;
-	%let NOBS=0;
-	%if %sysfunc(exist(&dataset.))=1 and %LENGTH(&dataset.) ne 0 %then %do;
-		data _null_;
-		dsid=open("&dataset.");
-		call symputx("NOBS",attrn(dsid,"NLOBS"));
-		run;
-	%end;	
+  %GLOBAL NOBS;
+  %let NOBS=0;
+  %if %sysfunc(exist(&dataset.))=1 and %LENGTH(&dataset.) ne 0 %then %do;
+    data _null_;
+    dsid=open("&dataset.");
+    call symputx("NOBS",attrn(dsid,"NLOBS"));
+    run;
+  %end; 
 %PUT &NOBS.;
 
 %put NOTE: ********END OF MACRO: ms_macros v1.0 => ISDATA ********;
 %MEND ISDATA;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %ISDATA                                                        		     */
+/* END ==> %ISDATA                                                                 */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -96,7 +96,7 @@ quit;
   run;
 %mend copy_rename_ds;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %copy_rename_ds                                                		   */
+/* END ==> %copy_rename_ds                                                       */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -128,17 +128,17 @@ quit;
 /*********************************************************************************/
 %macro date_ranges (variable= ,dataset= );
   %global date_min date_max;
-	 proc sql noprint;
-		  select min(&&variable.)  
-		 	     , max(&&variable.)
-		  into :date_min trimmed
+   proc sql noprint;
+      select min(&&variable.)  
+           , max(&&variable.)
+      into :date_min trimmed
        , :date_max trimmed
-		  from qadata.&&dataset.
+      from qadata.&&dataset.
     ;
-	 quit;
+   quit;
 %mend date_ranges;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %date_ranges                                                   		 */
+/* END ==> %date_ranges                                                        */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -333,25 +333,25 @@ quit;
 /*********************************************************************************/
 /* START ==> %move_l3                                                            */
 /*********************************************************************************/
-/*  move l3_signature file to the msoc folder if QA is on MIL table 		           */
+/*  move l3_signature file to the msoc folder if QA is on MIL table                */
 /*-------------------------------------------------------------------------------*/
 %macro move_l3;
-	 %ISDATA(dataset = dplocal.l3_signature);
-	 %IF (&NOBS. > 0) %THEN %DO;
-		 	proc sql noprint;
+   %ISDATA(dataset = dplocal.l3_signature);
+   %IF (&NOBS. > 0) %THEN %DO;
+      proc sql noprint;
       create table msoc.l3_signature as
- 				 select *
+         select *
       from dplocal.l3_signature
       ;
       drop table dplocal.l3_signature
       ;
     quit;
- 	%END;
+  %END;
 %mend move_l3;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %move_l3                                                              */
 /*-------------------------------------------------------------------------------*/
-	
+  
 
 /*********************************************************************************/
 /* START ==> %remove_labels                                                      */
@@ -523,9 +523,9 @@ quit;
          , a.abortYN
          , 99999 as count
     from infolder.lkp_all_flags a, DPLOCAL.temp_flag_11x_&tabid. b
-	where a.flagid = b.flagid
-	and lowcase(a.variable1) = lowcase(b.variable)
-	and lowcase(a.tableid)=lowcase("&tabid.") and checkid="&checkid."
+  where a.flagid = b.flagid
+  and lowcase(a.variable1) = lowcase(b.variable)
+  and lowcase(a.tableid)=lowcase("&tabid.") and checkid="&checkid."
     ;
   quit;
   data _null_;
@@ -3101,6 +3101,27 @@ run;
 /* END ==> %flag_257                                                             */
 /*-------------------------------------------------------------------------------*/
 
+/*********************************************************************************/
+/* START ==> %days_dist_by_yr                                                     */
+/*********************************************************************************/
+/* Return distance between cbirth_date and cenr_start, stratify by birth year    */
+/*-------------------------------------------------------------------------------*/
+%macro days_dist_by_yr;
+  proc sql noprint;
+    create table msoc.mil_l2_cenrstart_agedays_cat as 
+    select year(cbirth_date) as year_cbirth_date 
+          ,put(cenr_start - cbirth_date, agecat_days.) as agedays_group
+          ,count(distinct cpatid) as count 
+    from qadata.&table.(keep=cpatid cenr_start cbirth_date)
+    where not missing(cpatid)
+    group by calculated year_cbirth_date, calculated agedays_group
+    order by year_cbirth_date, agedays_group
+    ;
+  quit;
+%mend days_dist_by_yr;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %days_dist_by_yr                                                      */
+/*-------------------------------------------------------------------------------*/
 
 *-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-;
 * End 00.1_scdm_standard_macros.sas                                               ;
