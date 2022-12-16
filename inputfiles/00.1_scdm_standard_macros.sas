@@ -96,47 +96,7 @@ quit;
   run;
 %mend copy_rename_ds;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %copy_rename_ds                                                		     */
-/*-------------------------------------------------------------------------------*/
-
-/*********************************************************************************/
-/* START ==> %licensed                                                           */
-/*********************************************************************************/
-/*  Used in Control Flow to determine available SAS products at DP site          */
-/*-------------------------------------------------------------------------------*/
-%macro licensed;
-  proc setinit;
-  run;
-  %let ct=%sysfunc(countw(&comps,*));
-
-  proc sql noprint;
-   create table _licensed
-       (Component char(15),
-        temp num (3))
-
-   ;    
-   insert into _licensed
-   %do a=1 %to &ct.; 
-     values("%scan(%unquote(&comps),&a,*)", %sysprod(%scan(%unquote(&comps),&a,*)))
-   %end;
-   ;
- quit;
-
- proc sql noprint;
-   create table msoc.licensed as
-   select upcase(component) as Component
-        , case when temp=1 then "Licensed"
-               when temp=0 then "Not licensed"
-               when temp=-1 then "Invalid product"
-               else "Invalid product"
-          end as Status length=25
-   from _licensed
-   ;    
- quit;
-
-%mend licensed;
-/*-------------------------------------------------------------------------------*/
-/* END ==> %licensed                                                             */
+/* END ==> %copy_rename_ds                                                		   */
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
