@@ -2511,10 +2511,12 @@ run;
             %if &NOBS. = 0 %then %do;
               data dplocal.MIL_IDFileStatus_&VAR1.;
                 set flag_&i. (drop = message table1 table2);
+              run;
             %end;
             %else %do;
               data dplocal.MIL_IDFileStatus_&VAR1.;
                 set dplocal.MIL_IDFileStatus_&VAR1. flag_&i. (drop = message table1 table2);
+              run;
             %end;
           %end; /* end condition table2 in (DEL INF) */  
         %end; /* END Condition NOBS >0 */
@@ -2607,10 +2609,11 @@ run;
           end;
           if flag_l2;
         run;
-      %end; /* end condition if checkid=203 */
+      %end; /* end condition if checkid=203 */ 
+      %get_flagid (nvars=2, ntabs=2);
     %end; /* end i-loop */
   %end; /* end condition ct > 0 */ 
-  %get_flagid;
+
 %mend flag_201_203;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_201_203                                                         */
