@@ -168,6 +168,9 @@ run;quit;
 %mend;
 %level2_abort;
 
+/* Return distance between cbirth_date and cenr_start */
+%days_dist_by_yr
+
 %timestamp(&module._end);
 %timereport(&&&module._start,&&&module._end);
 
