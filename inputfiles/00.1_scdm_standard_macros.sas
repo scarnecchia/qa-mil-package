@@ -2846,21 +2846,24 @@ run;
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
-/* START ==> %flag_221_226_25 :Mom-Infant Linkage table                          */
+/* START ==> %flag_221_254_280 :Mom-Infant Linkage table                          */
 /*********************************************************************************/
 /* Intra-table check for two variables                                           */
 /*-------------------------------------------------------------------------------*/
-%macro flag_221_226_254; 
+%macro flag_221_254_280; 
+
+  %* select lookup records for checkid, count times to iterate to run all flags associated with check as ct;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
-    from temp_l2_flags (where=(checkid="&checkid.")) 
+    from temp_l2_flags (where=(checkid="&checkid.")) ;
     ;
   quit;
   %let ct=&sqlobs.;
+  %if &ct. > 0 
+  %then %do i=1 %to &ct.;
 
-  %if &ct. > 0 %then %do;
-    %do i=1 %to &ct.;
+      %* load variable names and tabID to parms for iteration;
       proc sql noprint;
         select variable1
              , variable2
@@ -2872,16 +2875,17 @@ run;
         where row=&i.
         ;
       quit;
-
-      %put ===> &var1. &var2. &tabid.;
+       
+      %* load full SCDM table name to table parm;
       %table_name(n=);
  
+
       %if &checkid. = 221 %then %do;
+
         data flag_&i.;
           set qadata.&table.;
           length message $300;
           message = "";
-          flag_12= 0;
           if not missing(&var1.) & missing(&var2.) then do;
           %if "%lowcase(&var1.)" ne "mpatid" & "%lowcase(&var2.)" ne "mpatid" & "%lowcase(&var1.)" ne "cpatid" %then %do;
             message=cat("MPatID= ",strip(mpatid),": &var1.= ",
@@ -2891,55 +2895,99 @@ run;
             message = cat("&Var1. = ",strip(&var1.),", but No value found for ","&var2.");
           %end;
             flag_12=1;
+            output;
           end;
-          if flag_12;
         run;
- 
-        %get_flagid (ntabs=1, nvars=2);
-      %end;
 
-      %else %if &checkid.=226 %then %do;
-        data flag_&i.;
-          set qadata.&table.;
-          length message $300;
-          message="";
-          flag_12=0;
-          if not missing(&var1.) & not missing(&var2.) then do;
-            if &var2. < &var1. then do;
-              message=cat("MPatID= ",strip(mpatid),": ADate= ",put(&var1., mmddyy10.), ",DDate= ", 
-              put(&var2., mmddyy10.), " but DDate must be >= ADate");
-              flag_12=1;
-            end;
-          end;
-          if flag_12;
-        run;
         %get_flagid (ntabs=1, nvars=2);
-      %end;
+
+      %end; %* end logic for check 221;
+
 
       %else %if &checkid. = 254 %then %do;
         data flag_&i.;
           set qadata.&table.;
           length message $300;
           message = "";
-          flag_12= 0;
           if not missing(&var1.) & not missing(&var2.) then do;
             value=round((&var2.-&var1.)/365.25, .01);
             if &var1. > &var2. | Sum(&var2.,-&var1.)/365.25 < 10 then do;
               message = cat("MPatID = ",strip(mpatid)," and CPatID = ",strip(cpatid),": &var1. (", put(&var1.,mmddyy10.), ") must be >= 10 years before &var2.(",
               put(&var2.,mmddyy10.),"). They are only ",value," years apart");
               flag_12 = 1;
+              output;
             end;
           end;
-          if flag_12;
         run;
+
         %get_flagid (ntabs=1, nvars=2);
-      %end;
-    %end;
-  %end; 
-%mend flag_221_226_254;
+
+      %end; %* end logic for check 254;
+
+
+      %else %if &checkid.=280 
+      %then %do;
+
+        data flag_&i.;
+          set qadata.&table.;
+          where 
+          where     not(missing(&var1.))
+                and not(missing(&var2.))
+                and (&var1. - &var2.) > 180;
+          length message $300;
+          flag_12=1;
+          message=cat("MPatID= ",strip(mpatid),"CPatID= ",strip(cpatid),": difference between &var1. (", put(&var1., mmddyy10.), ") and &var2. (", put(&var2., mmddyy10.),") > 180 days ");          
+        run;
+
+        %get_flagid (ntabs=1, nvars=2);
+
+      %end; %* end logic for check 280;
+
+  %end; %* end i=1 to ct do loop;
+
+%mend flag_221_254_280;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %flag_221_226_254                                                     */
+/* END ==> %flag_221_254_280                                                     */
 /*-------------------------------------------------------------------------------*/
+
+
+/*********************************************************************************/
+/* START ==> %flag_221 :Mom-Infant Linkage table                                 */
+/*********************************************************************************/
+/* Intra-table check, if variable is filled, variable2 must be filled       */
+/*-------------------------------------------------------------------------------*/
+%macro flag_221;
+  %flag_221_254_280
+%mend flag_221;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %flag_221                                                             */
+/*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
+/* START ==> %flag_254 :Mom-Infant Linkage table                                 */
+/*********************************************************************************/
+/* MBirth_date must be greater than CBirth_date by 10+ years         */
+/*-------------------------------------------------------------------------------*/
+%macro flag_254;
+  %flag_221_254_280
+%mend flag_254;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %flag_254                                                             */
+/*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
+/* START ==> %flag_280 :Mom-Infant Linkage table                                 */
+/*********************************************************************************/
+/* cbirth_date must be within 180 days following mother adate                    */
+/*-------------------------------------------------------------------------------*/
+%macro flag_280;
+  %flag_221_254_280
+%mend flag_280;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %flag_280                                                             */
+/*-------------------------------------------------------------------------------*/
+
+
 
 /*********************************************************************************/
 /* START ==> %flag_255_258 :Mom-Infant Linkage table                             */
@@ -3044,29 +3092,6 @@ run;
 /* END ==> %flag_255_258                                                         */
 /*-------------------------------------------------------------------------------*/
 
-/*********************************************************************************/
-/* START ==> %flag_221 :Mom-Infant Linkage table                                 */
-/*********************************************************************************/
-/* Intra-table check, if variable is filled, variable2 must be filled       */
-/*-------------------------------------------------------------------------------*/
-%macro flag_221;
-  %flag_221_226_254
-%mend flag_221;
-/*-------------------------------------------------------------------------------*/
-/* END ==> %flag_221                                                             */
-/*-------------------------------------------------------------------------------*/
-
-/*********************************************************************************/
-/* START ==> %flag_254 :Mom-Infant Linkage table                                 */
-/*********************************************************************************/
-/* MBirth_date must be greater than CBirth_date by 10+ years         */
-/*-------------------------------------------------------------------------------*/
-%macro flag_254;
-  %flag_221_226_254
-%mend flag_254;
-/*-------------------------------------------------------------------------------*/
-/* END ==> %flag_254                                                             */
-/*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
 /* START ==> %flag_255 :Mom-Infant Linkage table                                 */
