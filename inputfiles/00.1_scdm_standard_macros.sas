@@ -2930,7 +2930,6 @@ run;
 
         data flag_&i.;
           set qadata.&table.;
-          where 
           where     not(missing(&var1.))
                 and not(missing(&var2.))
                 and (&var1. - &var2.) > 180;
