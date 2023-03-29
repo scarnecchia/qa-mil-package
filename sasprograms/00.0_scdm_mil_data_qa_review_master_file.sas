@@ -366,7 +366,7 @@ quit;
 %let Phase= B; 
 
 /* Current QA version needed for signature file */
-%let QAVer= 3.3.0;
+%let QAVer= 3.3.1;
 
 /* Set Number of Observations for dplocal flags datasets */
 %let MaxObs= 500;
