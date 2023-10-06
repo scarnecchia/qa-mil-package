@@ -42,6 +42,7 @@ options linesize=100 pagesize=50;
 *        indata.PreTable    (prescribing, if available)
 *        indata.PrrTable    (patient reported response table, if available)
 *        indata.PrsTable    (patient reported survey table, if available)
+*        indata.Featable    (feature engineering table, if available)
 *        
 *     STAGED MIL SCDM table:
 *        qadata.MILTable (mother_infant_linkage)
@@ -72,8 +73,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 3/29/2023
-*  Version: 3.3.1
+*  Last modified date (mm/dd/yy): 9/28/2023
+*  Version: 3.3.2
 *
 ****************************************************************************************/
 
@@ -197,6 +198,7 @@ options linesize=100 pagesize=50;
        %let _PRETABLE= ;    *specify the prescribing table name;
        %let _PRRTABLE= ;    *specify the patient reported response table name;
        %let _PRSTABLE= ;    *specify the patient reported survey table name;
+       %let _FEATABLE= ;    *specify the feature engineering table name;
 
 /********************************** END OF SECTION 1 ***********************************/
 
@@ -283,7 +285,7 @@ quit;
     %global etl _etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
             enrtable demtable distable enctable diatable proctable deathtable  
             codtable labtable vittable ipharmtable itranstable phase miltable scdmver
-            pretable pvdtable factable prrtable prstable;
+            pretable pvdtable factable prrtable prstable featable;
   /*-----------------------------------------------------------------------------------*/
     %inc "&_packageroot./inputfiles/soc_setup_macros.sas" /nosource2;
 
@@ -311,11 +313,12 @@ quit;
     %let pvdtable= &_pvdtable;
     %let prrtable= &_prrtable;
     %let prstable= &_prstable;
+    %let featable= &_featable;
 
     %symdel  _dp _dp_mindate _dp_maxdate _scdmver
             _enrtable _demtable _distable _enctable _diatable _proctable _deathtable  
             _codtable _labtable _vittable _ipharmtable _itranstable _phase
-            _pretable _pvdtable _factable _prrtable _prstable;
+            _pretable _pvdtable _factable _prrtable _prstable _featable;
 
    /* Define request specific subdirectories */
     %let DPLOCAL = %soc_clean_paths(&_packageroot./dplocal/) ;
@@ -366,7 +369,7 @@ quit;
 %let Phase= B; 
 
 /* Current QA version needed for signature file */
-%let QAVer= 3.3.1;
+%let QAVer= 3.3.2;
 
 /* Set Number of Observations for dplocal flags datasets */
 %let MaxObs= 500;
