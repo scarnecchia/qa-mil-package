@@ -427,16 +427,22 @@ run;quit;
     %end;
 
     %local c i n;
-    %let macro_var_list=%upcase(DP|ETL|Phase|SCDMVer|dp_mindate|dp_maxdate|
-                              enrtable|demtable|distable|enctable|diatable|proctable|
-                              factable|pvdtable|deathtable|codtable|labtable|vittable|
-                              ipharmtable|itranstable|pretable|miltable);
+
+    /* Define macro variable list from Phase A qa_cc_metadata file */
+    %let MSOC_MI=%sysfunc(tranwrd(&DPL_MI,dplocal,msoc));
+    %soc_lib(MSOC_MI,&MSOC_MI); 
+    proc sql noprint;
+      select upcase(variable) into: macro_var_list separated by '|'
+      from MSOC_MI.qa_cc_metadata
+      ;
+    quit;
+
     proc sql noprint;
       create table msoc.qa_cc_metadata (Variable char(32), Value char(255))
       ;  
       insert into msoc.qa_cc_metadata
     %do i=1 %to %sysfunc(countw(&macro_var_list.));
-      %let var=%scan(&macro_var_list.,&i.,|);
+      %let var=%scan(&macro_var_list.,&i.,'|');
       %if %sysfunc(index(&var.,DP_))=1 %then %do;
       %let n=%sysfunc(putn(%superq(&var.),best12.));
       %let c=%sysfunc(putn(&n.,date9.));
