@@ -428,14 +428,15 @@ run;quit;
 
     %local c i n;
 
-    /* Define macro variable list from Phase A qa_cc_metadata file */
-    %let MSOC_MI=%sysfunc(tranwrd(&DPL_MI,dplocal,msoc));
-    %soc_lib(MSOC_MI,&MSOC_MI); 
+    /* Pull table names from cc_control_flow file */ 
     proc sql noprint;
-      select upcase(variable) into: macro_var_list separated by '|'
-      from MSOC_MI.qa_cc_metadata
+      select distinct lowcase(cc_table) into: cctablist separated by '|'
+      from msoc.cc_control_flow
       ;
     quit;
+
+    /* Define macro variable list for qa_cc_metadata */
+    %let macro_var_list=%upcase(DP|ETL|Phase|SCDMVer|dp_mindate|dp_maxdate|&cctablist.);
 
     proc sql noprint;
       create table msoc.qa_cc_metadata (Variable char(32), Value char(255))

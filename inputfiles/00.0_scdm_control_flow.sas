@@ -265,7 +265,7 @@
            , count(*) 
       into :tablelist separated by "*"
          , :tabct trimmed
-      from control_flow (where=(lowcase(cc_table) ne 'x' and execute_flag='n'))
+      from control_flow (where=(lowcase(cc_table) ne 'x' and execute_flag='n' and module_cat ne "")) 
       ;
     quit;
 
@@ -348,6 +348,14 @@
     if first.seqno;
     retain module_required 'y';
   run;
+
+  /* Create separate control flow dataset for cc metadata */
+  proc sql noprint;
+    create table msoc.cc_control_flow as
+    select cc_table
+    from control_flow (where=(lowcase(cc_table) ne 'x'))
+    ;
+  quit;
 
   /* Reset printto locations -- this method used to circumvent any file lock conflicts */     
   proc printto log=log; 
