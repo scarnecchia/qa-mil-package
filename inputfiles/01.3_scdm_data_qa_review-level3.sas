@@ -443,7 +443,7 @@ run;quit;
       ;  
       insert into msoc.qa_cc_metadata
     %do i=1 %to %sysfunc(countw(&macro_var_list.));
-      %let var=%scan(&macro_var_list.,&i.,'|');
+      %let var=%scan(&macro_var_list.,&i.,|);
       %if %sysfunc(index(&var.,DP_))=1 %then %do;
       %let n=%sysfunc(putn(%superq(&var.),best12.));
       %let c=%sysfunc(putn(&n.,date9.));
