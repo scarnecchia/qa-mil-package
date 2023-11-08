@@ -435,6 +435,10 @@ run;quit;
       ;
     quit;
 
+    proc datasets lib=msoc nolist nowarn;
+       delete cc_control_flow;
+    quit;
+
     /* Define macro variable list for qa_cc_metadata */
     %let macro_var_list=%upcase(DP|ETL|Phase|SCDMVer|dp_mindate|dp_maxdate|&cctablist.);
 
