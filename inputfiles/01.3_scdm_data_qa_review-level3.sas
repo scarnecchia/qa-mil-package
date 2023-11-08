@@ -427,28 +427,33 @@ run;quit;
     %end;
 
     %local c i n;
-    %let macro_var_list=%upcase(DP|ETL|Phase|SCDMVer|dp_mindate|dp_maxdate|
-                              enrtable|demtable|distable|enctable|diatable|proctable|
-                              factable|pvdtable|deathtable|codtable|labtable|vittable|
-                              ipharmtable|itranstable|pretable|miltable);
+
+    /* Pull table names from cc_control_flow file */ 
     proc sql noprint;
-      create table msoc.qa_cc_metadata (Variable char(32), Value char(255))
-      ;  
-      insert into msoc.qa_cc_metadata
+      select distinct lowcase(cc_table) into: cctablist separated by '|'
+      from msoc.cc_control_flow
+      ;
+    quit;
+
+    proc datasets lib=msoc nolist nowarn;
+       delete cc_control_flow;
+    quit;
+
+    /* Define macro variable list for qa_cc_metadata */
+    %let macro_var_list=%upcase(DP|ETL|Phase|SCDMVer|dp_mindate|dp_maxdate|&cctablist.);
+
+  data msoc.qa_cc_metadata;
+    length Variable $32 Value $255;
     %do i=1 %to %sysfunc(countw(&macro_var_list.));
       %let var=%scan(&macro_var_list.,&i.,|);
-      %if %sysfunc(index(&var.,DP_))=1 %then %do;
-      %let n=%sysfunc(putn(%superq(&var.),best12.));
-      %let c=%sysfunc(putn(&n.,date9.));
-      %let value=&c.;
+      %if %index(&var.,DP_) %then %let value=%sysfunc(putn(&&&var.,date9.));
+      %else %let value = &&&var.;
+      Variable = "&var." ;
+      Value =  "&value.";
+      output;
     %end;
-    %else %do;
-      %let value = %superq(&var.);
-    %end;
-      values ("&var.", "&value.")
-    %end;
-      ; 
-    quit;
+  run;
+
 %mend cc_metadata;
 %cc_metadata
 
