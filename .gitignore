@@ -1,0 +1,6 @@
+msoc/*.sas7bdat
+msoc/*.log
+msoc/*.csv
+dplocal/*.sas7bdat
+dplocal/*.log
+sasprograms/*.log
