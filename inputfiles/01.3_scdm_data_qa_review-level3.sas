@@ -495,6 +495,96 @@ run;quit;
 %mend;
 %move_files;
 
+/*---------------------------------------------------------------------------------*/
+/* automate creation of DP Characteristics Sign-Off Report
+/*   this assume that previous etl's all_l1_l2_flags and all_l3_flags dataset
+/*   are located at infolder library(inputfiles)
+/*---------------------------------------------------------------------------------*/
+%macro create_char_sign_off_report(dsn) ;
+  %local etlm1  ;
+  %let etlm1 = %eval(&etl -1) ;
+
+  proc sort data=msoc.&dsn.
+            out=&dsn.;
+  by flagID;
+  run ;
+
+  %if %sysfunc(exist(infolder.&dsn.,data)) %then
+  %do;
+    proc sort data=infolder.&dsn.
+              out =&dsn._x;
+    by flagID;
+    run ;
+
+    data &dsn._combined ;
+      if 0 then set &dsn.(drop=count) ;   /* bring var list from dataset except count */
+      format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. ;  /* order var */
+      format pctchg_count_&etl._&etlm1. comma7.2 ;
+
+      merge &dsn.(in=in_new rename=(count=count_&etl.))
+            &dsn._x(in=in_old rename=(count=count_&etlm1.
+                 DP=O_DP AbortYN=O_AbortYN FlagType=O_FlagType Flag_Descr=O_flag_Descr ) ) ;
+      by flagID;
+      drop O_: ;
+      if (in_old and not in_new) then do;
+        DP = O_DP ;
+        AbortYN = O_AbortYN ;
+        FlagType = O_FlagType ;
+        Flag_Descr = O_flag_Descr ;
+      end;
+
+      if missing(count_&etlm1.) then do;
+          diff_count_&etl._&etlm1. = . ;
+          pctchg_count_&etl._&etlm1. = . ;
+        end ;
+      else do;
+          diff_count_&etl._&etlm1. = count_&etl. - count_&etlm1. ;
+          pctchg_count_&etl._&etlm1. = diff_count_&etl._&etlm1. / count_&etlm1. * 100 ;
+        end;
+      length Sign_off $ 8 Comment $ 100. ;
+      call missing(Sign_off, Comment) ;
+    run;
+
+    proc datasets lib=work nolist nodetails nowarn;
+      delete &dsn._x ;
+    quit;
+  %end ;
+  %else %do ;
+    %put WARNING:prev. ver. of &dsn..sas7bdat in inputfiles does NOT exist - continuing;
+    data &dsn._combined ;
+      if 0 then set &dsn.(drop=count) ;
+      format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. ;
+      format pctchg_count_&etl._&etlm1. comma7.2 ;
+      set &dsn.(rename=(count=count_&etl.)) ;
+      count_&etlm1. = . ;
+      diff_count_&etl._&etlm1. = . ;
+      pctchg_count_&etl._&etlm1. = . ;
+      length Sign_off $ 8 Comment $ 100. ;
+      call missing(Sign_off, Comment) ;
+    run;
+  %end ;
+
+  ods excel options(sheet_name="&dsn." FLOW="HEADERS" FROZEN_HEADERS="ON"
+                    absolute_column_width = "8,17,5,8,52,10,10,10,10,10,30"
+                    row_heights = "30");
+
+  proc print data=&dsn._combined noobs;
+    var _all_ / style=[vjust=top] ;
+  run;
+
+  proc datasets lib=work nolist nodetails nowarn;
+    delete &dsn._combined  &dsn.;
+  quit;
+%mend;
+ods listing close;
+ods excel file="&msoc./data_characteristics_sign_off_report_&dpid._etl&etl.B.xlsx" ;
+
+%create_char_sign_off_report (all_l1_l2_flags);
+%create_char_sign_off_report (all_l3_flags);
+
+ods excel close;
+ods listing ;
+
 /* Clean up datasets from DPLOCAL */
 proc sql noprint;
   select memname into :ds separated by " "
