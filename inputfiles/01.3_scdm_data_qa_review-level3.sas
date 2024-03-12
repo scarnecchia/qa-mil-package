@@ -512,7 +512,7 @@ run;quit;
   %if %sysfunc(exist(msoc.&dsn.,data)) %then
   %do;
       proc sort data=msoc.&dsn.
-                out=&dsn. 
+                out=&dsn. ;
           by flagID;
       run ;
 
@@ -523,10 +523,10 @@ run;quit;
         data &dsn._combined;
 
           if 0 then set &dsn.(drop=count) ;   /* bring var list from dataset except count */
-          format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. ;  /* order var */
-          pctchg_count_&etl._&etlm1. comma7.2 ;
+          format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. 
+                 pctchg_count_&etl._&etlm1. comma7.2 ;
 
-          set &dsn.(in=in_new rename=(count=count_&etl.)) 
+          set &dsn.(in=in_new rename=(count=count_&etl.)) ;
           by flagID;
        
           length Sign_off $ 8 Comment $ 100. ;
@@ -554,7 +554,7 @@ run;quit;
 
         data &dsn._combined ;
           if 0 then set &dsn._x (drop=count) ;   /* bring var list from dataset except count */
-          format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. ;  /* order var */
+          format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. 
                  pctchg_count_&etl._&etlm1. comma7.2 ;
 
           set  &dsn._x(in=in_old rename=(count=count_&etlm1.));
@@ -572,7 +572,7 @@ run;quit;
 
         data &dsn._combined ;
           if 0 then set &dsn.(drop=count) ;   /* bring var list from dataset except count */
-          format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. ;  /* order var */
+          format count_&etlm1. count_&etl. diff_count_&etl._&etlm1. comma15. 
                  pctchg_count_&etl._&etlm1. comma7.2 ;
 
           merge &dsn.(in=in_new rename=(count=count_&etl.))
@@ -602,36 +602,32 @@ run;quit;
 
   %end; %* end do statment infolder.dsn exists;
 
-
-
-  %if %sysfunc(exist(&dsn._combined,data)) %then
-  %do;
-
-    ods excel options(sheet_name="&dsn." FLOW="HEADERS" FROZEN_HEADERS="ON"
-                      absolute_column_width = "8,17,5,8,52,10,10,10,10,10,30"
-                      row_heights = "30");
-
-    proc print data=&dsn._combined noobs;
-      var _all_ / style=[vjust=top] ;
-    run;
-
-    proc datasets lib=work nolist nodetails nowarn;
-      delete &dsn. 
-             &dsn._x
-             &dsn._combined;
-    quit;
-
-  %end; %* end do statement if exist dsn_combined to generate report;
-
-
-
   %if %sysfunc(exist(&dsn._combined,data))=0 %then
   %do;
 
     %put WARNING: previous version and new version of &dsn..sas7bdat do NOT exist, report will not be generated;
+    data &dsn._combined;
+        Message = "Previous and new versions of &dsn. do not exist.";
+        output;
+        Message = "No results to evaluate";
+        output;
+    run;  
 
   %end ; %* end do statement if dsn_combined does not exist to generate warning in log ;
 
+  ods excel options(sheet_name="&dsn." FLOW="HEADERS" FROZEN_HEADERS="ON"
+                      absolute_column_width = "8,17,5,8,52,10,10,10,10,10,30"
+                      row_heights = "30");
+
+  proc print data=&dsn._combined noobs;
+    var _all_ / style=[vjust=top] ;
+  run;
+
+  proc datasets lib=work nolist nodetails nowarn;
+    delete &dsn. 
+           &dsn._x
+           &dsn._combined;
+  quit;
 
 %mend;
 
