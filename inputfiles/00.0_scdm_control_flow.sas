@@ -565,6 +565,11 @@
     %abort 99;
   %end;
 
+  %* If specified in the master program file, call the qa_common_components program              *;
+  %if %lowcase(&execute_CC.)=y %then %do;
+    %cc_run
+  %end;
+
   %endmac: 
 
 %mend MASTER_FLOW;

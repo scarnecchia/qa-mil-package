@@ -19,6 +19,13 @@ options linesize=100 pagesize=50;
 *   breadth and depth of that data. This program defines the data check process, the
 *   specific checks that will be performed and how flagged data will be identified.   
 *
+*   All routine Sentinel distributed SAS program packages require that the QA Common Components (CC)
+*   package is setup at each Data Partner (DP) site prior to execution of any Sentinel Operations 
+*   Center (SOC) distributed packages. By default, this program is set to run the CC package after QA
+*   has completed. The purpose of CC is to provide commonly used metadata to executing SAS packages
+*   ---e.g., location of SCDM formatted tables, SCDM table names, ETL refresh version, minimum
+*   and maximum dates of data-completeness, etc.
+*
 * MAJOR STEPS: 
 *
 * KEY DEPENDENCIES/CONSTRAINTS/CAVEATS:
@@ -73,8 +80,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 03/13/2024
-*  Version: 3.4.1
+*  Last modified date (mm/dd/yy): 05/01/2024
+*  Version: 3.5.0
 *
 ****************************************************************************************/
 
@@ -200,6 +207,62 @@ options linesize=100 pagesize=50;
        %let _PRSTABLE= ;    *specify the patient reported survey table name;
        %let _FEATABLE= ;    *specify the feature engineering table name;
 
+/***************************************************************************************/
+/* 1f. Define Parameters for Common Components (CC) Phase B Run
+/***************************************************************************************/
+/* Specify if Common Components (CC) program package should run */
+  /* Enter 'Y' for yes, otherwise leave blank or enter 'N' for no */
+   %let Execute_CC = Y;
+
+  *****************************************************************************************
+   Linkage between Root-Path parameters and FUTURE Production Request Subdirectory
+     parameters.
+  *****************************************************************************************
+  The root-path parameters in this common component request are defined for each standard
+  workplan subdirectory, but they are not used in this request. These root-path parameters
+  are specific to the ETL and phase, but not to a given production request. When
+  combined with parameters from the master program for a specific production request,
+  the full path(s) specific to that request are generated dynamically.
+
+  Note that for most sites, all root-path parameters will point to the same directory.
+
+  An example is provided using the variable "DPLOCAL" to illustrate how the parameters
+  are resolved to dynamically build the full path to the "dplocal" subdirectory for
+  the request "cder_ahr_soc_wp005_b03".
+
+  /* The DP specifies the variable "_ROOT_DPLOCAL" in Section 1c. These values are then
+    written to a metadata file for use by all production queries for this ETL. */
+     Example: %let _ROOT_DPLOCAL=//sentinel/requests/etl_22/
+
+    /* The individual production request packages create the global macro variable &ReqID
+       --> Note:  This is separate from the ReqID for this CC request */
+       Example:  Production request &ReqID resolves to: "cder_ahr_soc_wp005_b03"
+
+    /* This CC package creates the global macro variable &DPLocal */
+       %let DPLOCAL = &_root_dplocal.&ReqID./dplocal/ ;
+
+    /* &DPLOCAL resolves to: //sentinel/requests/cder_ahr_soc_wp005_b03/dplocal/ */
+
+  **************************************************************************************;
+  /* Specify the local path(s) to the subfolders for FUTURE PRODUCTION requests run
+    on this ETL, excluding the Request ID.
+
+    Note: A value must be provided for each subfolder, even if they are located
+    in a single directory.
+
+    Example: %let _ROOT_DPLOCAL= /sentinel/requests/etl22/PhaseB/;
+  */
+
+  %let _ROOT_DPLOCAL= ;
+
+  /* Optional: Only modify the defaults below if your site plans to use different paths
+    for each of the following subfolders for production requests run on this ETL after,
+    but not including, this request. */
+
+   %let _ROOT_MSOC= &_root_dplocal ;
+   %let _ROOT_INPUTFILES= &_root_dplocal ;
+   %let _ROOT_SASPROGRAMS= &_root_dplocal ;
+
 /********************************** END OF SECTION 1 ***********************************/
 
 /*-------------------------------------------------------------------------------------*/
@@ -265,6 +328,13 @@ quit;
 
 /* Delete macro variable used as delimiter as no longer needed */
 %symdel dlm ;
+
+/* Rename and delete CCB _root variables as CCA uses same variables */
+%let _CCROOT_DPLOCAL= &_ROOT_DPLOCAL;
+%let _CCROOT_MSOC= &_ROOT_MSOC ;
+%let _CCROOT_INPUTFILES= &_ROOT_INPUTFILES ;
+%let _CCROOT_SASPROGRAMS= &_ROOT_SASPROGRAMS ;
+%symdel _ROOT_DPLOCAL _ROOT_MSOC _ROOT_INPUTFILES _ROOT_SASPROGRAMS;
 
 %macro scc_yn; /* Please do not edit */
   %global ccbypass;
@@ -342,6 +412,9 @@ quit;
 %soc_lib(INFOLDER,&INFOLDER, options=%str(access=readonly))
 %soc_lib(QADATA, &QADATA, options=%str(access=readonly))
 
+/* Create root path for Phase B qa_common_components package */
+%let CCroot=&INFOLDER.qa_common_components/;
+
 
 *****************************************************************************************
 ******                                 BEGIN PROGRAM                               ******
@@ -368,8 +441,9 @@ quit;
 /* Overwrite Phase from CC */
 %let Phase= B; 
 
-/* Current QA version needed for signature file */
+/* Current QA and CC versions needed for signature file */
 %let QAVer= 3.4.1;
+%let CCVer= 1.5.0;
 
 /* Set Number of Observations for dplocal flags datasets */
 %let MaxObs= 500;

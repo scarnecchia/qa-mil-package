@@ -387,6 +387,245 @@ quit;
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
+/* START ==> %redirect_libs                                                      */
+/*********************************************************************************/
+/*  Redirect subdirectory macro variables and libraries back to specified root   */
+/*   folder                                                                      */
+/*-------------------------------------------------------------------------------*/
+%macro redirect_libs(root);
+
+/* Define request specific subdirectories */
+%let DPLOCAL=&root./dplocal/ ;
+%let MSOC= &root./msoc/ ;
+%let INFOLDER= &root./inputfiles/;
+%let SASPROGRAMS= &root./sasprograms/ ;
+
+/* Assign libnames */
+%soc_lib(DPLOCAL,&DPLOCAL)
+%soc_lib(MSOC,&MSOC)
+%soc_lib(INFOLDER,&INFOLDER, options=%str(access=readonly))
+
+%mend redirect_libs;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %redirect_libs                                                        */
+/*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
+/* START ==> %dircopy                                                            */
+/*********************************************************************************/
+/*  Copy all files from one directory to another                                 */
+/*                                                                               */
+/*  Code to read directories recursively (outputting dirs_found and files_found  */
+/*    datasets) pulled from https://www.lexjansen.com/wuss/2012/55.pdf           */
+/*-------------------------------------------------------------------------------*/
+%macro dircopy (indir=,outdir=);
+
+/* Obtain list of all directories within &indir, and list of files within each directory */
+data dirs_found (compress=no);
+ length Root $256.;
+ root="&indir.";
+ output;
+run;
+
+data dirs_found files_found (compress=no); 
+  keep Path FileName;
+  length fref $8 Filename $256;
+  /* Read the name of a directory to search. */
+  modify dirs_found;
+  /* Make a copy of the name, because we might reset root. */
+  Path = root;
+  rc = filename(fref, path);
+  if rc = 0 then do;
+    did = dopen(fref);
+    rc = filename(fref);
+  end;
+  else do;
+    length msg $200.;
+    msg = sysmsg();
+    putlog msg=;
+    did = .;
+  end;
+  if did <= 0 then do;
+    putlog 'ERR' 'OR: Unable to open ' Path=;
+    return;
+  end;
+  dnum = dnum(did);
+  do i = 1 to dnum;
+    filename = dread(did, i);
+    fid = mopen(did, filename);
+    if fid > 0 then do;
+  output files_found;
+  end;
+  else do;
+/*  A directory name was found; calculate the complete */
+/*  path, and add it to the dirs_found data set, */
+/*  where it will be read in the next iteration of this */
+/*  data step. */
+    root = catt(path, "/", filename);
+    output dirs_found;
+  end;
+  end;
+  rc = dclose(did);
+run;
+
+/* Obtain list of output directories to copy files to */
+data dirs_all;
+  set dirs_found;
+  outpath=tranwrd(root,"&indir","&outdir");
+run;
+
+/* Create output directory folders if they don't exist */
+options dlcreatedir;
+data _null_;
+  set dirs_all;
+  call execute("libname folder " ||'"'||trim(outpath)||'";');
+run;
+options nodlcreatedir;
+
+/* Create macro variable list for each directory and output directory */
+proc sql noprint;
+  select root, count(root), outpath
+  into  :dirlist separated by '*', :dircnt, :outlist separated by '*'
+  from dirs_all
+  ;
+quit;
+
+%do i=1 %to &dircnt;
+
+  %let dir=%scan(&dirlist.,&i.,'*');
+  %let copydir=%scan(&outlist.,&i.,'*');
+
+  /* Obtain list of files in directory to copy */
+  proc sql noprint;
+    select filename, count(filename)  into :flist separated by '*', :fcnt
+    from files_found
+    where path="&dir."
+    ;
+  quit;
+
+  %do j=1 %to &fcnt;
+    %let file=%scan(&flist.,&j.,'*');
+
+    filename source "&dir./&file" recfm=n;
+    filename dest "&copydir./&file" recfm=n;
+
+    data _null_;
+      length msg $500.;
+      rc=fcopy('source', 'dest');
+         if rc=0 then
+          put "Copied source file &dir./&file to destination &copydir.";
+       else do;
+          msg=sysmsg();
+          put rc= msg=;
+       end;
+    run;
+
+  %end;
+%end;
+
+%mend dircopy;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %dircopy                                                              */
+/*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
+/* START ==> %cc_run                                                             */
+/*********************************************************************************/
+/*  1. Defines parameters to bypass qa_common_components master file, runs       */
+/*     qa_common_components, and copies output to msoc/qa_common_components      */
+/*     folder                                                                    */
+/*  2. Creates CC request id folder under QA package root directory (based on    */
+/*     QA request id), copies entire CC package to CC request id folder          */
+/*-------------------------------------------------------------------------------*/
+%macro cc_run;
+
+  data _null_;
+    put 75*'-';
+    put ' ';
+    put "==> Begin Execution of qa_common_components program";
+    put ' ';
+    put 75*'-';
+  run;
+
+  /* Obtain QApackage_root variable */
+  %if &ccbypass=N %then %do;
+    %let QApackage_root=&_root_dplocal;
+  %end;
+  %else %if &ccbypass=Y %then %do;
+    %let QApackage_root=&_packageroot;
+  %end;
+
+  /* Rename CCB _root variables for CCB run */
+  %let _ROOT_DPLOCAL= &_CCROOT_DPLOCAL;
+  %let _ROOT_MSOC= &_CCROOT_MSOC ;
+  %let _ROOT_INPUTFILES= &_CCROOT_INPUTFILES ;
+  %let _ROOT_SASPROGRAMS= &_CCROOT_SASPROGRAMS ;
+
+  /* Create library for CC dp_metadata folder */
+  %soc_lib(QARESULT, &INFOLDER.qa_common_components/inputfiles/dp_metadata) 
+
+  /* Copy over necessary QA Package metadata datasets to CC dp_metadata folder */
+  proc copy in=msoc out=qaresult memtype=data;
+    select all_l1_cont etl_version minmax_dates qa_cc_metadata;
+  run;
+
+  /* Redirect libraries to inputfiles/qa_common_components folder */
+  %redirect_libs(&CCroot.)
+
+  /* Redefine infolder library to include cc_test folder */
+  %soc_lib(INFOLDER, &INFOLDER. &INFOLDER.cc_test, options=%str(access=readonly))
+
+  /* Redefine qadata to include only path to MIL table (and exclude path to Phase A Mother-Infant ID results) */
+
+  %let QADATA = %soc_clean_paths(&Evaluate_MIL);
+  %soc_lib(QADATA, &QADATA., options=%str(access=readonly))
+
+  /* Execute the main Common Components file */
+  %inc "&infolder.01.0_run_cc.sas" /nosource2;
+
+  /* _ROOT macro variable is assigned in CC program, reassign back to QA package request id root folder */
+  %let _ROOT=%soc_clean_paths(&QApackage_root);
+  %let _ROOT=&_root.&reqid./;
+
+  /* Redirect libraries back to QA package request id root folder */
+  %redirect_libs(&_root.)
+
+  /* Create msoc/qa_common_components directory */
+  %let MSOC_CC=&_root.msoc/qa_common_components;
+
+  options dlcreatedir;
+  libname MSOC_CC "&MSOC_CC.";
+  options nodlcreatedir;
+
+  /* Copy over CC output to msoc/qa_common_components folder */
+  %dircopy(indir=&INFOLDER.qa_common_components/msoc, outdir=&MSOC_CC)
+
+  /* Create CC request id */
+  %if %lowcase(&wptype.) = qmr %then %do;
+    %let cc_wptype = ccb;
+  %end;
+  %else %do;
+    %let cc_wptype = cca;
+  %end;
+
+  %let CCreqid=&ProjID._&cc_wptype._&wpid._&dpid._&verid.;
+
+  /* Create CC request id folder */
+  %let CCdir=&_ROOT.&CCreqid.;
+
+  options dlcreatedir;
+  libname CCdir "&CCdir.";
+  options nodlcreatedir;
+  
+  /* Copy over entire completed CC package from inputfiles folder to CC request id folder */
+  %dircopy(indir=&INFOLDER.qa_common_components, outdir=&CCdir)
+
+%mend cc_run;
+/*-------------------------------------------------------------------------------*/
+/* END ==> %cc_run                                                               */
+/*-------------------------------------------------------------------------------*/
+
+/*********************************************************************************/
 /* START ==> %set_ds                                                             */
 /*********************************************************************************/
 /*  Used in all table modules to combine datasets based on the specified prefix  */
