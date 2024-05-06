@@ -73,6 +73,8 @@ run;quit;
       run;
     %end;
 
+    %let dsid_close=%sysfunc(close(&dsid.));
+
     %let nobs=%sysfunc(putn(&numobs.,comma18.));
       data _null_;
         put 70*'=';
