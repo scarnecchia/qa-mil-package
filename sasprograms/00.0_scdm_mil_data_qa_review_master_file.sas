@@ -4,12 +4,12 @@ options linesize=100 pagesize=50;
 *****************************************************************************************
 * NAME: 00.0_scdm_mil_data_qa_review_master_file.sas
 *
-* PURPOSE: The purpose of this program is to check the quality of data in the Sentinel 
+* PURPOSE: The purpose of this program is to check the quality of data in the Sentinel
 *   Common Data Model(SCDM). Prior to conducting a statistical query,
 *   sufficient data screening methods should be used for all variables to identify
 *   miscoded, missing, or otherwise disorganized data. Some of the items to check for
 *   include: missing required fields,validating values, validating dates or date ranges,
-*   validating data types, etc. 
+*   validating data types, etc.
 *
 *   Data are generated from health plan administrative claims data held by Data Partners
 *   (DP) into the SCDM.  Analytic models and monitoring are dependent on data, which are
@@ -17,16 +17,16 @@ options linesize=100 pagesize=50;
 *   the data will meet these goals, the Sentinel Operations Center (SOC) has written this
 *   program to perform both data quality checks and to profile the data to expose the
 *   breadth and depth of that data. This program defines the data check process, the
-*   specific checks that will be performed and how flagged data will be identified.   
+*   specific checks that will be performed and how flagged data will be identified.
 *
 *   All routine Sentinel distributed SAS program packages require that the QA Common Components (CC)
-*   package is setup at each Data Partner (DP) site prior to execution of any Sentinel Operations 
+*   package is setup at each Data Partner (DP) site prior to execution of any Sentinel Operations
 *   Center (SOC) distributed packages. By default, this program is set to run the CC package after QA
 *   has completed. The purpose of CC is to provide commonly used metadata to executing SAS packages
 *   ---e.g., location of SCDM formatted tables, SCDM table names, ETL refresh version, minimum
 *   and maximum dates of data-completeness, etc.
 *
-* MAJOR STEPS: 
+* MAJOR STEPS:
 *
 * KEY DEPENDENCIES/CONSTRAINTS/CAVEATS:
 *
@@ -50,30 +50,30 @@ options linesize=100 pagesize=50;
 *        indata.PrrTable    (patient reported response table, if available)
 *        indata.PrsTable    (patient reported survey table, if available)
 *        indata.Featable    (feature engineering table, if available)
-*        
+*
 *     STAGED MIL SCDM table:
 *        qadata.MILTable (mother_infant_linkage)
-* 
+*
 *     SAS programs:
 *        00.0_scdm_mil_control_flow.sas
 *        00.1_scdm_mil_standard_macros.sas
 *        00.2_scdm_mil_formats.sas
 *        00.3_scdm_mil_sas_log_checker_directory_cc.sas
 *        00.4_scdm_mil_qasignaturerequest.sas
-*        01.1_scdm_mil_data_qa_review-level1.sas 
+*        01.1_scdm_mil_data_qa_review-level1.sas
 *        01.2_scdm_mil_data_qa_review-level2.sas
 *        01.3_scdm_mil_data_qa_review-level3.sas
 *        soc_setup_macros.sas
-* 
+*
 *     Lookup tables:
 *        control_flow.sas7bdat
 *        lkp_all_flags.sas7bdat
 *        lkp_all_l1.sas7bdat
 *
 *   PROGRAM OUTPUT:  See documentation in DOCs subfolder of this request
-*            
+*
 *----------------------------------------------------------------------------------------
-* CONTACT INFO: 
+* CONTACT INFO:
 *  Sentinel Coordinating Center
 *  info@sentinelsystem.org
 *
@@ -88,7 +88,7 @@ options linesize=100 pagesize=50;
 /*---------------------------------------------------------------------------------------
 *                                        DEFINITIONS
 *----------------------------------------------------------------------------------------
-* Evaluate_MIL...Location of ETL SCDM tables to be evaluated by this QA request  
+* Evaluate_MIL...Location of ETL SCDM tables to be evaluated by this QA request
 *
 * DPL_MI...Location of the DPLOCAL subfolder containing the Mother_Infant Identification
 *          results, created from a prior execution of either a 'qar' or 'mir' request
@@ -103,7 +103,7 @@ options linesize=100 pagesize=50;
 *    NOTE: This parameter needs to be set by the programmer preparing the Request-ID in
 *          coordination with the Sentinel Operations Center (SOC)
 *
-* The following paths for the current request are automatically derived 
+* The following paths for the current request are automatically derived
 *    DPLOCAL  ...path for data created that remains local (i.e. behind the DP firewall)
 *    MSOC     ...path for data created to share with Sentinel Operations Center
 *    INFOLDER ...path for program inputs (e.g. lookup data, include programs/macros)
@@ -130,53 +130,58 @@ options linesize=100 pagesize=50;
   %let Evaluate_MIL= <edit-path>;
 
 /* 1b. Define path to location of Mother-Infant ID results in DPLOCAL created by either
-       an executed QA (qar) or MI ID (mir) package 
+       an executed QA (qar) or MI ID (mir) package
        Example: %let DPL_MI= //sentinel/etl22/PhaseA/soc_qar_wp001_xxxx_v01/dplocal/   */
   %let DPL_MI= <edit-path>;
 
 /* 1c. Specify the name of the staged SCDM MIL table, not including .sas7bdat. A default
-       value has been entered. Edit if ETL-specific name is used at your site         
+       value has been entered. Edit if ETL-specific name is used at your site
        Example: %let _MILTABLE= mother_infant_linkage;                                 */
-   %let _MILTABLE= mother_infant_linkage;
+  %let _MILTABLE= mother_infant_linkage;
 
 /* 1d. Edit macro variable SCC to point to the directory containing the executed Phase A
-       Common Components (CC) request associated with this ETL, INCLUDING the request-id. 
+       Common Components (CC) request associated with this ETL, INCLUDING the request-id.
        Example: %let SCC = /<root>/soc_cca_wp001_xxxx_v01/
        NOTE: ORGANIZATIONS WITHOUT CC SHOULD LEAVE BLANK AND SKIP TO STEP 1e.          */
   %let SCC = <edit-path> ;
- 
+
+/* 1e. Identify the list of patients to exclude (if applicable) from snapshot-specific output.
+       SAS Dataset should contain one variable, patid, and list all patids that should be excluded.
+       Must include libname (e.g., indata.PtsToExclude).                          */
+  %let PTSTOEXCLUDE= ;
+
 /***************************************************************************************/
-/* 1e. OPTIONAL: Organizations WITHOUT Common Components define parameters in this 
+/* 1f. OPTIONAL: Organizations WITHOUT Common Components define parameters in this
        section, leaving STEP 1d. above blank.                                          */
 
-    /* _DP is a descriptive identifier for your organization. Specify a 3-6 UPPERCASE 
+    /* _DP is a descriptive identifier for your organization. Specify a 3-6 UPPERCASE
       character abbreviation for _DP. Example: %let DP=ABCDE ;                         */
        %let _DP= ;
 
     /* Specify the location of this request package, containing the 4 subfolders: dplocal,
-      msoc, inputfiles, and sasprograms */  
+      msoc, inputfiles, and sasprograms */
    /* Example: %let packageroot = A:/sentinel/qa_mil_package/                          */
        %let _packageroot = ;
 
-    /* Specify the file path to the location of your Phase A Sentinel Common Data Model 
+    /* Specify the file path to the location of your Phase A Sentinel Common Data Model
       (SCDM) datasets.  Example: %let prod_scdm=A:/sentinel/etl1/phaseA/scdm/ ;        */
        %let prod_scdm= ;
 
     /* The following metadata describe characteristics of your SCDM. If known, modify the
-      following parameters:      
-      /* DP_MinDate: Specify the overall SCDM minimum date in the format "DDMMMYYYY"d 
+      following parameters:
+      /* DP_MinDate: Specify the overall SCDM minimum date in the format "DDMMMYYYY"d
                      Default value is "01Jan2000"d                                     */
       %let _DP_MinDate="01Jan2000"d ;
 
-      /* DP_MaxDate: Specify the overall SCDM maximum date in the format "DDMMMYYYY"d 
+      /* DP_MaxDate: Specify the overall SCDM maximum date in the format "DDMMMYYYY"d
                     Default value is today's date (e.g. "&sysdate."d)                  */
        %let _DP_MaxDate = "&sysdate."d ;
 
-      /* ETL: Please enter the ETL version # for your current Phase A production SCDM. 
+      /* ETL: Please enter the ETL version # for your current Phase A production SCDM.
               Default is 1                                                              */
       %let _ETL_ = 1;
 
-    /* SCDMVer: Please enter the version of the SCDM associated ETL SCDM in 
+    /* SCDMVer: Please enter the version of the SCDM associated ETL SCDM in
                   format #.#.# (e.g., 7.0.0)                                           */
        %let _SCDMVer = ;
 
@@ -193,11 +198,11 @@ options linesize=100 pagesize=50;
        %let _PVDTABLE= ; *specify the provider table name *;
 
     /****************************************************************************\
-       The following tables are optional. Leave BLANK if they are not available 
+       The following tables are optional. Leave BLANK if they are not available
        at your site (DO NOT COMMENT OUT).
     \****************************************************************************/
        %let _DEATHTABLE= ;  *specify the death table name *;
-       %let _CODTABLE= ;    *specify the cause of death table name *; 
+       %let _CODTABLE= ;    *specify the cause of death table name *;
        %let _LABTABLE= ;    *specify the lab result table name *;
        %let _VITTABLE= ;    *specify the vital signs table name *;
        %let _IPHARMTABLE= ; *specify the inpatient pharmacy table name *;
@@ -206,13 +211,6 @@ options linesize=100 pagesize=50;
        %let _PRRTABLE= ;    *specify the patient reported response table name;
        %let _PRSTABLE= ;    *specify the patient reported survey table name;
        %let _FEATABLE= ;    *specify the feature engineering table name;
-
-/***************************************************************************************/
-/* 1f. Define Parameters for Common Components (CC) Phase B Run
-/***************************************************************************************/
-/* Specify if Common Components (CC) program package should run */
-  /* Enter 'Y' for yes, otherwise leave blank or enter 'N' for no */
-   %let Execute_CC = Y;
 
   *****************************************************************************************
    Linkage between Root-Path parameters and FUTURE Production Request Subdirectory
@@ -277,8 +275,8 @@ options linesize=100 pagesize=50;
   *  [Project-ID: SOC]                       %let ProjID = soc ;
   *  [Workplan-Type: QA MIL package request] %let WPType = qmr ;
   *  [Workplan-ID: 1]                        %let WPID =   wp001 ;
-  *  [DP-ID: SOC]                            %let DPID =   soc ;  
-  *  [Version-ID: version 1]                 %let VerID =  v01 ;         
+  *  [DP-ID: SOC]                            %let DPID =   soc ;
+  *  [Version-ID: version 1]                 %let VerID =  v01 ;
   *
   *  The example values above would produce Request-ID --> soc_qmr_wp001_soc_v01 ;
  /*------------------------------------------------------------------------------------*/
@@ -288,12 +286,16 @@ options linesize=100 pagesize=50;
    %let WPID   = <edit-wpid>;
    %let DPID   = <edit-dpid>;
    %let VerID  = <edit-verid>;
- 
+
    /* Create request-id delimiter - Default is underscore (_)                          */
-   %let dlm = _ ;  /* Do not edit */  
+   %let dlm = _ ;  /* Do not edit */
 
    /* Specify ETL # for this request (i.e., Same ETL # for Phase A SCDM tables)        */
    %let _ETL = <edit-etl#> ;
+
+  /* Specify if Common Components (CC) program package should run */
+  /* Enter 'Y' for yes, otherwise leave blank or enter 'N' for no */
+   %let Execute_CC = Y;
 
 ****************************************************************************************
 *******                             END OF USER INPUT                             ******
@@ -318,7 +320,7 @@ options fullstimer ;
 options missing = .;
 options validvarname = v7;
 options FMTERR;
-   
+
 /* Create clean work environment */
 proc datasets lib=work kill memtype=data nolist nodetails;
 quit;
@@ -353,7 +355,7 @@ quit;
   /*-----------------------------------------------------------------------------------*/
   /* Define all macro parameters as global - DO NOT EDIT                               */
     %global etl _etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
-            enrtable demtable distable enctable diatable proctable deathtable  
+            enrtable demtable distable enctable diatable proctable deathtable
             codtable labtable vittable ipharmtable itranstable phase miltable scdmver
             pretable pvdtable factable prrtable prstable featable;
   /*-----------------------------------------------------------------------------------*/
@@ -386,13 +388,13 @@ quit;
     %let featable= &_featable;
 
     %symdel  _dp _dp_mindate _dp_maxdate _scdmver
-            _enrtable _demtable _distable _enctable _diatable _proctable _deathtable  
+            _enrtable _demtable _distable _enctable _diatable _proctable _deathtable
             _codtable _labtable _vittable _ipharmtable _itranstable _phase
             _pretable _pvdtable _factable _prrtable _prstable _featable;
 
    /* Define request specific subdirectories */
     %let DPLOCAL = %soc_clean_paths(&_packageroot./dplocal/) ;
-    %let MSOC = %soc_clean_paths(&_packageroot./msoc/) ;         
+    %let MSOC = %soc_clean_paths(&_packageroot./msoc/) ;
     %let INFOLDER = %soc_clean_paths(&_packageroot./inputfiles/) ;
     %let SASPROGRAMS = %soc_clean_paths(&_packageroot./sasprograms) ;
     %let INDATA=%soc_clean_paths(&prod_scdm) ;
@@ -404,7 +406,7 @@ quit;
 
 /* Clean up path (e.g. convert/add slashes if necessary) and validate that path exist */
 %let QADATA = %soc_clean_paths(&Evaluate_MIL. &DPL_MI) ;
-  
+
 /* Assign libnames */
 /* %soc_lib(libref-name, path-name, options=%str(options-name=options-value)) */
 %soc_lib(DPLOCAL,&DPLOCAL)
@@ -414,6 +416,7 @@ quit;
 
 /* Create root path for Phase B qa_common_components package */
 %let CCroot=&INFOLDER.qa_common_components/;
+%let SSroot=&INFOLDER.scdm_snapshot/;
 
 
 *****************************************************************************************
@@ -439,11 +442,12 @@ quit;
 %let inftable=r02_infants;
 
 /* Overwrite Phase from CC */
-%let Phase= B; 
+%let Phase= B;
 
 /* Current QA and CC versions needed for signature file */
 %let QAVer= 4.0.0;
 %let CCVer= 1.5.0;
+%let SnapshotVer=2.4.0;
 
 /* Set Number of Observations for dplocal flags datasets */
 %let MaxObs= 500;
