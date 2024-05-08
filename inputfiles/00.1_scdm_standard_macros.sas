@@ -527,7 +527,6 @@ quit;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %dircopy                                                              */
 /*-------------------------------------------------------------------------------*/
-
 /*********************************************************************************/
 /* START ==> %snapshot_run                                                       */
 /*********************************************************************************/
@@ -544,28 +543,64 @@ quit;
     put 75*'-';
   run;
 
-  /* Set up Snapshot-specific libraries */
-  %let SSINFOLDER=&INFOLDER.scdm_snapshot/inputfiles/;
-  %soc_lib(SSINFOLDER,&SSINFOLDER, options=%str(access=readonly);
+  /* Obtain QA MIL Package _root variable */
+  %if &ccbypass=N %then %do;
+    %let _ssroot=&_root_dplocal/&ReqID/;
+  %end;
+  %else %if &ccbypass=Y %then %do;
+    %let _ssroot=&_packageroot;
+  %end;
+
+  /* Define indata folder */
+  %let SSDATA=&QADATA.;
+  %soc_lib(SSDATA, &SSDATA, options=%str(access=readonly));
+
+  /* Redirect libraries to inputfiles/scdm_snapshot folder */
+  %redirect_libs(&SSroot.);
+
+  /* Create clean output environment */
+  %kill_directory(kill_list=dplocal msoc);
 
   /* Initialize and execute Snapshot-specific modules */
-  %inc "&SSinfolder.macros/ms_macros.sas" / nosource2;
-  %inc "&SSinfolder.macros/ms_delpatients.sas" / nosource2;
-  %inc "&SSinfolder.macros/_mil_linkage_rates.sas"; / nosource2;
+  %inc "&infolder.soc_scdm_snapshot_signature_module.sas" / nosource2;
+  %inc "&infolder.soc_scdm_formats_agecat.sas" / nosource2;
+  %inc "&infolder.macros/ms_macros.sas" / nosource2;
+  %inc "&infolder.macros/ms_delpatients.sas" / nosource2;
+  %inc "&infolder.macros/_mil_linkage_rates.sas"  /nosource2;
+
+  /**
+    Create a snapshot specific log, as we're bypassing the Snapshot program
+    in favor of calling the mil_linkage_rates macro.
+  */
+  proc printto log="&MSOC./soc_scdm_data_snapshot.log" new; run;
+
+    %SIGNATURE_BEGIN;
+    %timestamp(snapshot_start);
+
+  /* import ptstoexclude if in cport format */
+    %importfiles(var=&ptstoexclude.);
+
+  /* Call mil_linkage_rates */
+
+   %mil_linkage_rates(inlib=ssdata, outlib=msoc);
+   %timestamp(snapshot_end);
+   %timereport(&snapshot_start,&snapshot_end);
+   %SIGNATURE_END;
+   proc printto;
+   run;
+
+  /* Redirect libraries back to QA MIL package request id root folder */
+  %redirect_libs(&_ssroot.);
 
   /* Create msoc/scdm_snapshot directory */
-  %let MSOC_SS=&_root.msoc/scdm_snapshot;
+  %let MSOC_SS=&msoc./scdm_snapshot;
 
   options dlcreatedir;
   libname MSOC_SS "&MSOC_SS.";
   options nodlcreatedir;
 
-  %SIGNATURE_BEGIN(snapshot);
-  %timestamp(snapshot_start);
-  %mil_linkage_rates(inlib=INDATA, outlib=MSOC_SS);
-  %timestamp(snapshot_end);
-  %timereport(&snapshot_start,&snapshot_end);
-  %SIGNATURE_END(snapshot);
+  /* Copy over snapshot output to msoc/scdm_snapshot folder */
+  %dircopy(indir=&INFOLDER.scdm_snapshot/msoc, outdir=&MSOC_SS);
 
 %mend snapshot_run;
 
