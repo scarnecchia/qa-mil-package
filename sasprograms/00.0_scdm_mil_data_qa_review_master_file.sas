@@ -19,6 +19,11 @@ options linesize=100 pagesize=50;
 *   breadth and depth of that data. This program defines the data check process, the
 *   specific checks that will be performed and how flagged data will be identified.
 *
+*   This package also executes the SCDM Snapshot package, which includes SAS programs and input
+*   files that operate together to produce a set of aggregate tables based on SCDM tables for the ETL
+*   under review. These tables are returned to the SOC and used to produce descriptive reports that
+*   characterize the current Sentinel Population.
+*
 *   All routine Sentinel distributed SAS program packages require that the QA Common Components (CC)
 *   package is setup at each Data Partner (DP) site prior to execution of any Sentinel Operations
 *   Center (SOC) distributed packages. By default, this program is set to run the CC package after QA
@@ -142,7 +147,7 @@ options linesize=100 pagesize=50;
 /* 1d. Edit macro variable SCC to point to the directory containing the executed Phase A
        Common Components (CC) request associated with this ETL, INCLUDING the request-id.
        Example: %let SCC = /<root>/soc_cca_wp001_xxxx_v01/
-       NOTE: ORGANIZATIONS WITHOUT CC SHOULD LEAVE BLANK AND SKIP TO STEP 1e.          */
+       NOTE: ORGANIZATIONS WITHOUT CC SHOULD LEAVE BLANK AND SKIP TO STEP 1f.          */
   %let SCC = <edit-path> ;
 
 /* 1e. Identify the list of patients to exclude (if applicable) from snapshot-specific output.
@@ -151,7 +156,7 @@ options linesize=100 pagesize=50;
   %let PTSTOEXCLUDE= ;
 
 /***************************************************************************************/
-/* 1f. OPTIONAL: Organizations WITHOUT Common Components define parameters in this
+/* 1f. OPTIONAL: Organizations WITHOUT Phase A Common Components define parameters in this
        section, leaving STEP 1d. above blank.                                          */
 
     /* _DP is a descriptive identifier for your organization. Specify a 3-6 UPPERCASE
@@ -211,7 +216,8 @@ options linesize=100 pagesize=50;
        %let _PRRTABLE= ;    *specify the patient reported response table name;
        %let _PRSTABLE= ;    *specify the patient reported survey table name;
        %let _FEATABLE= ;    *specify the feature engineering table name;
-
+  /***************************************************************************************/
+  /* 1f. Define Parameters for Common Components (CC) Phase B Run
   *****************************************************************************************
    Linkage between Root-Path parameters and FUTURE Production Request Subdirectory
      parameters.
@@ -229,15 +235,18 @@ options linesize=100 pagesize=50;
   the request "cder_ahr_soc_wp005_b03".
 
   /* The DP specifies the variable "_ROOT_DPLOCAL" in Section 1c. These values are then
-    written to a metadata file for use by all production queries for this ETL. */
+     written to a metadata file for use by all production queries for this ETL.
      Example: %let _ROOT_DPLOCAL=//sentinel/requests/etl_22/
+  */
 
     /* The individual production request packages create the global macro variable &ReqID
-       --> Note:  This is separate from the ReqID for this CC request */
+       --> Note:  This is separate from the ReqID for this CC request
        Example:  Production request &ReqID resolves to: "cder_ahr_soc_wp005_b03"
+    */
 
-    /* This CC package creates the global macro variable &DPLocal */
+    /* This CC package creates the global macro variable &DPLocal
        %let DPLOCAL = &_root_dplocal.&ReqID./dplocal/ ;
+    */
 
     /* &DPLOCAL resolves to: //sentinel/requests/cder_ahr_soc_wp005_b03/dplocal/ */
 
