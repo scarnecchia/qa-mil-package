@@ -49,12 +49,12 @@
     data _null_;
       putlog 85*'!';
       putlog ' ';
-      putlog '==> MASTER_FLOW macro is aborting...a fatal problem occurred prior to MASTER_FLOW';      
-      putlog "==>  Check program log &sasprograms.00.0_scdm_mil_data_qa_review_master_file.log.";      
+      putlog '==> MASTER_FLOW macro is aborting...a fatal problem occurred prior to MASTER_FLOW';
+      putlog "==>  Check program log &sasprograms.00.0_scdm_mil_data_qa_review_master_file.log.";
       putlog ' ';
-      putlog 85*'!'; 
-    run; 
-    %abort cancel 99 ;      
+      putlog 85*'!';
+    run;
+    %abort cancel 99 ;
   %end ;
 
   %let end_qa=0;
@@ -62,8 +62,8 @@
    /* Capture and format run date so that program logs always sort in ascending order */
    /* Note: format date as yymmdd, without any delimiters, for log checker parsing */
   %global dt_today;
-  %let dt_today = %sysfunc(putn("&sysdate."d, yymmddn8.));   
-  
+  %let dt_today = %sysfunc(putn("&sysdate."d, yymmddn8.));
+
     /* Setup Log */
   filename mainlog "&sasprograms.00.0_scdm_mil_data_qa_review_master_file.log ";
   filename runlog "&msoc./scdm_data_mil_qa_master_&dt_today..log";
@@ -72,10 +72,10 @@
 
    /* Include Macros and Formats */
   %include "&INFOLDER.00.1_scdm_standard_macros.sas" /nosource2;
-  %include "&INFOLDER.00.2_scdm_formats.sas" /nosource2;        
+  %include "&INFOLDER.00.2_scdm_formats.sas" /nosource2;
 
 /***************************************************************************/
-/*   Checks ETL number and PHASE for consistency with CCR/CCA request      */   
+/*   Checks ETL number and PHASE for consistency with CCR/CCA request      */
 /***************************************************************************/
   data _null_;
     putlog 75*'*';
@@ -92,84 +92,84 @@
     data _null_;
       putlog 80*'!';
       putlog ' ';
-      putlog "==> MASTER_FLOW macro is aborting due to an issue with the expected ETL #/Phase.";  
+      putlog "==> MASTER_FLOW macro is aborting due to an issue with the expected ETL #/Phase.";
       putlog ' ';
       putlog '==> Ensure that your site is pointing to the correct version of CC for the Phase A ';
       putlog "    SCDM tables used to create the MIL table under review. ";
-      putlog ' '; 
+      putlog ' ';
       putlog 80*'!';
-      putlog ' '; 
-    run; 
-    %abort cancel 99 ;      
+      putlog ' ';
+    run;
+    %abort cancel 99 ;
   %end ;
 
   /*Create ETL Version table*/
   %local ETL_VersionTable;
   %if %sysfunc(exist(msoc.etl_version,data)) %then %do; /* begin if etl_version ds exists */
     %put ;
-    %put ==> An ETL_version table already exists and will be reviewed to;      
+    %put ==> An ETL_version table already exists and will be reviewed to;
     %put ==> ensure that the ETL in the ETL_version table is equal to the expected ETL;
-    %put ;              
+    %put ;
     proc sql noprint;
       select etl into :ETL_VersionTable trimmed
-      from qaresult.etl_version 
+      from qaresult.etl_version
       ;
     quit;
     %put ;
     %put ====> CURRENT ETL: &ETL. ;
-    %put ====> Expected ETL: &_ETL. ;        
-    %put ====> ETL from ETL_Version table in this QA MIL package MSOC folder: &ETL_VersionTable.;        
+    %put ====> Expected ETL: &_ETL. ;
+    %put ====> ETL from ETL_Version table in this QA MIL package MSOC folder: &ETL_VersionTable.;
     %put ;
 
     %if &ETL.=&ETL_VersionTable. %then %do;
-      %put ;        
+      %put ;
       %put ==> ETL Versions match and the program will continue;
       %put ==> HOWEVER, unless otherwise specified in the master program, all ;
       %put ==>  existing SAS datasets in the local output directories ('dplocal','msoc');
-      %put ==>  will be deleted for data quality assurance purposes ;  
-      %put ;        
-    %end; 
- 
-    %else %do; 
+      %put ==>  will be deleted for data quality assurance purposes ;
+      %put ;
+    %end;
+
+    %else %do;
       data _null_;
-        put 70*'!';              
-        put ' ';        
+        put 70*'!';
+        put ' ';
         put 'ERR'"OR: MASTER_FLOW macro is aborting to avoid overwriting existing datasets";
         put "       from a different ETL version";
         put ' ';
-        put "==> Check program log msoc.scdm_data_mil_qa_master_&dt_today..log for details." ;          
-        put ' ';           
+        put "==> Check program log msoc.scdm_data_mil_qa_master_&dt_today..log for details." ;
+        put ' ';
         put 70*'!';
-      run; 
+      run;
       %abort cancel 99;
     %end;
-  %end;  /* end if etl_version ds exists */       
+  %end;  /* end if etl_version ds exists */
 
-  %kill_directory (kill_list=dplocal msoc); 
+  %kill_directory (kill_list=dplocal msoc);
 
-  data msoc.etl_version; 
+  data msoc.etl_version;
     length DP $6;
     dp=upcase("&dpid.");
-    ETL=&ETL.; 
-  run;   
-      
+    ETL=&ETL.;
+  run;
+
   title 'ETL Version undergoing QA review' ;
   title2 "Job executed on &sysdate at &systime" ;
   proc print data=msoc.etl_version;
-  run;        
-  title ; 
+  run;
+  title ;
 
   %put &syscc.;
   %if %sysevalf(&syscc.>4) %then %do;
     data _null_;
       putlog 80*'!';
       putlog ' ';
-      putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in MASTER_FLOW";      
+      putlog "==> MASTER_FLOW macro is aborting...a fatal problem occured in MASTER_FLOW";
       putlog "==> Check program log msoc/scdm_data_mil_qa_master_&dt_today..log for details.";
-      putlog ' '; 
+      putlog ' ';
       putlog 80*'!';
-    run; 
-    %abort cancel 99 ;      
+    run;
+    %abort cancel 99 ;
   %end ;
 
   /* Include .csv file*/
@@ -180,19 +180,19 @@
     informat sascode $45. ;
     informat cc_table $12.;
     informat seqno best.;
-    informat module_cat $10.; 
+    informat module_cat $10.;
     informat module_util $1. ;
     format module $5. ;
     format execute_flag $1. ;
     format sascode $45. ;
     format cc_table $12.;
     format seqno best. ;
-    format module_cat $10.; 
+    format module_cat $10.;
     format module_util $1. ;
     input module :$5. execute_flag :$1. sascode :$45. cc_table :$12.
           seqno :8. module_cat :$10. module_util :$1.;
   run;
-            
+
 /* MASTER_FLOW Step 2 - Clean up control flow dataset */
   data control_flow ;
     set control_flow ;
@@ -201,7 +201,7 @@
     execute_flag = lowcase(execute_flag) ;
     module_cat = lowcase(module_cat) ;
     module_util = lowcase(module_util) ;
-  run;   
+  run;
 
   proc sort data=control_flow;
     by seqno;
@@ -212,10 +212,10 @@
     %local t tabct abortct tablelist;
     %let tabct=0;
     %let abortct=0;
- 
+
     proc sql noprint;
       select cc_table
-           , count(*) 
+           , count(*)
       into :tablelist separated by "*"
          , :tabct trimmed
       from control_flow (where=(lowcase(cc_table) ne 'x' and execute_flag='y'))
@@ -228,27 +228,27 @@
       %if %length(%superq(&table)) = 0 %then %do;
         %let abortct=%eval(&abortct. + 1);
         data _null_;
-          put 70*'!';              
-          put ' ';        
+          put 70*'!';
+          put ' ';
           put 'ERR'"OR: SCDM &table. name is expected at the site, but ";
           put "   is defined by DP. All the SCDM tables defined by SOC in the ";
           put "   inputfiles/control flow.csv file should be present in the ";
           put "   directory and named in the master program. ";
-          put ' ';             
+          put ' ';
           put 70*'!';
-        run; 
+        run;
       %end;
     %end;
 
     %if "&abortct." ne "0" %then %do;
       data _null_;
-        put 70*'!';              
-        put ' ';        
+        put 70*'!';
+        put ' ';
         put 'ERR'"OR: MASTER_FLOW macro is aborting because an expected SCDM table ";
         put "   name was not defined by your site for the ETL under review. ";
         put ' ';
         put 70*'!';
-        run; 
+        run;
       %abort cancel 99;
     %end;
   %mend check_missing_tablenames;
@@ -262,10 +262,10 @@
 
     proc sql noprint;
       select cc_table
-           , count(*) 
+           , count(*)
       into :tablelist separated by "*"
          , :tabct trimmed
-      from control_flow (where=(lowcase(cc_table) ne 'x' and execute_flag='n' and module_cat ne "")) 
+      from control_flow (where=(lowcase(cc_table) ne 'x' and execute_flag='n' and module_cat ne ""))
       ;
     quit;
 
@@ -276,27 +276,27 @@
         %if %length(%superq(&table)) ne 0 %then %do;
           %let abortct=%eval(&abortct. + 1);
           data _null_;
-            put 70*'!';              
-            put ' ';        
+            put 70*'!';
+            put ' ';
             put 'ERR'"OR: SCDM &table. name is defined by DP, but not expected";
             put "   at the site. Only the SCDM tables defined by SOC in the ";
             put "   inputfiles/control_flow.csv file should be present in the ";
             put "   directory and named in the master program. ";
-            put ' ';             
+            put ' ';
             put 70*'!';
-          run; 
+          run;
         %end;
       %end;
 
       %if "&abortct." ne "0" %then %do;
         data _null_;
-          put 70*'!';              
-          put ' ';        
+          put 70*'!';
+          put ' ';
           put 'ERR'"OR: MASTER_FLOW macro is aborting because an unexpected SCDM table";
           put "   name was defined by your site for the ETL under review.";
           put ' ';
           put 70*'!';
-        run; 
+        run;
         %abort cancel 99;
       %end;
     %end;
@@ -309,21 +309,21 @@
     select *
     from control_flow
     where lowcase(execute_flag) eq 'y'
-    order by seqno 
+    order by seqno
     ;
   quit;
 
 /* MASTER_FLOW Step 4 - Ensure that the necessary modules are run given dependencies */
-  %local Core Util;  
-  proc sql noprint;  
+  %local Core Util;
+  proc sql noprint;
     select case when max(module_cat = 'core') then 1 else 0 end as Core
-         , case when max(module_util = 'y') then 1 else 0 end as Util 
+         , case when max(module_util = 'y') then 1 else 0 end as Util
     into :Core
-       , :Util            
-    from control_flow_1 
+       , :Util
+    from control_flow_1
     ;
   quit;
-  
+
   data control_flow_2;
     set control_flow;
     by seqno;
@@ -338,9 +338,9 @@
       if module_util = 'y' then do;
         output;
       end;
-    end; 
+    end;
   run;
-  
+
   data msoc.control_flow_3;
     set control_flow_1
         control_flow_2;
@@ -357,11 +357,11 @@
     ;
   quit;
 
-  /* Reset printto locations -- this method used to circumvent any file lock conflicts */     
-  proc printto log=log; 
-  run;     
+  /* Reset printto locations -- this method used to circumvent any file lock conflicts */
+  proc printto log=log;
+  run;
   proc printto print=print;
-  run;   
+  run;
   /* Direct proc printto statement to the master log in sasprograms folder */
   proc printto log=mainlog;
   run;quit;
@@ -371,7 +371,7 @@
   proc printto print="&msoc.module_execution_plan_&dt_today..log" new;
   run;
 
-  title "List of QA MIL Modules that will be executed for this Request -- job executed on &sysdate at &systime";  
+  title "List of QA MIL Modules that will be executed for this Request -- job executed on &sysdate at &systime";
   title3 'NOTE: Modules for optional tables are only selected if defined in control flow and master program';
   title4 "NOTE: If any 'utilization modules' are selected, all utilization modules will be selected";
   title5 "NOTE: If any 'core' modules are selected, modules l1, l2 l3, and dates will be selected";
@@ -381,11 +381,11 @@
   run;
   title;
 
-  /* Reset printto locations -- this method used to circumvent any file lock conflicts */     
-  proc printto log=log; 
-  run;     
+  /* Reset printto locations -- this method used to circumvent any file lock conflicts */
+  proc printto log=log;
+  run;
   proc printto print=print;
-  run;   
+  run;
   options orientation=portrait linesize=100 pagesize=50;
 
 /* MASTER_FLOW Step 5 - Set up macro variable lists for processing each module */
@@ -397,7 +397,7 @@
     into :module_list separated by ' '
        , :sascode_list separated by '~'
     from msoc.control_flow_3 where upcase(cc_table) eq "X"
-    order by seqno 
+    order by seqno
     ;
   quit;
 
@@ -405,9 +405,9 @@
 
   data _null_;
     put 70*'-';
-    put "Note: For module execution details, see module specific log files";          
+    put "Note: For module execution details, see module specific log files";
     put 70*'-';
-  run; 
+  run;
 
 /* MASTER_FLOW Step 6 - Loop through and execute each module in sequence */
   %local z module sascode;
@@ -422,73 +422,73 @@
 
     %if &end_qa.=0 %then %do;
       proc printto;
-      run;    
+      run;
       data _null_;
         put 75*'-';
         put ' ';
-        put "==> Begin Execution of module: &module., sascode: &sascode..sas";          
+        put "==> Begin Execution of module: &module., sascode: &sascode..sas";
         put "==> This is module &z of &nmod modules selected to execute";
-        put ' ';            
-        put 75*'-'; 
-      run; 
+        put ' ';
+        put 75*'-';
+      run;
 
       filename modlog "&msoc.&module._&dt_today..log";
-      
+
       /* Direct include statement to master log in sasprograms folder */
       proc printto log=mainlog;
-      run;quit; 
+      run;quit;
 
-      %SIGNATURE_BEGIN(&module)   
-      %inc "&INFOLDER.&sascode..sas" /source2 ;            
+      %SIGNATURE_BEGIN(&module)
+      %inc "&INFOLDER.&sascode..sas" /source2 ;
 
-      %if %sysevalf(&syscc. gt 4) %then %do ; /* begin-if execute if last module failed */ 
-     
-     /* Reset printto locations -- this method used to circumvent any file lock conflicts */     
-        proc printto log=log; 
-        run;     
+      %if %sysevalf(&syscc. gt 4) %then %do ; /* begin-if execute if last module failed */
+
+     /* Reset printto locations -- this method used to circumvent any file lock conflicts */
+        proc printto log=log;
+        run;
         proc printto print=print;
-        run;        
+        run;
 
-       /* Save useful debug info */        
+       /* Save useful debug info */
         %local last_module;
         %let last_module = %upcase(%scan(&module_list, %eval(&z - 0), %str( )));
 
        /* Run log checker */
         %_disable_syntax_checks;  /* disable syntax checks so that log checker executes*/
-        %include "&INFOLDER.00.3_scdm_sas_log_checker_directory_cc.sas" /nosource2;        
+        %include "&INFOLDER.00.3_scdm_sas_log_checker_directory_cc.sas" /nosource2;
         %_enable_syntax_checks ;  /* enable syntax checks for safety*/
-        
+
        /* Print out useful debug info and abort */
         data _null_;
           put 70*'!';
           put " ";
           put 'ERR'"OR: Macro MASTER_FLOW is aborting ...";
-          put "==> Check program log &msoc.&last_module._&dt_today..log for details.";  
+          put "==> Check program log &msoc.&last_module._&dt_today..log for details.";
           put " ";
           put 70*'!';
-        run;  
-      %end ;  /* end-if execute if last module failed */       
+        run;
+      %end ;  /* end-if execute if last module failed */
 
       %else %do;
-        %SIGNATURE_END(&module)          
+        %SIGNATURE_END(&module)
           proc printto;
-          run ;    
-      %end; 
+          run ;
+      %end;
     %end;
 
-    %else %do; /* if end_qa =1 */     
+    %else %do; /* if end_qa =1 */
       %local last_module;
       %let last_module = %upcase(%scan(&module_list, %eval(&z - 1), %str( )));
       data _null;
         put 75*'!';
         put ' ';
         put 'ERR'"OR: The &last_module. module has produced data check flags that";
-        put "         require the Sentinel QA Program Package to abort after creating"; 
+        put "         require the Sentinel QA Program Package to abort after creating";
         put "         a master signature file and running the log checker.";
         put ' ';
         put 75*'!';
       run;
-      %let z=99; 
+      %let z=99;
     %end;
   %end; /* end loop z */
 
@@ -510,17 +510,17 @@
       put "==> We will now wrap up by creating a master signature file and running the log checker." ;
       put ' ';
       put 75*'-';
-    run;    
+    run;
   %end;
-    
+
   %local rc1 ;
   *%include "&INFOLDER.00.4_scdm_qasignaturerequest.sas"/nosource2;
   %let rc1 = &syscc. ;
- 
+
   %let syscc = 0 ; /* reset rc to ensure that log checker can run */
   %_disable_syntax_checks ;  /* disable syntax checks so that log checker executes*/
   %local rc2 ;
-  %include "&INFOLDER.00.3_scdm_sas_log_checker_directory_cc.sas" /nosource2;      
+  %include "&INFOLDER.00.3_scdm_sas_log_checker_directory_cc.sas" /nosource2;
   %let rc2 = &syscc ;
   %_enable_syntax_checks ;  /* enable syntax checks for safety*/
 
@@ -529,7 +529,7 @@
       put 75*'-';
       put ' ';
       put '==> The macro MASTER_FLOW has run the modules selected without any fatal problems detected';
-      put '==> and successfully created a master signature file and run the log checker!'; 
+      put '==> and successfully created a master signature file and run the log checker!';
       put ' ';
       put 75*'-';
     run;
@@ -565,12 +565,15 @@
     %abort 99;
   %end;
 
-  %* If specified in the master program file, call the qa_common_components program              *;
+  %* Call the SCDM Snapshot program                                                    *;
+    %snapshot_run;
+
+  %* If specified in the master program file, call the qa_common_components program      *;
   %if %lowcase(&execute_CC.)=y %then %do;
     %cc_run
   %end;
 
-  %endmac: 
+  %endmac:
 
 %mend MASTER_FLOW;
 

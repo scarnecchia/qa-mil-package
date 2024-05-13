@@ -22,7 +22,7 @@
 %macro assignlib;
   *Different libnames for SCDM tables and mil tables. *;
   %global templib;
-   %if "%lowcase(&tabid.)" = "mil" or "%lowcase(&tabid.)" = "mis" %then %do; 
+   %if "%lowcase(&tabid.)" = "mil" or "%lowcase(&tabid.)" = "mis" %then %do;
       %let templib = qadata;
     %end;
     %else %do;
@@ -31,7 +31,7 @@
 %mend assignlib;
 
 /*************************************************************************************/
-/** All values that are product of any combination of prime numbers (2,3,5,7,11,13,17) **/  
+/** All values that are product of any combination of prime numbers (2,3,5,7,11,13,17) **/
 /*************************************************************************************/
 %macro prime();
 %let prime = 2 3 5 7 11 13 17;
@@ -76,7 +76,7 @@ quit;
     dsid=open("&dataset.");
     call symputx("NOBS",attrn(dsid,"NLOBS"));
     run;
-  %end; 
+  %end;
 %PUT &NOBS.;
 
 %put NOTE: ********END OF MACRO: ms_macros v1.0 => ISDATA ********;
@@ -123,13 +123,13 @@ quit;
 /*********************************************************************************/
 /* START ==> %data_ranges                                                       */
 /*********************************************************************************/
-/**Minimum and Maximum date ranges for a dataset                                **/ 
-/**  (note: not derived min/max dates)                                          **/  
+/**Minimum and Maximum date ranges for a dataset                                **/
+/**  (note: not derived min/max dates)                                          **/
 /*********************************************************************************/
 %macro date_ranges (variable= ,dataset= );
   %global date_min date_max;
    proc sql noprint;
-      select min(&&variable.)  
+      select min(&&variable.)
            , max(&&variable.)
       into :date_min trimmed
        , :date_max trimmed
@@ -149,8 +149,8 @@ quit;
 %macro ods_printlog_start;
   ods _all_ close;
   ods escapechar="^";
-  options orientation=portrait 
-          leftmargin=%str(.75in) rightmargin=%str(.75in) 
+  options orientation=portrait
+          leftmargin=%str(.75in) rightmargin=%str(.75in)
           topmargin=%str(.75in) bottommargin=%str(.75in);
   ods pdf file="&DPLOCAL.&dpid._&module._&mi..pdf" style=sasweb startpage=now;
 %mend ods_printlog_start;
@@ -225,7 +225,7 @@ quit;
 /*********************************************************************************/
 /*  Used in all modules to create &TABLE(n) based on &TABID(n)                   */
 /*-------------------------------------------------------------------------------*/
-%macro table_name (n= ); /*Optional-leave blank for tabid, put n if tabid[n]*/ 
+%macro table_name (n= ); /*Optional-leave blank for tabid, put n if tabid[n]*/
   %let temp=&&tabid&n.;
   %let temp2=%bquote(&)&temp.table;
   %let table=%unquote(&temp2);
@@ -316,10 +316,10 @@ quit;
       %let dsid = %sysfunc(open(&libin..&ds.)); /* assign and open dataset */
       %let dpid_exist = %qsysfunc(varnum(&dsid.,dp));  /* populate dpid_exist as variable number */
       %let rc = %qsysfunc(close(&dsid.)); /* close dataset */
-      %if &dpid_exist = 0 %then %do;    /* Add DP ID if it does not exist in the dataset */ 
+      %if &dpid_exist = 0 %then %do;    /* Add DP ID if it does not exist in the dataset */
         data &libout..&ds.;
           %add_dpid_ds
-          set &libin..&ds.; 
+          set &libin..&ds.;
         run;
       %end;
     %end;
@@ -351,7 +351,7 @@ quit;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %move_l3                                                              */
 /*-------------------------------------------------------------------------------*/
-  
+
 
 /*********************************************************************************/
 /* START ==> %remove_labels                                                      */
@@ -360,8 +360,8 @@ quit;
 /*-------------------------------------------------------------------------------*/
 %macro remove_labels(lib, ds);
   proc datasets nolist lib=&lib. memtype=data;
-    modify &ds.; 
-    attrib _all_ label=' '; 
+    modify &ds.;
+    attrib _all_ label=' ';
   quit;
 %mend remove_labels;
 /*-------------------------------------------------------------------------------*/
@@ -427,7 +427,7 @@ data dirs_found (compress=no);
  output;
 run;
 
-data dirs_found files_found (compress=no); 
+data dirs_found files_found (compress=no);
   keep Path FileName;
   length fref $8 Filename $256;
   /* Read the name of a directory to search. */
@@ -527,6 +527,86 @@ quit;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %dircopy                                                              */
 /*-------------------------------------------------------------------------------*/
+/*********************************************************************************/
+/* START ==> %snapshot_run                                                       */
+/*********************************************************************************/
+/*  Defines parameters to bypass scdm_snapshot master file, runs                 */
+/*    scdm_snapshot program, and copies output to msoc/scdm_snapshot folder      */
+/*-------------------------------------------------------------------------------*/
+%macro snapshot_run;
+
+  data _null_;
+    put 75*'-';
+    put ' ';
+    put "==> Begin Execution of scdm_snapshot program";
+    put ' ';
+    put 75*'-';
+  run;
+
+  /* Obtain QA MIL Package _root variable */
+  %if &ccbypass=N %then %do;
+    %let _ssroot=&_root_dplocal/&ReqID/;
+  %end;
+  %else %if &ccbypass=Y %then %do;
+    %let _ssroot=&_packageroot;
+  %end;
+
+  /* Define indata folder */
+  %let SSDATA=&QADATA.;
+  %soc_lib(SSDATA, &SSDATA, options=%str(access=readonly));
+
+  /* Redirect libraries to inputfiles/scdm_snapshot folder */
+  %redirect_libs(&SSroot.);
+
+  /* Create clean output environment */
+  %kill_directory(kill_list=dplocal msoc);
+
+  /* Initialize and execute Snapshot-specific modules */
+  %inc "&infolder.soc_scdm_snapshot_signature_module.sas" / nosource2;
+  %inc "&infolder.soc_scdm_formats_agecat.sas" / nosource2;
+  %inc "&infolder.macros/ms_macros.sas" / nosource2;
+  %inc "&infolder.macros/ms_delpatients.sas" / nosource2;
+  %inc "&infolder.macros/_mil_linkage_rates.sas"  /nosource2;
+
+  /**
+    Create a snapshot specific log, as we're bypassing the Snapshot program
+    in favor of calling the mil_linkage_rates macro.
+  */
+  proc printto log="&MSOC./soc_scdm_data_snapshot.log" new; run;
+
+    %SIGNATURE_BEGIN;
+    %timestamp(snapshot_start);
+
+  /* import ptstoexclude if in cport format */
+    %importfiles(var=&ptstoexclude.);
+
+  /* Call mil_linkage_rates */
+
+   %mil_linkage_rates(inlib=ssdata, outlib=msoc);
+   %timestamp(snapshot_end);
+   %timereport(&snapshot_start,&snapshot_end);
+   %SIGNATURE_END;
+   proc printto;
+   run;
+
+  /* Redirect libraries back to QA MIL package request id root folder */
+  %redirect_libs(&_ssroot.);
+
+  /* Create msoc/scdm_snapshot directory */
+  %let MSOC_SS=&msoc./scdm_snapshot;
+
+  options dlcreatedir;
+  libname MSOC_SS "&MSOC_SS.";
+  options nodlcreatedir;
+
+  /* Copy over snapshot output to msoc/scdm_snapshot folder */
+  %dircopy(indir=&INFOLDER.scdm_snapshot/msoc, outdir=&MSOC_SS);
+
+%mend snapshot_run;
+
+/*-------------------------------------------------------------------------------*/
+/* END ==> %snapshot_run                                                         */
+/*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
 /* START ==> %cc_run                                                             */
@@ -562,7 +642,7 @@ quit;
   %let _ROOT_SASPROGRAMS= &_CCROOT_SASPROGRAMS ;
 
   /* Create library for CC dp_metadata folder */
-  %soc_lib(QARESULT, &INFOLDER.qa_common_components/inputfiles/dp_metadata) 
+  %soc_lib(QARESULT, &INFOLDER.qa_common_components/inputfiles/dp_metadata)
 
   /* Copy over necessary QA Package metadata datasets to CC dp_metadata folder */
   proc copy in=msoc out=qaresult memtype=data;
@@ -616,7 +696,7 @@ quit;
   options dlcreatedir;
   libname CCdir "&CCdir.";
   options nodlcreatedir;
-  
+
   /* Copy over entire completed CC package from inputfiles folder to CC request id folder */
   %dircopy(indir=&INFOLDER.qa_common_components, outdir=&CCdir)
 
@@ -707,7 +787,7 @@ quit;
           value=temp;
         run;
       %end; /* End loop j */
-      
+
       data &libout..&dsout.;
         set &libin..&dsin_prefix.:;
         format coun: comma15.;
@@ -741,9 +821,9 @@ quit;
   quit;
   data _null_;
     put 70*'!';
-    put 'ERR'"OR: %unquote(&logmsg.)"; 
+    put 'ERR'"OR: %unquote(&logmsg.)";
     put 70*'!';
-  run; 
+  run;
   %let abort_table=1;
 %mend abort_table;
 /*-------------------------------------------------------------------------------*/
@@ -769,9 +849,9 @@ quit;
   quit;
   data _null_;
     put 70*'!';
-    put 'ERR'"OR: %unquote(&logmsg.)"; 
+    put 'ERR'"OR: %unquote(&logmsg.)";
     put 70*'!';
-  run; 
+  run;
   %let abort_table=1;
 %mend abort_table2;
 /*-------------------------------------------------------------------------------*/
@@ -783,7 +863,7 @@ quit;
 /***************************************versionMIL ******************************************/
 /*  Used in L2 and table modules to add flagid, etc. to the flags dataset        */
 /*-------------------------------------------------------------------------------*/
-%macro get_flagid (ntabs=, nvars=); 
+%macro get_flagid (ntabs=, nvars=);
 /* Determine if 'count' variable already exists in source table using proc contents*/
   proc contents data=flag_&i. out=proctemp (keep=name nobs) noprint;
   run;
@@ -818,10 +898,10 @@ quit;
       quit;
     %end;
 
-/* Join existing temp flags dataset with the flags lkp table to get the following 
+/* Join existing temp flags dataset with the flags lkp table to get the following
      variables: flagid, flag_descr, flagtype, abortyn */
     proc sql noprint;
-      create table 
+      create table
     /* name of new flags dataset will depend on macro variable ntabs */
     %if %eval(&ntabs.=1) %then %do; %str(flag_l2_&checkid._&tabid._&i.) %end;
     %else %if %eval(&ntabs.=2) %then %do; %str(flag_l2_&checkid._&tabid1._&tabid2._&i.) %end;
@@ -829,30 +909,30 @@ quit;
       select b.flagid
            , b.flag_descr
            , b.flagtype
-           , b.abortyn 
+           , b.abortyn
   /* if a 'count' variable already exists in temp dataset, sum the values and rename as 'count' */
-    %if %eval(&countyn.) %then %do; 
-      %str(, sum(a.&countvar.) as count) 
+    %if %eval(&countyn.) %then %do;
+      %str(, sum(a.&countvar.) as count)
     %end;
   /* else count the rows and create variable 'count' */
-    %else %do; 
-      %str(, count(*) as count) 
+    %else %do;
+      %str(, count(*) as count)
     %end;
       from %str((select *, "&checkid." as checkid from flag_&i.) as a)
   /* perform the join based on the number of SCDM tables and variables specified in ntabs and nvars */
     /* if the flagid only references one SCDM table (e.g. Tabid=ENR) */
-    %if %eval(&ntabs.=1) %then %do;  
+    %if %eval(&ntabs.=1) %then %do;
                     %str(, temp_l2_flags %(where=%(checkid="&checkid." and lowcase(tableid)=lowcase("&tabid."))
-      %if %eval(&nvars. gt 0) %then %do;  
+      %if %eval(&nvars. gt 0) %then %do;
         %str( and lowcase(variable1)=lowcase("&var1.") )
       %end;
       %if %eval(&nvars.=2) %then %do;
         %str( and lowcase(variable2)=lowcase("&var2.") )
       %end;
-      %str( %)%) as b where a.checkid=b.checkid)  
+      %str( %)%) as b where a.checkid=b.checkid)
     %end;
     /* if the flagid references 2 SCDM table (e.g. Tabid=DEM-ENR) */
-    %else %if %eval(&ntabs.=2) %then %do; 
+    %else %if %eval(&ntabs.=2) %then %do;
       %str( left join temp_l2_flags %(where=%(checkid="&checkid." )
       %if %eval(&nvars. gt 0) %then %do;
         %str( and lowcase(variable1)=lowcase("&var1.") )
@@ -888,7 +968,7 @@ quit;
     select "&checkid." as CheckID
          , "Unique PatID" as count_type length=15
          , count(distinct patid) as count
-    from flag union all 
+    from flag union all
     select "&checkid." as CheckID
          , "Records" as count_type length=15
          ,  count(*) as count
@@ -907,11 +987,11 @@ quit;
 %macro l2_lkp_table (abortyn= , flagtype= , crosstable= , dsout=temp_l2_flags);
    proc sql noprint;
     create table &dsout. as
-    select *      
+    select *
          , substr(tableid,1,3) as Table1
          , substr(tableid,5,3) as Table2
     from infolder.lkp_all_flags
-    where level="&level." 
+    where level="&level."
     %if %lowcase(&abortyn.) ne %str( ) %then %do;
       %str( and lowcase(abortyn)=lowcase("&abortyn.") )
     %end;
@@ -923,7 +1003,7 @@ quit;
         %str( and calculated table2 ne ' ' )
       %end;
     %end;
-    having lowcase(table1) in (&sql_tabidlist.) 
+    having lowcase(table1) in (&sql_tabidlist.)
     order by checkid, table2, table1
     ;
   quit;
@@ -942,12 +1022,12 @@ quit;
     %let tabid=%scan(&tabidlist.,&a.);
     proc sql noprint;
       select variable
-           , variable 
+           , variable
       into :keyvarlist separated by ' '
          , :group separated by ','
       from (select * from infolder.lkp_all_l1 (where=(lowcase(tabid)="&tabid.")))
       where upcase(keyvar)='K'
-      ; 
+      ;
     quit;
     %let keyct=&sqlobs.;
     %put *** keyct=&keyct.;
@@ -995,7 +1075,7 @@ quit;
           %if &rows. ne 0 %then %do;
             proc sql noprint;
               select sum(dups-1) into :dupct trimmed
-              from temp 
+              from temp
               ;
             quit;
             %put ****&dupct.;
@@ -1043,7 +1123,7 @@ quit;
   /* output duplicate and subset enrollment date ranges to temporary file*/
     else if (enr_start le lag_start) and (enr_end ge lag_end) then do;
       if enr_start=lag_start and enr_end=lag_end then do;
-        enr_rec_flag='D';  
+        enr_rec_flag='D';
         output enr_overlap_1;
       end;
       else if enr_start le lag_end and enr_end le lag_end then do;
@@ -1056,7 +1136,7 @@ quit;
   run;
 
   data enr_temp_2 enr_overlap_2;
-    set temp1; 
+    set temp1;
     length enr_rec_flag $1.;
     by patid;
     enr_rec_flag=' ';
@@ -1091,7 +1171,7 @@ quit;
   %if &recct.=0 %then %do;
     proc format cntlout=temp_fmt lib=dplocal;
       select $enr_overlap;
-    run; 
+    run;
 
     data dplocal.enr_l2_overlap (drop=label);
       set temp_fmt (keep=label);
@@ -1138,12 +1218,12 @@ quit;
   proc sql noprint;
     create table tmp_lkp as
     select tabid, variable, varid, varlength
-    from infolder.lkp_all_l1 
+    from infolder.lkp_all_l1
     where lowcase(tabid) in (&sql_tabidlist.) and crossvar='X'
     order by variable, tabid
     ;
     select distinct variable
-         , count(distinct variable) 
+         , count(distinct variable)
     into :varlist separated by " "
        , :varct trimmed
     from tmp_lkp
@@ -1159,13 +1239,13 @@ quit;
        proc sql noprint;
          select varid
               , tabid
-              , count(*) 
+              , count(*)
          into :varidlist separated by ' '
             , :tablist separated by ' '
             , :tabct trimmed
          from tmp_lkp (where=(variable="&var."))
          ;
-       quit; 
+       quit;
 
     /* loop through each table containing variable of interest */
       %do b=1 %to &tabct.;
@@ -1203,7 +1283,7 @@ quit;
                , "&var." as Variable length=21
                , lengthn(&var.) as ValueLength length=3
                , sum(count) as count
-          from DPLOCAL._&varid._&tabid. 
+          from DPLOCAL._&varid._&tabid.
           group by valuelength
           ;
         quit;
@@ -1252,15 +1332,15 @@ quit;
         proc sql noprint;
           select tabid1
                , tabid1
-               , count(tabid1) 
+               , count(tabid1)
           into :tab1list separated by ','
              , :var1list separated by ' '
              , :tab1ct trimmed
           from dplocal.tmp_lkp_&var. (where=(tabid2="&base." and lowcase(tabid1) in (&sql_tabidlist.)))
           ;
         quit;
-   /* for a base that is only used once (e.g. COD-DTH match), skip merge step */     
-        %if &tabct.=1 %then %do; 
+   /* for a base that is only used once (e.g. COD-DTH match), skip merge step */
+        %if &tabct.=1 %then %do;
           %local skip;
           proc sql noprint;
             select count (*) into skip trimmed
@@ -1268,11 +1348,11 @@ quit;
             ;
           quit;
           %if &skip.=2 %then %let c=%eval(&c.+1);
-        %end; 
+        %end;
    /* merge tables by 'base' comparison table (e.g. ENR) */
         %else %do;
           data dplocal.all_match_&var.;
-            merge dplocal.tmp_&var._&base. 
+            merge dplocal.tmp_&var._&base.
           %do t=1 %to &tab1ct.;
             %let tab1=%scan(%bquote(&tab1list.),&t.,%str(,));
               dplocal.tmp_&var._&tab1.
@@ -1344,7 +1424,7 @@ quit;
     select *, count(*) as count
     from &dsin. (keep=patid &datevar.)
     group by 1,2
-    ;  
+    ;
   quit;
 
   %remove_labels(dplocal,_temp);
@@ -1352,11 +1432,11 @@ quit;
   proc sql noprint;
     create table dplocal._&checkid._&tabid. as
     select a.*
-    from dplocal._temp as a 
-      right join (select distinct patid   
-                  from dplocal._temp  
-                    except all 
-                  select patid 
+    from dplocal._temp as a
+      right join (select distinct patid
+                  from dplocal._temp
+                    except all
+                  select patid
                   from dplocal.all_match_patid (keep=patid enr &tabid. where=(enr='0' or &tabid.='0'))) as b
     on a.patid=b.patid
     order by a.patid, &datevar.
@@ -1382,7 +1462,7 @@ quit;
 %macro l2_flags_201_202;
   proc sql noprint;
     select distinct variable1
-         , count(distinct variable1) 
+         , count(distinct variable1)
     into :varlist separated by " "
        , :varct trimmed
     from temp_l2_flags (where=(checkid="&checkid."))
@@ -1491,7 +1571,7 @@ quit;
         create table flag_&i. as
         select "&var1." as variable1 length=21
              , "&var2." as variable2 length=21
-             , "&tabid1." as table1 
+             , "&tabid1." as table1
              , "&tabid2." as table2
         from qadata.&table1. (keep=patid &var1. where=(&var1. ne .)) as a full join
         %if %lowcase(&tabid2.) = %str(enr) %then %do;
@@ -1518,7 +1598,7 @@ quit;
 /*********************************************************************************/
 /* Create L2 flags for invalid value for 2-variable comp  (checkid=223,228,229)  */
 /*-------------------------------------------------------------------------------*/
-%macro l2_flags_223_228_229;  
+%macro l2_flags_223_228_229;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
@@ -1551,7 +1631,7 @@ quit;
         set &ds.;
         where %str(&where.);
       run;
- 
+
       %get_flagid (ntabs=1, nvars=2);
     %end;
   %end;
@@ -1646,9 +1726,9 @@ quit;
     select b.flagid
          , b.flag_descr
          , b.flagtype
-         , b.abortyn 
+         , b.abortyn
          , a.count
-    from (select "&checkid." as checkid, count(distinct patid) as count from dplocal.temp_&tabid._enr) a,  
+    from (select "&checkid." as checkid, count(distinct patid) as count from dplocal.temp_&tabid._enr) a,
           infolder.lkp_all_flags (where=(checkid="&checkid.")) b
     where a.checkid=b.checkid
     ;
@@ -1687,21 +1767,21 @@ quit;
   proc sql noprint;
     create table tmp1 as
     select a.*, b.dp_length as VarLength1 label=' '
-    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type 
-                        where=(checkid="&checkid")) as a 
+    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type
+                        where=(checkid="&checkid")) as a
       left join dplocal.all_l1_scdm_comp (keep=TabID var dp_length) as b
     on lowcase(a.table1)=lowcase(b.TabID) and lowcase(a.variable1)=lowcase(b.var)
     order by variable1, table2, table1
     ;
     create table tmp2 as
     select a.flagid, b.dp_length as VarLength2 label=' '
-    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type 
-                        where=(checkid="&checkid")) as a 
+    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type
+                        where=(checkid="&checkid")) as a
       left join dplocal.all_l1_scdm_comp (keep=TabID var dp_length) as b
     on lowcase(a.table2)=lowcase(b.TabID) and lowcase(a.variable1)=lowcase(b.var)
     order by variable1, table2, table1
     ;
-    create table tmp3 as 
+    create table tmp3 as
     select a.*, b.VarLength2
     from tmp1 as a full join tmp2 as b
     on a.flagid=b.flagid
@@ -1732,21 +1812,21 @@ quit;
   proc sql noprint;
     create table tmp1 as
     select a.*, b.valuelength as Length1 label=' '
-    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type 
-                        where=(checkid="&checkid")) as a          
+    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type
+                        where=(checkid="&checkid")) as a
       left join dplocal.all_l2_crosstab_length_value (keep=TabID variable valuelength) as b
     on lowcase(a.table1)=lowcase(b.TabID) and lowcase(a.variable1)=lowcase(b.variable)
     order by variable1, table2, table1
     ;
     create table tmp2 as
     select a.flagid, b.valuelength as Length2 label=' '
-    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type    
-                        where=(checkid="&checkid")) as a 
+    from temp_l2_flags (drop=variable2--variable4 test: data: look: ms: result_type
+                        where=(checkid="&checkid")) as a
       left join dplocal.all_l2_crosstab_length_value (keep=TabID variable valuelength) as b
     on lowcase(a.table2)=lowcase(b.TabID) and lowcase(a.variable1)=lowcase(b.variable)
     order by variable1, table2, table1
     ;
-    create table tmp3 as 
+    create table tmp3 as
     select a.*, b.Length2
     from tmp1 as a full join tmp2 as b
     on a.flagid=b.flagid
@@ -1817,7 +1897,7 @@ quit;
       proc sql;
         create table dplocal._tmp as
         select a.patid
-             , a.&datevar.  
+             , a.&datevar.
              , a.count as temp_count
              , b.total_patid
         from dplocal._&checkid._&tabid. as a, (select patid, sum(count) as total_patid from dplocal._&checkid._&tabid. group by 1) as b
@@ -1835,7 +1915,7 @@ quit;
                end as _validdt length=3
              , max(calculated _validdt) as _valid length=3
         from dplocal._tmp as a left join dplocal.tmp_enr as b
-        on a.patid = b.patid 
+        on a.patid = b.patid
         group by a.patid
         having _valid=0
         ;
@@ -1851,7 +1931,7 @@ quit;
         select b.flagid
              , b.flag_descr
              , b.flagtype
-             , b.abortyn 
+             , b.abortyn
              , sum(a.count) as count
         from (select "&checkid." as checkid, count from dplocal.&tabid._&datevar._&checkid.) a, temp (where=(row=&i.)) b
         where a.checkid=b.checkid
@@ -1891,7 +1971,7 @@ quit;
         select b.flagid
              , b.flag_descr
              , b.flagtype
-             , b.abortyn 
+             , b.abortyn
              , a.count_dup as count
         from dplocal.all_l2_nobs_dup a, temp (where=(row=&i.)) b
         where a.TabID=b.tableid
@@ -1936,9 +2016,9 @@ quit;
     select a.flagid
          , a.flag_descr
          , a.flagtype
-         , a.abortyn 
+         , a.abortyn
          , b.count format=comma15. informat=comma15.
-    from temp_l2_flags (where=(checkid="&checkid.")) a right join tmp b 
+    from temp_l2_flags (where=(checkid="&checkid.")) a right join tmp b
     on a.checkid=b.checkid
     ;
     drop table tmp
@@ -1956,7 +2036,7 @@ quit;
 /*   enr_end, medcov, drugcov, and chart                                         */
 /*-------------------------------------------------------------------------------*/
 %macro flag_216;
-  data flag; 
+  data flag;
     set dplocal.l2_nodup_enr (where=(enr_start ne . and enr_end ne . and enr_start ge enr_end));
     by patid;
     if first.patid then do;
@@ -1965,7 +2045,7 @@ quit;
       lag_medcov=' ';
       lag_drugcov=' ';
       lag_chart=' ';
-    end;  
+    end;
     else do;
       lag_start=lag(enr_start);
       lag_end=lag(enr_end);
@@ -1982,7 +2062,7 @@ quit;
     select b.flagid
          , b.flag_descr
          , b.flagtype
-         , b.abortyn 
+         , b.abortyn
          , a.count
     from (select count(*) as count, "&checkid." as checkid from flag) a, temp_l2_flags (where=(checkid="&checkid.")) b
     where a.checkid=b.checkid
@@ -1999,7 +2079,7 @@ quit;
 /* Intra-table check for invalid data relationship across 2 variables            */
 /*-------------------------------------------------------------------------------*/
 %macro flag_223;
-  %l2_flags_223_228_229; 
+  %l2_flags_223_228_229;
 %mend flag_223;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_223                                                             */
@@ -2016,7 +2096,7 @@ quit;
   %end;
   %else %do;
     %l2_flags_226_227;
-  %end; 
+  %end;
 %mend flag_226;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_226                                                             */
@@ -2028,7 +2108,7 @@ quit;
 /* Intra-table check for invalid date relationship (var1 lt var2)                */
 /*-------------------------------------------------------------------------------*/
 %macro flag_227;
-  %l2_flags_226_227; 
+  %l2_flags_226_227;
 %mend flag_227;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_227                                                             */
@@ -2040,7 +2120,7 @@ quit;
 /* Intra-table check for invalid data value relationship across 2 variables      */
 /*-------------------------------------------------------------------------------*/
 %macro flag_228;
-  %l2_flags_223_228_229; 
+  %l2_flags_223_228_229;
 %mend flag_228;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_228                                                             */
@@ -2052,7 +2132,7 @@ quit;
 /* Intra-table check for invalid variable value based on specified date          */
 /*-------------------------------------------------------------------------------*/
 %macro flag_229;
-  %l2_flags_223_228_229; 
+  %l2_flags_223_228_229;
 %mend flag_229;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_229                                                             */
@@ -2070,12 +2150,12 @@ quit;
   /* Create a macro variable with list of unique CheckIds from temporary lookup */
   proc sql noprint;
     select distinct checkid
-         , count(distinct checkid) 
+         , count(distinct checkid)
     into :checkidlist separated by ' '
        , :checkct trimmed
     from temp_l2_flags
-    ; 
-  quit; 
+    ;
+  quit;
 
     %if %sysevalf(&checkct. > 0) %then %do;
     /* Loop through each CheckID and output temporary flags datasets by CheckID  */
@@ -2098,8 +2178,8 @@ quit;
 /* START ==> %date_percentiles                                                   */
 /*********************************************************************************/
 %macro date_percentiles (libin=, dsin=, libout=, dsout=, vars=);
-  proc means nolabels data=&libin..&dsin. (keep=&vars. n) missing vardef=weight StackODSOutput 
-       n min p1 P5 P25 median P75 P95 p99 max; 
+  proc means nolabels data=&libin..&dsin. (keep=&vars. n) missing vardef=weight StackODSOutput
+       n min p1 P5 P25 median P75 P95 p99 max;
     var &vars.;
     weight n;
     ods output summary=&libout..&dsout.;
@@ -2133,7 +2213,7 @@ quit;
 /*********************************************************************************/
 /* PROC MEANS WITH NWAY CLASS 1 VARIABLE ONLY + SPECIFIC FORMAT FOR THAT CLASSVAR*/
 /*********************************************************************************/
-%macro scdm_means_nway_format_sum 
+%macro scdm_means_nway_format_sum
   (libin=,dsin=,libout=,dsout=,keepvars=,vars=,classvars=,names=,format=,formatvar=,numobs=);
   proc means nway noprint data=&libin..&dsin.(obs=&numobs. keep=&keepvars.) missing;
     var &vars.;
@@ -2200,7 +2280,7 @@ data _NULL_;
 run;
 /*Create signature file*/
 data signature;
-   DP="&DP.";                                                                    
+   DP="&DP.";
    ReqID="&ReqID.";
    ProjID="&ProjID.";
    WPType="&WPType.";
@@ -2209,19 +2289,19 @@ data signature;
    VerID="&VerID.";
    QAVer="&QAVer.";
    SCDMVer="&SCDMVer.";
-   Module="&MODULE."; 
+   Module="&MODULE.";
    OSABBR="&sysscp.";
    OSNAME="&sysscpl.";
    SASVersion="&sysver.";
    SASVersionLong="&sysvlong.";
    RunType="&sysenv.";
    NCPU="&sysncpu.";
-   format StartTime StopTime datetime21.2; 
-   StartTime=trim(left("&&&MODULE.START."));                                
+   format StartTime StopTime datetime21.2;
+   StartTime=trim(left("&&&MODULE.START."));
    StopTime=trim(left("&&&MODULE.STOP."));
-   Seconds=trim(left("&Seconds.")); 
-   format RunTime $20.; 
-   RunTime=strip("&hours. h &minutes. m &seconds2. s"); 
+   Seconds=trim(left("&Seconds."));
+   format RunTime $20.;
+   RunTime=strip("&hours. h &minutes. m &seconds2. s");
    output;
 run;
 
@@ -2230,7 +2310,7 @@ proc transpose data=signature out=dplocal.&MODULE._signature
    var _ALL_;
 run;
 %remove_labels(dplocal,&module._signature);
-%MEND SIGNATURE_END; 
+%MEND SIGNATURE_END;
 
 
 /*********************************************************************************/
@@ -2241,37 +2321,37 @@ run;
 ***********************************************************************************
 * NAME:  ms_min_max_dates.sas
 *
-* PURPOSE:  
-*   Calculates min/max dates of data completeness for SCDM Core tables and  
-*   stores results in a SAS dataset.  This data will be used by Common-Components 
+* PURPOSE:
+*   Calculates min/max dates of data completeness for SCDM Core tables and
+*   stores results in a SAS dataset.  This data will be used by Common-Components
 *   to populate the MinDate and MaxDate parameters.
 *
-* MAJOR STEPS: 
-*   1- For each SCDM Core table, use metadata from QA results to 
-*      A- calculate MaxDate as the largest date with at least X% of the prior 
-*         year-month row    
+* MAJOR STEPS:
+*   1- For each SCDM Core table, use metadata from QA results to
+*      A- calculate MaxDate as the largest date with at least X% of the prior
+*         year-month row
 *      B- calculate MinDate as the smallest date with at least X% of the next
-*         year-month row    
+*         year-month row
        C- append calculated results to min/max datasets
 *   2- Create final dataset
-*      A- derive overall Min/Max dates from Step 1-C, 
-*      B- transpose datasets from Step 1-C 
-*      C- create final dataset by merging datasets from Step 2-A and Step 2-B 
+*      A- derive overall Min/Max dates from Step 1-C,
+*      B- transpose datasets from Step 1-C
+*      C- create final dataset by merging datasets from Step 2-A and Step 2-B
 *
 * KEY DEPENDENCIES/CONSTRAINTS:
 *   - Externally defined macro variable &DP
 *   - Access to infolder.lkp_all_minmax_dates that defines key macro variables
 *   - Access to QA datasets with record counts by year-month
-*   - Date algorithm may not work well with all types of distributions 
-*     (Example: a distribution with a large drop proceeded or followed by a long 
-*               flattail of many months) 
+*   - Date algorithm may not work well with all types of distributions
+*     (Example: a distribution with a large drop proceeded or followed by a long
+*               flattail of many months)
 *   - This version works with QA data that stores the minimum date for a given
-*     year-month row.  Thus, when calculating the maximum dates, we need to push  
+*     year-month row.  Thus, when calculating the maximum dates, we need to push
 *     out the dates to the end of month.
 *
 *----------------------------------------------------------------------------------
 * USER-PARAMETERS:
-*   threshold...minimum qualifying percentage of current/prior or current/next 
+*   threshold...minimum qualifying percentage of current/prior or current/next
 *              (default: .80)
 *
 *----------------------------------------------------------------------------------
@@ -2279,7 +2359,7 @@ run;
 %macro MS_MIN_MAX_DATES (threshold=.80);
  /*-------------------------------------*/
  /* 0- Setup Tasks                      */
- /*-------------------------------------*/     
+ /*-------------------------------------*/
   %local i;
   /* Create the list of tables to loop through */
   proc sql noprint;
@@ -2288,7 +2368,7 @@ run;
           from infolder.lkp_all_minmax as a right join msoc.control_flow_3 as b
           on lowcase(a.tabid)=lowcase(b.module)
           where lowcase(b.execute_flag)="y" and b.cc_table ne "X") as c
-    ; 
+    ;
   quit;
   proc datasets library=work nolist nowarn nodetails ;
     delete maxDate: minDate:;
@@ -2312,7 +2392,7 @@ run;
          , :inc trimmed
       from infolder.lkp_all_minmax (where=(tabid="&tabid."))
       ;
-    quit; 
+    quit;
     %if %sysfunc(exist(&libin..&dsin., data)) %then %do;
       %if %sysevalf(%lowcase(&sum.)=y) %then %do;
         proc sql noprint;
@@ -2352,92 +2432,92 @@ run;
     /*---------------------------------------------------------*/
     /*  Contributes to Step 1-A:                               */
     /*  Grab prior month count and attach to current month     */
-    /*  and flag if curr month qualifies for max date          */ 
-    /*---------------------------------------------------------*/            
+    /*  and flag if curr month qualifies for max date          */
+    /*---------------------------------------------------------*/
       data temp ;
         set temp ;
-        by date ;                            
-        month_n = _n_ ;            
-        lagPriorCount = lag(count) ;    
+        by date ;
+        month_n = _n_ ;
+        lagPriorCount = lag(count) ;
         if lagPriorCount ne . then do ;
           format percentPrev percent8.2 ;
           percentPrev = (count / lagPriorCount) ;
-          qualifyMax = (percentPrev ge &threshold) ;    
-        end ;            
-      run ;      
-    /*----------------------------------------------------------*/         
-    /*  Contribute to Step 1-B                                  */         
+          qualifyMax = (percentPrev ge &threshold) ;
+        end ;
+      run ;
+    /*----------------------------------------------------------*/
+    /*  Contribute to Step 1-B                                  */
     /*  Grab next month count and attach to current month and   */
-    /*  flag if curr month qualifies for min date               */ 
-    /*----------------------------------------------------------*/                 
+    /*  flag if curr month qualifies for min date               */
+    /*----------------------------------------------------------*/
       proc sort data=temp;
         by descending date;
       run;
       data temp;
-        set temp;      
-        by descending date;            
-        NextCount = lag(count) ;    
+        set temp;
+        by descending date;
+        NextCount = lag(count) ;
         if NextCount ne . then do ;
           format percentNext percent8.2 ;
           percentNext = (count / NextCount) ;
-          qualifyMin = (percentNext ge &threshold) ;    
-        end ;                        
-      run ;      
-    /*---------------------------------------------------------*/         
-    /* Finalizes Step 1-A:                                     */                  
+          qualifyMin = (percentNext ge &threshold) ;
+        end ;
+      run ;
+    /*---------------------------------------------------------*/
+    /* Finalizes Step 1-A:                                     */
     /* Grab first qualifing MaxDate                            */
-    /*---------------------------------------------------------*/                 
+    /*---------------------------------------------------------*/
       data MaxDate_&tabid.;
         set temp;
-        by descending date; 
-        type=upcase("&tabid.");  
+        by descending date;
+        type=upcase("&tabid.");
         include="&inc.";
         retain trap 0 ;
-        if (trap eq 0) and (qualifyMax eq 1) then do ;               
+        if (trap eq 0) and (qualifyMax eq 1) then do ;
           label months_from_last = 'Number of months from last month with any data' ;
           months_from_last = month_n - &n_months ;
           output ;
           trap = 1 ;
-          stop ;            
+          stop ;
         end ;
         rename date=MaxDate;
         keep date months_from_last include type ;
       run ;
-    /*---------------------------------------------------------*/         
-    /* Finalizes Step 1-B:                                     */                           
+    /*---------------------------------------------------------*/
+    /* Finalizes Step 1-B:                                     */
     /* Grab first qualifing MinDate                            */
-    /*---------------------------------------------------------*/               
+    /*---------------------------------------------------------*/
       proc sort data=temp;
         by date;
       run;
       data MinDate_&tabid.;
         set temp;
-        by date;  
-        type=upcase("&tabid."); 
-        include="&inc."; 
+        by date;
+        type=upcase("&tabid.");
+        include="&inc.";
         retain trap 0 ;
-        if (trap eq 0) and (qualifyMin eq 1) then do ;               
+        if (trap eq 0) and (qualifyMin eq 1) then do ;
           output ;
           trap = 1 ;
-          stop ;            
+          stop ;
         end ;
         rename date=MinDate;
         keep date month_n include type ;
       run;
 
- /*-------------------------------------------------------------*/         
+ /*-------------------------------------------------------------*/
  /* 1-C Append min dates together and append max dates together */
- /*-------------------------------------------------------------*/         
+ /*-------------------------------------------------------------*/
       proc append force base=minDates data=MinDate_&tabid. ;
         format MinDate yymmdd10. ;
-      run ;    
+      run ;
       proc append force base=maxDates data=MaxDate_&tabid. ;
-        format MaxDate yymmdd10. ;       
-      run ; 
+        format MaxDate yymmdd10. ;
+      run ;
   /* Fix max dates to be the last day of the month */
       data maxDates ;
         set maxDates (rename=(maxDate=maxDt)) ;
-        format maxDate yymmdd10. ;        
+        format maxDate yymmdd10. ;
         maxDate = intnx('month',maxDt,0,'end') ;
         drop maxDt ;
       run ;
@@ -2464,16 +2544,16 @@ run;
   /* 2-A Create Overall Minimum and Maximum Dates with Complete Data */
     proc sql ;
       create table minDate as
-      select max(minDate) as DP_MinDate format=yymmdd10. 
+      select max(minDate) as DP_MinDate format=yymmdd10.
            label='Overall DP Minimum Date for Data Completeness'
       from minDates (where=(lowcase(include)='y'))
       ;
       create table maxDate as
-      select min(maxDate) as DP_MaxDate format=yymmdd10. 
+      select min(maxDate) as DP_MaxDate format=yymmdd10.
            label='Overall DP Maximum Date for Data Completeness'
       from maxDates (where=(lowcase(include)='y'))
-      ;        
-    quit;  
+      ;
+    quit;
   /* 2-B Transpose table specific dates from rows to cols */
     proc transpose data=minDates (where=(lowcase(include)='y')) out=transposed_minDates suffix=_MinDate;
       var minDate ;
@@ -2483,11 +2563,11 @@ run;
     proc transpose data=maxDates (where=(lowcase(include)='y')) out=transposed_maxDates suffix=_MaxDate;
       var maxDate ;
       id type ;
-      format maxDate yymmdd10. ;      
+      format maxDate yymmdd10. ;
     run ;
   /* 2-C Save Final Dataset */
     options mergenoby=nowarn ;
-    data msoc.MinMax_Dates;     
+    data msoc.MinMax_Dates;
       %add_dpid_ds
        merge minDate (keep=DP_MinDate)
            maxDate (keep=DP_MaxDate)
@@ -2510,7 +2590,7 @@ run;
   options NOSYNTAXCHECK ;
   %if &SYSSCP eq WIN %then %do ;
     options NODMSSYNCHK ;
-  %end ; 
+  %end ;
   run ;
 %mend ;
 
@@ -2522,7 +2602,7 @@ run;
   options SYNTAXCHECK ;
   %if &SYSSCP eq WIN %then %do ;
     options DMSSYNCHK ;
-  %end ; 
+  %end ;
   run ;
 %mend ;
 
@@ -2542,14 +2622,14 @@ run;
 /*                  'get_file_names' to search for either files or directories  */
 
 /* The MOPEN function returns a 0 for directories and a positive number for files. */
-  %local found_type ; 
+  %local found_type ;
   %if %lowcase(&type) eq dir_name %then %do ;
     %let found_type = eq ;    /* equal to 0 means a directory is found */
   %end ;
   %else %if %lowcase(&type) eq file_name %then %do ;
     %let found_type = gt ;    /* > 0 means a file is found */
-  %end ;  
- 
+  %end ;
+
   data &OUT.;
     keep name type ;
     retain type "&type" ;
@@ -2578,7 +2658,7 @@ run;
     if fid &found_type 0 then if &FILTER. then output;
     end;
     rc = dclose(did);
-    rc = filename(fref);        
+    rc = filename(fref);
   run;
 
 %mend get_dir_file_names ;
@@ -2600,7 +2680,7 @@ run;
   proc sql noprint;
     create table temp2 as
     select * from qadata.&table.
-    where 
+    where
   %if "%lowcase(&l.)" = "y" %then not missing(cpatid) and not missing(mpatid);
   %else %if "%lowcase(&l.)" = "n" %then not missing(mpatid) and missing(cpatid) ;
   %else %if "%lowcase(%sysfunc(substr(&var1.,1,1)))" = "m" %then not missing(mpatid);
@@ -2616,7 +2696,7 @@ run;
     by %do j = 1 %to 4; &&var&j. %end; ;
   %end;
   run;
- 
+
   proc sql;
     select count(*) as row into: dups
     from dupout
@@ -2639,7 +2719,7 @@ run;
     select count(distinct &var.) as duprows %do j = 1 %to %eval(&m.); ,&&var&j.. %end;
     from dupout
     group by %do j = 1 %to %eval(&m.-1); &&var&j.., %end; &&var&m..
-    order by %do j = 1 %to %eval(&m.-1); &&var&j.., %end; &&var&m.. 
+    order by %do j = 1 %to %eval(&m.-1); &&var&j.., %end; &&var&m..
     ;
   quit;
 
@@ -2655,14 +2735,14 @@ run;
 /*********************************************************************************/
 /* START ==> %flag_201_203                                                       */
 /*********************************************************************************/
-/* Cross table checks                                                            */ 
+/* Cross table checks                                                            */
 /*-------------------------------------------------------------------------------*/
 %macro flag_201_203 /minoperator;
   %local i;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
-    from temp_l2_flags (where=(checkid="&checkid.")) 
+    from temp_l2_flags (where=(checkid="&checkid."))
     ;
   quit;
   %let ct=&sqlobs.;
@@ -2685,17 +2765,17 @@ run;
 
       /*if variable1 is filled, then that variable must be present in table2*/
       %if &checkid. = 201  %then %do;
- 
+
         %if %upcase(&tabid2.) in (DEL INF) %then %do;
           %if %upcase(&tabid2.) = DEL %then %let reftable = &deltable.;
             %else %let reftable = &inftable.;
 
           proc sql noprint;
             create table flag_&i. as
-              select distinct a.&var1. 
+              select distinct a.&var1.
                 %if %upcase(&tabid2.)=DEL %then , a.&var2. ;
                , "E" as IDFileStatus format=$1.
-            from  qadata.&&&tabid1.table a 
+            from  qadata.&&&tabid1.table a
             left join qadata.&reftable. b
             on a.&var1. = b.&var1.
             %if %upcase(&tabid2.) = DEL %then %do;
@@ -2704,13 +2784,13 @@ run;
             where not missing (a.&var1.) and b.&var1. is null
           ;
           quit;
-        %end; /* end condition tabid in DEL, INF */ 
+        %end; /* end condition tabid in DEL, INF */
 
-        %else %do;    
+        %else %do;
           proc sql noprint;
             create table flag_&i. as
               select distinct a.&var1.
-            from qadata.&&&tabid1.table a 
+            from qadata.&&&tabid1.table a
             left join indata.&&&tabid2.table b
             on a.&var1. = b.&var2.
             where not missing(a.&var1.) and b.&var2. is null
@@ -2739,7 +2819,7 @@ run;
               message=cat("&var1. (",strip(&var1.),") not found in &&&tabid2.table table");
             %end;
           %end; /* END condition NOBS > 0 */
-           %else %do; 
+           %else %do;
              message = "";
            %end;
           run;
@@ -2757,7 +2837,7 @@ run;
                 set dplocal.MIL_IDFileStatus_&VAR1. flag_&i. (drop = message table1 table2);
               run;
             %end;
-          %end; /* end condition table2 in (DEL INF) */  
+          %end; /* end condition table2 in (DEL INF) */
         %end; /* END Condition NOBS >0 */
       %end; /*end of 201*/
 
@@ -2794,9 +2874,9 @@ run;
             %else %if "%upcase(&tabid2.)" = "INF" %then %do;
               message=cat("&var1. (",strip(&var1.)
                         ,") was found in Infants but not found in &&&tabid1.table table");
-            %end;     
+            %end;
           %end; /* end if NOBS>0 condition */
-          %else %do; 
+          %else %do;
             message = "";
           %end;
         run;
@@ -2810,10 +2890,10 @@ run;
           %end;
           %else %do;
             data dplocal.MIL_IDFileStatus_&VAR1.;
-              set dplocal.MIL_IDFileStatus_&VAR1. 
+              set dplocal.MIL_IDFileStatus_&VAR1.
                   flag_&i. (drop = message table1 table2);
             run;
-          %end;    
+          %end;
         %end; /* end condition NOBS >0 */
       %end; /*end of 202*/
 
@@ -2828,15 +2908,15 @@ run;
           create table flag_&i. as
             select "&tabid1." as table1 length=3
                  , "&tabid2." as table2 length=3
-                 , a.length 
-                 , b.length as comp_length 
-          from l2_cont_&tabid1. (keep = name type length) a 
+                 , a.length
+                 , b.length as comp_length
+          from l2_cont_&tabid1. (keep = name type length) a
              , l2_cont_&tabid2. (keep=name type length) b
           where upcase(a.name) = "%upcase(&var1.)"
           and upcase(b.name) = "%upcase(&var2.)"
           ;
         quit;
-  
+
         data flag_&i.;
           set flag_&i.;
           length message $300;
@@ -2848,10 +2928,10 @@ run;
           end;
           if flag_l2;
         run;
-      %end; /* end condition if checkid=203 */ 
+      %end; /* end condition if checkid=203 */
       %get_flagid (nvars=2, ntabs=2);
     %end; /* end i-loop */
-  %end; /* end condition ct > 0 */ 
+  %end; /* end condition ct > 0 */
 
 %mend flag_201_203;
 /*-------------------------------------------------------------------------------*/
@@ -2866,12 +2946,12 @@ run;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
-    from temp_l2_flags (where=(checkid="&checkid.")) 
+    from temp_l2_flags (where=(checkid="&checkid."))
     ;
   quit;
   %let ct=&sqlobs.;
 
-  %if &ct. > 0 %then %do; 
+  %if &ct. > 0 %then %do;
     %do i=1 %to &ct.;
       proc sql noprint;
         select variable1
@@ -2893,7 +2973,7 @@ run;
         ;
       quit;
 
-      /* If comparing MIL to DEM sex value, convert DEM ('A','U') to 'O' for consistency */ 
+      /* If comparing MIL to DEM sex value, convert DEM ('A','U') to 'O' for consistency */
       %if "%upcase(&tabid2.)" = "DEM" %then %do;
         data dem;
           set indata.&&&tabid2.table;
@@ -2903,25 +2983,25 @@ run;
       %end;
       %else %do;
         %if %upcase(&tabid2.) = ENC %then %let reflib = indata;
-          %else %let reflib = qadata; 
+          %else %let reflib = qadata;
         %let scdmtable = &reflib..&&&tabid2.table;
       %end;
 
       proc sql;
-        create table flag_&i. as 
+        create table flag_&i. as
         select distinct a.&var1.
             , "&flag_descr" as message length=300
             , "&tabid1." as table1 length=3
-            , "&tabid2." as table2 length=3 
-        from qadata.&&&tabid1.table a, &scdmtable. b 
-        where a.&var3. = b.&var4. AND 
+            , "&tabid2." as table2 length=3
+        from qadata.&&&tabid1.table a, &scdmtable. b
+        where a.&var3. = b.&var4. AND
               (a.&var1. ne b.&var2. and not missing(a.&var1.))
         ;
       quit;
       %get_flagid (ntabs=2, nvars=2);
     %end; /* end i-loop */
   %end;/* end condition count>0 */
-%mend flag_208; 
+%mend flag_208;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_208                                                           */
 /*-------------------------------------------------------------------------------*/
@@ -2930,13 +3010,13 @@ run;
 /* START ==> %flag_217_219_27_ :Mom-Infant Linkage table                         */
 /*********************************************************************************/
 /* Duplicate rows for variable combination                                       */
-/* Variable differs across rows                                                  */ 
+/* Variable differs across rows                                                  */
 /*-------------------------------------------------------------------------------*/
 %macro flag_217_219_27_;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
-    from temp_l2_flags (where=(checkid="&checkid.")) 
+    from temp_l2_flags (where=(checkid="&checkid."))
     ;
   quit;
   %let ct=&sqlobs.;
@@ -2944,7 +3024,7 @@ run;
   data temp;
     set temp;
     array vars variable:;
-    do i = 1 to dim(vars); 
+    do i = 1 to dim(vars);
       vars(i) = tranwrd(vars(i), "NA", " ");
     end;
   run;
@@ -2958,7 +3038,7 @@ run;
              , variable3
              , variable4
              , _linked
-             , tableid 
+             , tableid
              , flag_descr
         into :var1 trimmed
            , :var2 trimmed
@@ -2973,7 +3053,7 @@ run;
       quit;
       %put ===> &var1. &var2. &var3. &var4. &link. &tabid.;
 
-      %let variable = %str(&var1. &var2. &var3. &var4.); 
+      %let variable = %str(&var1. &var2. &var3. &var4.);
       %let n = %sysfunc(countw(&variable.));
       %put n===>&n.;
 
@@ -2985,7 +3065,7 @@ run;
         %put &checkvar.;
         %checkrows(var = &checkvar);
       %end;
- 
+
       data flag_&i.;
       %if (&checkid. = 219 ) %then %do;
         merge dupout (in = a) temp3 (in = b);
@@ -3002,7 +3082,7 @@ run;
         %if &dups. > 0 %then %do;
           %if "%lowcase(&var1.)"= "clname" %then %do;
         message=cat("Cpatid (",strip(cpatid),"), &var1. (",strip(&var1.),
-        "), &var2. (",strip(&var2.),%if &checkid. = 273 %then 
+        "), &var2. (",strip(&var2.),%if &checkid. = 273 %then
         "), &var3. (",strip(&var3.),"), &var4. (",put(&var4., mmddyy10.),;"): Variable combination appears on > 1 row");
           %end;
           %else %do;
@@ -3010,19 +3090,19 @@ run;
           %end;
         flag_l2= 1;
         %end;
-      %end; 
+      %end;
 
       %if &checkid.= 217 %then %do;
         %if &dups. > 0 %then %do;
         message=cat("MPatID (",strip(mpatid),"), EncounterID (", strip(encounterid),"), ADate (", put(adate, mmddyy10.),"), MBirth_Date (",put(mbirth_date, mmddyy10.),"): Not linked, but variable combination appears on > 1 row");
         flag_l2 = 1;
         %end;
-      %end;  
+      %end;
       %if &checkid. = 218 %then %do;
         %if &dups. > 0 %then %do;
           %if "%lowcase(&var1.)" = "mlname" %then %do;
         message=cat("MPatid (",strip(mpatid),"), Cpatid (",strip(cpatid),"), EncounterID (",strip(encounterid),
-         "), EncType (",strip(enctype),"), Adate (",put(adate, mmddyy10.),"), Sex (",strip(sex),"), CBirthDate (", 
+         "), EncType (",strip(enctype),"), Adate (",put(adate, mmddyy10.),"), Sex (",strip(sex),"), CBirthDate (",
          put(Cbirth_date, mmddyy10.),"), Match_Method (",strip(matchmethod),"), &var1. (",strip(&var1.),
         "), &var2. (",strip(&var2.),"), &var3. (",strip(&var3.),"), &var4. (",strip(&var4.),"): Linked, but variable combination  appears on > 1 row");
           %end;
@@ -3033,20 +3113,20 @@ run;
           %end;
         flag_l2 = 1;
         %end;
-      %end; 
+      %end;
 
-      %if &checkid. = 219 %then %do;  
-        %if &dups. > 0 %then %do;      
+      %if &checkid. = 219 %then %do;
+        %if &dups. > 0 %then %do;
           %if &duprows. > 1 %then %do;
             message=cat("Linked: &var1. (",strip(&var1.),"), &var2. (",
-            %if %index(%LOWCASE(&var2.),date) %then put(&var2., mmddyy10.); 
+            %if %index(%LOWCASE(&var2.),date) %then put(&var2., mmddyy10.);
               %else strip(&var2.);,
             %if ("%lowcase(&checkid.)" = "mbirth_date" | "%lowcase(&checkid.)" = "adate") %then "), EncType (",strip(EncType),;
             %if "%lowcase(&checkid.)" = "mbirth_date" %then "), ADate (", put(adate, mmddyy10.),;
-            "): &checkvar. values differ across rows");  
-          %end; /* end if duprows >1 condition */ 
+            "): &checkvar. values differ across rows");
+          %end; /* end if duprows >1 condition */
           flag_l2 = 1;
-        %end; /* end if dups > 0 condition */ 
+        %end; /* end if dups > 0 condition */
       %end; /* end if checkid = 219 condition */
       run;
 
@@ -3054,9 +3134,9 @@ run;
       %if (&checkid.= 274 | &checkid. = 275 ) %then %do;
         data flag_&i.;
           set qadata.&table;
-        %if "%lowcase(&link.)" = "y" %then 
+        %if "%lowcase(&link.)" = "y" %then
           if not missing(mpatid) and not missing(cpatid);
-        %else %if "%lowcase(&link.)" = "n" %then 
+        %else %if "%lowcase(&link.)" = "n" %then
           if missing(mpatid) or missing(cpatid); ;
           length message $300;
           message = "";
@@ -3089,7 +3169,7 @@ run;
 /*********************************************************************************/
 /* Intra-table check for two variables                                           */
 /*-------------------------------------------------------------------------------*/
-%macro flag_221_254_280; 
+%macro flag_221_254_280;
 
   %* select lookup records for checkid, count times to iterate to run all flags associated with check as ct;
   proc sql noprint;
@@ -3099,14 +3179,14 @@ run;
     ;
   quit;
   %let ct=&sqlobs.;
-  %if &ct. > 0 
+  %if &ct. > 0
   %then %do i=1 %to &ct.;
 
       %* load variable names and tabID to parms for iteration;
       proc sql noprint;
         select variable1
              , variable2
-             , tableid 
+             , tableid
         into :var1 trimmed
            , :var2 trimmed
            , :tabid trimmed
@@ -3114,10 +3194,10 @@ run;
         where row=&i.
         ;
       quit;
-       
+
       %* load full SCDM table name to table parm;
       %table_name(n=);
- 
+
 
       %if &checkid. = 221 %then %do;
 
@@ -3164,7 +3244,7 @@ run;
       %end; %* end logic for check 254;
 
 
-      %else %if &checkid.=280 
+      %else %if &checkid.=280
       %then %do;
 
         data flag_&i.;
@@ -3174,7 +3254,7 @@ run;
                 and (&var1. - &var2.) > 180;
           length message $300;
           flag_12=1;
-          message=cat("MPatID= ",strip(mpatid),"CPatID= ",strip(cpatid),": difference between &var1. (", put(&var1., mmddyy10.), ") and &var2. (", put(&var2., mmddyy10.),") > 180 days ");          
+          message=cat("MPatID= ",strip(mpatid),"CPatID= ",strip(cpatid),": difference between &var1. (", put(&var1., mmddyy10.), ") and &var2. (", put(&var2., mmddyy10.),") > 180 days ");
         run;
 
         %get_flagid (ntabs=1, nvars=2);
@@ -3230,8 +3310,8 @@ run;
 /*********************************************************************************/
 /* START ==> %flag_255_258 :Mom-Infant Linkage table                             */
 /*********************************************************************************/
-* CBirth_Date must be between 3 days before the ADate through DDate; 
-* if DDate is null, then CBirth_Date must be between 3 days before, 
+* CBirth_Date must be between 3 days before the ADate through DDate;
+* if DDate is null, then CBirth_Date must be between 3 days before,
 *  through 1 day after the Adate;
 /*-------------------------------------------------------------------------------*/
 %macro flag_255_258;
@@ -3239,7 +3319,7 @@ run;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
-    from temp_l2_flags (where=(checkid="&checkid.")) 
+    from temp_l2_flags (where=(checkid="&checkid."))
     ;
   quit;
 
@@ -3250,7 +3330,7 @@ run;
         select variable1
              , variable2
              , variable3
-             , tableid 
+             , tableid
         into :var1 trimmed
            , :var2 trimmed
            , :var3 trimmed
@@ -3306,7 +3386,7 @@ run;
       %end;
 
       %if &checkid. = 258 %then %do;
-   /* Flag [TABID]_1_xx_00-0_258: value between min and max (inclusive) */ 
+   /* Flag [TABID]_1_xx_00-0_258: value between min and max (inclusive) */
         %date_ranges(variable=&var1., dataset=%if "%upcase(%sysfunc(substr(&var1., 1, 1)))"= "C" %then &inftable.; %else &deltable.;);
         data flag_&i.;
           set qadata.&table.;
@@ -3315,7 +3395,7 @@ run;
           flag_12= 0;
           if not missing(&var1.) & ((&var1. gt &date_max. | &var1. lt &date_min.)) then do;
             flag_12 = 1;
-            message = cat(%if "%upcase(%sysfunc(substr(&var1., 1, 1)))" = "C" %then "CPatID (",strip(cpatid),; %else "MPatID (",strip(mpatid),; 
+            message = cat(%if "%upcase(%sysfunc(substr(&var1., 1, 1)))" = "C" %then "CPatID (",strip(cpatid),; %else "MPatID (",strip(mpatid),;
             ") &var1.(",strip(put(&var1.,mmddyy10.)),") not found in ",
         %if "%upcase(%sysfunc(substr(&var1., 1, 1)))" = "C" %then "Infants table"; %else "Deliveries table";);
           end;
@@ -3374,10 +3454,10 @@ run;
 /*-------------------------------------------------------------------------------*/
 %macro days_dist_by_yr;
   proc sql noprint;
-    create table msoc.mil_l2_cenrstart_agedays_cat as 
-    select year(cbirth_date) as year_cbirth_date 
+    create table msoc.mil_l2_cenrstart_agedays_cat as
+    select year(cbirth_date) as year_cbirth_date
           ,put(cenr_start - cbirth_date, agecat_days.) as agedays_group
-          ,count(distinct cpatid) as count 
+          ,count(distinct cpatid) as count
     from qadata.&table.(keep=cpatid cenr_start cbirth_date)
     where not missing(cpatid)
     group by calculated year_cbirth_date, calculated agedays_group
