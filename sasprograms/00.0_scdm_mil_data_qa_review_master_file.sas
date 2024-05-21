@@ -302,7 +302,7 @@ options linesize=100 pagesize=50;
    /* Specify ETL # for this request (i.e., Same ETL # for Phase A SCDM tables)        */
    %let _ETL = <edit-etl#> ;
 
-  /* Specify if Common Components (CC) program package should run */
+  /* Specify if Phase B Common Components (CC) program package should run */
   /* Enter 'Y' for yes, otherwise leave blank or enter 'N' for no */
    %let Execute_CC = Y;
 
@@ -361,6 +361,25 @@ quit;
   /*-----------------------------------------------------------------------------------*/
   %else %if %str("&SCC.") = %str("") %then %do;
     %let ccbypass=Y;
+
+    /* If Execute_CC=Y then abort package and output error message, CCB requires CCA metadata to run successfully */
+    %if %lowcase(&Execute_CC)=y %then %do;
+      data _null_;
+        put 80*'!';
+        put ' ';
+        put 'MASTER_FLOW macro is aborting due to Phase A Common Components (CC) bypass.';
+        put ' ';
+        put '==> The Execute_CC parameter is set to Y. For a successful Phase B CC run,';
+        put '    Phase A CC metadata is required. Ensure your site is not bypassing';
+        put '    Phase A CC by populating section 1d of the master program.';
+        put ' ';
+        put 80*'!';
+        put ' ';
+      run;
+      %abort cancel 99 ;
+    %end ; 
+
+    %else %do;
   /*-----------------------------------------------------------------------------------*/
   /* Define all macro parameters as global - DO NOT EDIT                               */
     %global etl _etl dp dp_mindate dp_maxdate dplocal msoc infolder sasprograms
@@ -409,6 +428,7 @@ quit;
     %let INDATA=%soc_clean_paths(&prod_scdm) ;
 
     %soc_lib(INDATA, &INDATA, options=%str(access=readonly))
+    %end;
   %end;
 %mend scc_yn;
 %scc_yn
