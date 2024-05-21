@@ -178,6 +178,6 @@ quit;
      %let %superq(var) = &val ;
   %end;
 
-  %if %lowcase(&phase)=a %then %let miltable=%str( );
+  %if %lowcase(&phase)=a %then %let miltable=;
 %mend scdm_table_names;
 %scdm_table_names;
