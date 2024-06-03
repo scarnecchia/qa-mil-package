@@ -129,7 +129,7 @@ proc sql noprint;
   select a.*, b.actual
   from (select variable as table
              , lowcase(value) as expected length=32
-   from qaresult.qa_cc_metadata (where=(index (variable, "TABLE") ne 0 and value not in (" ", "NA")))) as a
+   from qaresult.qa_cc_metadata (where=(index (variable, "TABLE") ne 0 and value not in (" ", "NA") and first(value) ne "&"))) as a
      left join (select distinct(lowcase(memname)) as actual length=32
    from dplocal.SCDM_L1_CONT) as b
   on lowcase(a.expected)=lowcase(b.actual)
