@@ -340,6 +340,25 @@ quit;
 /* Delete macro variable used as delimiter as no longer needed */
 %symdel dlm ;
 
+/* Defensive Pre-Check: Abort Program if Execute_CC=Y and _ROOT_DPLOCAL variable not populated (for CCB)*/
+%macro ccb_precheck;
+  %if &Execute_CC=Y and &_ROOT_DPLOCAL= %then %do;
+    data _null_;
+      put 90*'!';
+      put ' ';
+      put 'Defensive Pre-Check: _ROOT_DPLOCAL parameter not populated. Program is aborting.';
+      put ' ';
+      put '==> The _ROOT_DPLOCAL parameter cannot be blank if Execute_CC=Y.';
+      put '==> Please go back to the master program and populate _ROOT_DPLOCAL.';
+      put ' ';
+      put 90*'!';
+      put ' ';
+    run;
+    %abort cancel 99 ;
+  %end ; 
+%mend ccb_precheck;
+%ccb_precheck
+
 /* Rename and delete CCB _root variables as CCA uses same variables */
 %let _CCROOT_DPLOCAL= &_ROOT_DPLOCAL;
 %let _CCROOT_MSOC= &_ROOT_MSOC ;
@@ -367,7 +386,7 @@ quit;
       data _null_;
         put 80*'!';
         put ' ';
-        put 'MASTER_FLOW macro is aborting due to Phase A Common Components (CC) bypass.';
+        put 'Program is aborting due to Phase A Common Components (CC) bypass.';
         put ' ';
         put '==> The Execute_CC parameter is set to Y. For a successful Phase B CC run,';
         put '    Phase A CC metadata is required. Ensure your site is not bypassing';
