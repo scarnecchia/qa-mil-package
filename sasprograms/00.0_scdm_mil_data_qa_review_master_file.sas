@@ -342,7 +342,11 @@ quit;
 
 /* Defensive Pre-Check: Abort Program if Execute_CC=Y and _ROOT_DPLOCAL variable not populated (for CCB)*/
 %macro ccb_precheck;
-  %if &Execute_CC=Y and &_ROOT_DPLOCAL= %then %do;
+  %macro isBlank(param);
+    %sysevalf(%superq(param)=,boolean)
+  %mend isBlank; 
+
+  %if &Execute_CC=Y and %isBlank(&_ROOT_DPLOCAL)=1 %then %do;
     data _null_;
       put 90*'!';
       put ' ';
