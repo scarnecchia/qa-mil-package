@@ -85,8 +85,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 05/01/2024
-*  Version: 4.0.0
+*  Last modified date (mm/dd/yy): 07/08/2024
+*  Version: 4.0.1
 *
 ****************************************************************************************/
 
@@ -130,8 +130,9 @@ options linesize=100 pagesize=50;
 /*-------------------------------------------------------------------------------------*/
 /* SECTION 1: Data Partner/Data Site programmer defines parameters in this section.    */
 /*-------------------------------------------------------------------------------------*/
-/* 1a. Define path to location of staged SCDM tables under review
-       Example: %let Evaluate_MIL= //sentinel/etl22/PhaseB/ */
+/* 1a. Define path to location(s) of approved Phase A SCDM Tables and staged SCDM tables under review
+       Delimit multiple paths via single space
+       Example: %let Evaluate_MIL= //sentinel/etl22/PhaseA/ //sentinel/etl22/PhaseB/ */
   %let Evaluate_MIL= <edit-path>;
 
 /* 1b. Define path to location of Mother-Infant ID results in DPLOCAL created by either
@@ -340,6 +341,29 @@ quit;
 /* Delete macro variable used as delimiter as no longer needed */
 %symdel dlm ;
 
+/* Defensive Pre-Check: Abort Program if Execute_CC=Y and _ROOT_DPLOCAL variable not populated (for CCB)*/
+%macro ccb_precheck;
+  %macro isBlank(param);
+    %sysevalf(%superq(param)=,boolean)
+  %mend isBlank; 
+
+  %if &Execute_CC=Y and %isBlank(&_ROOT_DPLOCAL)=1 %then %do;
+    data _null_;
+      put 90*'!';
+      put ' ';
+      put 'Defensive Pre-Check: _ROOT_DPLOCAL parameter not populated. Program is aborting.';
+      put ' ';
+      put '==> The _ROOT_DPLOCAL parameter cannot be blank if Execute_CC=Y.';
+      put '==> Please go back to the master program and populate _ROOT_DPLOCAL.';
+      put ' ';
+      put 90*'!';
+      put ' ';
+    run;
+    %abort cancel 99 ;
+  %end ; 
+%mend ccb_precheck;
+%ccb_precheck
+
 /* Rename and delete CCB _root variables as CCA uses same variables */
 %let _CCROOT_DPLOCAL= &_ROOT_DPLOCAL;
 %let _CCROOT_MSOC= &_ROOT_MSOC ;
@@ -367,7 +391,7 @@ quit;
       data _null_;
         put 80*'!';
         put ' ';
-        put 'MASTER_FLOW macro is aborting due to Phase A Common Components (CC) bypass.';
+        put 'Program is aborting due to Phase A Common Components (CC) bypass.';
         put ' ';
         put '==> The Execute_CC parameter is set to Y. For a successful Phase B CC run,';
         put '    Phase A CC metadata is required. Ensure your site is not bypassing';
