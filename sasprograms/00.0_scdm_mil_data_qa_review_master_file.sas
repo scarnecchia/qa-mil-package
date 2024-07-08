@@ -85,8 +85,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 10/2018
-*  Last modified date (mm/dd/yy): 05/01/2024
-*  Version: 4.0.0
+*  Last modified date (mm/dd/yy): 07/08/2024
+*  Version: 4.0.1
 *
 ****************************************************************************************/
 
@@ -130,8 +130,9 @@ options linesize=100 pagesize=50;
 /*-------------------------------------------------------------------------------------*/
 /* SECTION 1: Data Partner/Data Site programmer defines parameters in this section.    */
 /*-------------------------------------------------------------------------------------*/
-/* 1a. Define path to location of staged SCDM tables under review
-       Example: %let Evaluate_MIL= //sentinel/etl22/PhaseB/ */
+/* 1a. Define path to location(s) of approved Phase A SCDM Tables and staged SCDM tables under review
+       Delimit multiple paths via single space
+       Example: %let Evaluate_MIL= //sentinel/etl22/PhaseA/ //sentinel/etl22/PhaseB/ */
   %let Evaluate_MIL= <edit-path>;
 
 /* 1b. Define path to location of Mother-Infant ID results in DPLOCAL created by either
