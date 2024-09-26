@@ -20,14 +20,27 @@
 %macro mil_linkage_rates(inlib=, outlib=);
   %if &miltable. ne %str( ) %then %do;
 
-  %ms_delpatients(  datafile=&inlib..&miltable
+    %local _miltable;
+    %do p = 1 %to &numpartitions.;
+      %if &numpartitions. gt 1 %then %do;
+        %let _miltable = &inlib..&miltable.&p.;
+      %end; /* end of numpartitions check */
+      %else %let _miltable = &inlib..&miltable.;
+
+  %ms_delpatients(  datafile=&_miltable.
                   , ptsfile= &PTSTOEXCLUDE.
-                  , outfile= dplocal.mil_exclude
+                  , outfile= dplocal.mil_exclude&p.
                   , patvar= mpatid);
-  %ms_delpatients(  datafile=dplocal.mil_exclude
+  %ms_delpatients(  datafile=dplocal.mil_exclude&p.
                   , ptsfile= &PTSTOEXCLUDE.
-                  , outfile= dplocal.mil_exclude
+                  , outfile= dplocal.mil_exclude&p.
                   , patvar= cpatid);
+
+  %end; /* end of partitions (p) loop */
+
+  %mergeDataset(inlib=dplocal, indsn_root=mil_exclude);
+
+
   /* InfantsLinked: This is the count of distinct populated CPatIDs per MPatID/EncounterID*/
   proc sql noprint;
     create table dplocal.mil_linkedcpatid as
