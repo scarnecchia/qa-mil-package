@@ -44,14 +44,43 @@
 
     /* merge enrollment with demographcis to add birthdate and calculate age */
         data _agecalc_&cov.&p. (drop=birth_date);
+          length agecategory $40;
           merge _last_enroll_patid_&cov.&p. (in=a keep=patid _enr_start _dpMaxenroll)
-              &_demtable. (in=b keep=patid birth_date where=(birth_date ne .));
+              &_demtable. (in=b keep=patid birth_date sex where=(birth_date ne .));
           by patid;
           if a and b;
 
-          Age=floor((intck('month',Birth_Date, _Enr_Start) - (day(_Enr_Start) < day(Birth_Date))) / 12);
+          age=floor((intck('month',Birth_Date, _Enr_Start) - (day(_Enr_Start) < day(Birth_Date))) / 12);
           agecategory = put(age, age_years.);
         run;
+        
+      data _temp_agecat1_&cov.&p. _temp_agecat2_&cov.&p. _temp_agecat3_&cov.&p. _temp_agecat4_&cov.&p.;
+        set _agecalc_&cov.&p.;
+        if 0 <= age <= 19 then do;
+            agecategory='0-18 (Pediatric Populations I)';
+            output _temp_agecat1_&cov.&p.;
+        end;
+        if 0 <= age <= 22 then do;
+            agecategory='0-21 (Pediatric Populations II)';
+            output _temp_agecat2_&cov.&p.;
+        end;
+        if 0 <= age < 26 then do;
+            agecategory='0-<26 (Young Adult Coverage Eligible)';
+            output _temp_agecat3_&cov.&p.;
+        end;
+        if 10 <= age <= 54 and upcase(sex)='F' then do;
+            agecategory='10-54 & Sex = F (Childbearing Age)';
+            output _temp_agecat4_&cov.&p.;
+        end;
+    run;
+    
+    data _agecalc_&cov.&p.;
+        set _agecalc_&cov.&p.
+            _temp_agecat1_&cov.&p.
+            _temp_agecat2_&cov.&p.
+            _temp_agecat3_&cov.&p.
+            _temp_agecat4_&cov.&p.;
+    run;
 
     /* inner join with age category look-up to attach sort order */
     /* note this extract will be used again for table limited to currently enrolled     */
