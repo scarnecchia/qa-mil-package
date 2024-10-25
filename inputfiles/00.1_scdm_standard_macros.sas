@@ -580,6 +580,13 @@ quit;
   /* import ptstoexclude if in cport format */
     %importfiles(var=&ptstoexclude.);
 
+  /* Setup partition parameters to allow for snapshot to run */
+  %if %symexist(numpartitions) = 0 or %str("&numpartitions.") eq %str("") %then
+    %do;
+      %global numpartitions;
+      %let numpartitions = 1;
+  %end;
+
   /* Call mil_linkage_rates */
 
    %mil_linkage_rates(inlib=ssdata, outlib=msoc);
@@ -588,6 +595,8 @@ quit;
    %SIGNATURE_END;
    proc printto;
    run;
+
+  %symdel numpartitions;
 
   /* Redirect libraries back to QA MIL package request id root folder */
   %redirect_libs(&_ssroot.);
