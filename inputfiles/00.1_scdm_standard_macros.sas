@@ -566,6 +566,7 @@ quit;
   %inc "&infolder.soc_scdm_formats_agecat.sas" / nosource2;
   %inc "&infolder.macros/ms_macros.sas" / nosource2;
   %inc "&infolder.macros/ms_delpatients.sas" / nosource2;
+  %inc "&infolder.macros/_mergeDataset.sas" /nosource2;
   %inc "&infolder.macros/_mil_linkage_rates.sas"  /nosource2;
 
   /**
