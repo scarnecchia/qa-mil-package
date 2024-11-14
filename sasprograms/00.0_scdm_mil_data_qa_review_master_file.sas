@@ -518,8 +518,7 @@ run;
 *---------------------------------------------------------------------------------------
 * 2- Execute Program
 *---------------------------------------------------------------------------------------;
-%include "&INFOLDER.00.0_scdm_control_flow.sas" /nosource2;
-%MASTER_FLOW ;
+%include "&INFOLDER.scdm_qa_mil_control_flow.sas" /nosource2;
 
 *+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+;
 * End 00.0_scdm_mil_data_qa_review_master_file.sas                                      ;
