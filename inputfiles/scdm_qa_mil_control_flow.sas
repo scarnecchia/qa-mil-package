@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------------------\
 |  PROGRAM NAME:                                                                        |
-|     00.0_scdm_control_flow.sas                                                        |
+|     scdm_qa_mil_control_flow.sas                                                      |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to define selective and sequential execution       |
@@ -58,7 +58,7 @@
         data _null_;
             putlog 80*'!';
             putlog ' ';
-            putlog "==> MASTER_FLOW macro is aborting due to an issue with the expected ETL #/Phase.";
+            putlog "==> QA_MIL_CONTROL_FLOW macro is aborting due to an issue with the expected ETL #/Phase.";
             putlog ' ';
             putlog '==> Ensure that your site is pointing to the correct version of CC for the Phase A ';
             putlog "    SCDM tables used to create the MIL table under review. ";

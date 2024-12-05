@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
-|     00.4_scdm_qasignaturerequest.sas                                                  |
+|     scdm_qasignaturerequest.sas                                                       |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create request-level metadata "signature" files  |

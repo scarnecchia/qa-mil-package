@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------------------*\
-|  PROGRAM NAME: 00.1_scdm_standard_macros.sas                                          |
+|  PROGRAM NAME: scdm_qa_mil_standard_macros.sas                                        |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store macros used repeatedly in QA programs      |

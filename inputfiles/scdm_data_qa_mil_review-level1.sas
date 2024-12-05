@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
-|     01.1_scdm_data_qa_review-level1.sas                                               |
+|     scdm_data_qa_review-level1.sas                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of this program is to perform Level 1 data checks on MIL              |
@@ -191,7 +191,7 @@
       data _null_;
         putlog 80*'!';
         putlog 'ERR'"OR: ";
-        putlog "==> MASTER_FLOW macro is aborting due to an issue with the expected ETL number";
+        putlog "==> QA_MIL_CONTROL_FLOW macro is aborting due to an issue with the expected ETL number";
         putlog "    specified in the MIL table label";
         putlog ' ';
         putlog ' ';

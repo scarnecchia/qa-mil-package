@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------------------*\
-|  PROGRAM NAME: 01.3_scdm_data_qa_review-level3.sas                                    |
+|  PROGRAM NAME: scdm_data_qa_review-level3.sas                                         |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to create cross-table level 3 output datasets for   |

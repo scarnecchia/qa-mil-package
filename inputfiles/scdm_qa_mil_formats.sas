@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
-|     00.2_scdm_formats                                                                 |
+|     scdm_qa_mil_formats                                                               |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to store file formats of variables.                 |

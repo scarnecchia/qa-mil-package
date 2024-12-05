@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
-|     01.2_scdm_data_qa_review-level2.sas                                               |
+|     scdm_data_qa_review-level2.sas                                                    |
 |---------------------------------------------------------------------------------------|
 |  PURPOSE:                                                                             |
 |     The purpose of the program is to perform critical level 2 data quality checks     |
