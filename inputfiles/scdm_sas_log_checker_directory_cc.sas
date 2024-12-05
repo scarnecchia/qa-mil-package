@@ -174,7 +174,7 @@
   run; 
 
   ods _all_ close;
-  ods pdf file="&msoc./&dpid._scdm_data_qa_logcheck.pdf" style=statdoc;
+  ods pdf file="&msoc./&dpid._scdm_data_qa_mil_logcheck.pdf" style=statdoc;
   title1 "Summary of Log Messages";
   title2 " ";
 

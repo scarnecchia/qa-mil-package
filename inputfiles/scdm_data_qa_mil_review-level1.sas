@@ -1,6 +1,3 @@
-/* Direct log to module log in the msoc folder */
-proc printto log=modlog new;
-run;quit;
 /*-------------------------------------------------------------------------------------*\
 |  PROGRAM NAME:                                                                        |
 |     01.1_scdm_data_qa_review-level1.sas                                               |
@@ -124,7 +121,11 @@ run;quit;
         run; 
 
         * return log to default module log;
-        proc printto log = modlog; run;
+        proc printto; 
+        run;
+
+        proc printto log = "&msoc.qa_mil_package.log";
+        run;
 
         %let sortOrderFlag= 0;
         /* pull NOTES from temp log file to see if sort was verified */

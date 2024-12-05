@@ -51,7 +51,7 @@
     %include "&INFOLDER.scdm_qa_mil_standard_macros.sas" /nosource2;
     %include "&INFOLDER.scdm_qa_mil_formats.sas" /nosource2;
     %include "&INFOLDER.scdm_sas_log_checker_directory_cc.sas" /nosource2;    
-    %include "&INFOLDER.scdm_qasignaturerequest.sas" /nosource2; 
+    *%include "&INFOLDER.scdm_qasignaturerequest.sas" /nosource2; 
 
     %*   Checks ETL number and PHASE for consistency with CCR/CCA request;
     %if %unquote(&ETL.&phase) ne %unquote(&_ETL.B) %then %do;
