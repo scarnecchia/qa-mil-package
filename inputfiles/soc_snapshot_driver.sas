@@ -23,14 +23,16 @@
 * PLEASE DO NOT EDIT BELOW WITHOUT CONTACTING THE SENTINEL OPERATION CENTER        ;
 *+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_;
 %let debug = 0;
-%if debug ne 0 %then %do;
-  options mprint mlogic mprintnest mlogicnest symbolgen;
-%end;
-
 proc printto log="&MSOC./soc_scdm_data_snapshot.log" new; run;
 
 %SIGNATURE_BEGIN;
 %timestamp(snapshot_start);
+
+%macro snapshotDriver;
+
+%if debug ne 0 %then %do;
+  options mprint mlogic mprintnest mlogicnest symbolgen;
+%end;
 
 %initPartitions;
 %subset_enrtable(inlib=dplocal, indsn=temp_enr);
@@ -46,6 +48,17 @@ proc printto log="&MSOC./soc_scdm_data_snapshot.log" new; run;
 %modCOD;
 %mil_linkage_rates(inlib=indata, outlib=msoc);
 
+/** Preserve temp dplocal datasets if debug = 0 */
+%if debug ne 0 %then %do;
+  proc datasets lib=dplocal mt=data nolist nodetails nowarn;
+    delete temp_enr: ;
+  run;
+%end;
+
+%mend;
+
+%snapshotDriver;
+
 /***************************************************************************************/
 /* Close signature file                                                                */
 /***************************************************************************************/
@@ -56,12 +69,6 @@ proc printto log="&MSOC./soc_scdm_data_snapshot.log" new; run;
 /***************************************************************************************/
 /* Cleanup SAS environment                                                             */
 /***************************************************************************************/
-%if debug ne 0 %then %do;
-  proc datasets lib=dplocal mt=data nolist nodetails nowarn;
-    delete temp_enr: ;
-  run;
-%end;
-
 proc datasets lib=work kill nodetails nowarn nolist;
 run;
 quit;
