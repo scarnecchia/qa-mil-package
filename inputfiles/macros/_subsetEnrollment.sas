@@ -7,7 +7,7 @@
     data dplocal.temp_enr_m&p.
          dplocal.temp_enr_d&p.
          dplocal.temp_enr_md&p.;
-        set &inlib..&indsn.&p. (drop=chart plantype payertype);
+        set &inlib..&indsn.&p. (keep=patid enr_start enr_end medcov drugcov);
         _start_year=year(enr_start);
         _end_year=year(enr_end);
 

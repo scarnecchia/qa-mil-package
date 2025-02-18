@@ -27,11 +27,17 @@
   %end; /* end of numpartitions check */
   %else %let _enctable = indata.&enctable.;
 
+  %importfiles(var=&encidtoexclude.);
+
+  %ms_delencounterids(datafile=&_enctable.,
+                      EncIdsfile=&ENCIDTOEXCLUDE.,
+                      Outfile=dplocal.temp_enc&p.);
+
   proc sql noprint;
     create table dplocal._enc_adate_patid_ct&p. as
     select *
          , count(*) as _count
-    from &_enctable. (keep=patid ADate)
+    from dplocal.temp_enc&p. (keep=patid ADate)
     where ADate ne .
     group by patid, ADate;
   quit;

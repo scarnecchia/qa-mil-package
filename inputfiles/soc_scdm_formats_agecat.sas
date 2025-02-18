@@ -86,7 +86,7 @@ proc format cntlin=temp_btype_format;
 run;
 quit;
 
-proc sql;
+proc sql noprint ;
   create table msoc.age_sort as
   select monotonic( ) as SortOrder format=z2.
        , label

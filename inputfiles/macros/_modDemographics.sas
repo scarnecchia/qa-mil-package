@@ -56,11 +56,11 @@
         
       data _temp_agecat1_&cov.&p. _temp_agecat2_&cov.&p. _temp_agecat3_&cov.&p. _temp_agecat4_&cov.&p.;
         set _agecalc_&cov.&p.;
-        if 0 <= age <= 19 then do;
+        if 0 <= age < 19 then do;
             agecategory='0-18 (Pediatric Populations I)';
             output _temp_agecat1_&cov.&p.;
         end;
-        if 0 <= age <= 22 then do;
+        if 0 <= age < 22 then do;
             agecategory='0-21 (Pediatric Populations II)';
             output _temp_agecat2_&cov.&p.;
         end;
