@@ -20,8 +20,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yyyy): 01/05/2017
-*  Last modified date (mm/dd/yyyy): 11/19/2024
-*  Package version: 3.0.1
+*  Last modified date (mm/dd/yyyy): 02/18/2025
+*  Package version: 3.1.2
 *
 *  Sentinel master program header version: 4.0.0 (DO NOT EDIT)
 ****************************************************************************************/
@@ -86,6 +86,13 @@ options linesize=100 pagesize=50;
        SAS Dataset should contain one variable, patid, and list all patids that should be
        excluded. Must include libname (e.g., indata.PtsToExclude).                          */
   %let PTSTOEXCLUDE= ;
+
+  	/* Edit this parameter to identify the list of patients and their encounterids to exclude (if applicable).
+       Dataset should contain two variables, patid and encounterid, and list all patids, encounterids that should be
+       excluded. Must include libname (e.g., indata.EncIdToExclude).
+     */
+
+	%let ENCIDTOEXCLUDE=;
 
 
 /***************************************************************************************/
@@ -370,7 +377,7 @@ quit;
 /*-------------------------------------------------------------------------------------*/
 /* 1- Execute package                                                                  */
 /*-------------------------------------------------------------------------------------*/
-%let SnapshotVer=3.0.1;
+%let SnapshotVer=3.1.2;
 
 /* Create clean output environment */
 proc datasets lib=msoc kill memtype=data nolist nodetails nowarn;
@@ -383,6 +390,7 @@ quit;
 %inc "&infolder.soc_scdm_formats_agecat.sas" / nosource2;
 %inc "&infolder.macros/ms_macros.sas" / nosource2;
 %inc "&infolder.macros/ms_delpatients.sas" / nosource2;
+%inc "&infolder.macros/ms_delencounterids.sas" / nosource2;
 
 %include "&infolder./macros/compile_macros.sas";
 %compile_macros;

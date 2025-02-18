@@ -42,7 +42,7 @@
 *
 ***************************************************************************************************;
 
-%MACRO ms_delpatients(datafile=, ptsfile= , outfile=,  patvar=patid);
+%MACRO ms_delpatients(datafile=, ptsfile= , outfile=, patvar=patid);
 
 %put =====> MACRO CALLED: ms_delpatients v1.1;
 
