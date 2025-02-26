@@ -129,12 +129,15 @@ proc sql noprint;
   select a.*, b.actual
   from (select variable as table
              , lowcase(value) as expected length=32
-   from qaresult.qa_cc_metadata (where=(index (variable, "TABLE") ne 0 and value not in (" ", "NA") and first(value) ne "&"))) as a
-     left join (select distinct(lowcase(memname)) as actual length=32
+   from qaresult.qa_cc_metadata (where=(index (variable, "TABLE") ne 0 and value not in (" ", "NA") and first(value) ne "&"  and upcase(variable) ^= 'PARTABLE'))) as a
+        left join 
+            (select distinct(lowcase(PRXCHANGE ('s/\d+$//', 1, trim(memname) ))) as actual length=32
    from dplocal.SCDM_L1_CONT) as b
   on lowcase(a.expected)=lowcase(b.actual)
   ;
 quit;
+
+;
 
 data _test_group_1 ;
      set dplocal.compare_table_names ;
@@ -255,10 +258,10 @@ run ;
       from qaresult.qa_cc_metadata (where=(lowcase(variable)="miltable"))
       ;
       select distinct lowcase(MEMLABEL) into :actual trimmed
-      from qaresult.all_l1_cont (where=(lowcase(memname)="&miltable."))
+      from qaresult.all_l1_cont (where=(lowcase(PRXCHANGE ('s/\d+$//', 1, trim(memname))))="&miltable.")) 
       ;
       select distinct lowcase(MEMLABEL) into :expected trimmed
-      from dplocal.scdm_l1_cont (where=(lowcase(memname)="&miltable."))
+      from dplocal.scdm_l1_cont (where=(lowcase(PRXCHANGE ('s/\d+$//', 1, trim(memname))))="&miltable."))
       ;
     quit;
 
@@ -423,6 +426,35 @@ option nomprint;
 option &header_mprint.;
 %mend ds_root_paths;
 %ds_root_paths;
+
+%macro declare_partition_variables;
+    %* Check if partitioning variables already exist and declared. Declare otherwise                *;
+    %if ^%symexist(SASCMD) %then %do;
+    %global SASCMD;
+    %let SASCMD=;
+    %end;
+    %if ^%symexist(SASCONNECT) %then %do;
+    %global SASCONNECT;
+    %let SASCONNECT=;
+    %end;
+    %if ^%symexist(SASGRID) %then %do;
+    %global SASGRID;
+    %let SASGRID=;
+    %end;
+    %if ^%symexist(GRIDSRV) %then %do;
+    %global GRIDSRV;
+    %let GRIDSRV=;
+    %end;
+    %if ^%symexist(NUMPARTITIONS) %then %do;
+    %global NUMPARTITIONS;
+    %let NUMPARTITIONS=;
+    %end;
+    %if ^%symexist(PARTABLE) %then %do;
+    %global PARTABLE;
+    %let PARTABLE=;
+    %end;
+%mend declare_partition_variables;
+%declare_partition_variables;
 
 /* Call macro %signature_end to create signature file and output to msoc folder */
 %SIGNATURE_END;

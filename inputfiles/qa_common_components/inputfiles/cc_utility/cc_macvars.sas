@@ -32,6 +32,12 @@
 *           MSOC
 *           SASPROGRAMS
 *           INDATA
+*           NUMPARTITIONS
+*           PARTABLE
+*           SASCONNECT
+*           SASGRID
+*           GRIDSRV
+*           SASCMD
 *
 * MAJOR STEPS:
 *       1. DPs run CC testing, which contains all necessary metadata files (included by
@@ -118,6 +124,12 @@ quit;
 %macvar(dp)
 %macvar(etl)
 %macvar(phase)
+%macvar(numpartitions)
+%macvar(partable)
+%macvar(sasconnect)
+%macvar(sasgrid)
+%macvar(gridsrv)
+%macvar(sascmd)
 
 /* Conditional code to force the current SCDM version (e.g. 7.0.0) if not already in the metadata file */
 /* Consider removing after all DP sites update to SCDM v8.0.0 */

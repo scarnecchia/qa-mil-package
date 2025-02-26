@@ -31,12 +31,20 @@ data temp_format;
   AGE_YEARS 02-04      02 04 N N . N
   AGE_YEARS 05-09      05 09 N N . N
   AGE_YEARS 10-14      10 14 N N . N
-  AGE_YEARS 15-18      15 18 N N . N
-  AGE_YEARS 19-21      19 21 N N . N
-  AGE_YEARS 22-44      22 44 N N . N
-  AGE_YEARS 45-64      45 64 N N . N
-  AGE_YEARS 65-74      65 74 N N . N
-  AGE_YEARS 75+        75 .  N N H N
+  AGE_YEARS 15-19      15 19 N N . N
+  AGE_YEARS 20-24      20 24 N N . N
+  AGE_YEARS 25-29      25 29 N N . N
+  AGE_YEARS 30-34      30 34 N N . N
+  AGE_YEARS 35-39      35 39 N N . N
+  AGE_YEARS 40-44      40 44 N N . N
+  AGE_YEARS 45-49      45 49 N N . N
+  AGE_YEARS 50-54      50 54 N N . N
+  AGE_YEARS 55-59      55 59 N N . N
+  AGE_YEARS 60-64      60 64 N N . N
+  AGE_YEARS 65-69      65 69 N N . N
+  AGE_YEARS 70-74      70 74 N N . N
+  AGE_YEARS 75-79      75 79 N N . N
+  AGE_YEARS 80+        80 .  N N H N
 ;
 run;
 
@@ -78,16 +86,37 @@ proc format cntlin=temp_btype_format;
 run;
 quit;
 
-proc sql;
+proc sql noprint ;
   create table msoc.age_sort as
   select monotonic( ) as SortOrder format=z2.
        , label
   from temp_format
   ;
+  select max(sortorder) into: _lastsort trimmed from msoc.age_sort;
   drop table temp_format
   ;
 quit;
 
+data new_labels;
+  length label $40;
+  label='0-18 (Pediatric Populations I)';
+  sortorder=&_lastsort+1;
+  output;
+  label='0-21 (Pediatric Populations II)';
+  sortorder=&_lastsort+1;
+  output;
+  label='0-<26 (Young Adult Coverage Eligible)';
+  sortorder=sortorder+1;
+  output;
+  label='10-54 & Sex = F (Childbearing Age)';
+  sortorder=sortorder+1;
+  output;
+run;
+
+data msoc.age_sort;
+  length label $40;
+  set msoc.age_sort new_labels;
+run;
 /* format for cod_pat_codct_md & cod_pat_codct_m  */
 
 data temp_rec_ct_format;

@@ -136,8 +136,10 @@
 
     data SCDM_L1_CONT_H (keep=memname memtype nobs crdate modate crdate_n modate_n)
          SCDM_L1_CONT_D (keep=memname name type length format formatl formatd);
-      set dplocal.SCDM_L1_CONT (rename=(crdate=crdate_n modate=modate_n));
-      memname = lowcase(memname);
+      set dplocal.SCDM_L1_CONT (rename=(crdate=crdate_n modate=modate_n memname = full_memname));
+
+      length memname $ 32;
+      memname = lowcase(PRXCHANGE ('s/\d+$//', 1, trim(full_memname)));
       memtype = lowcase(memtype);
       name = lowcase(name);
       crdate = put(crdate_n, datetime.);
@@ -145,11 +147,11 @@
       if memname in (&SCDM_tbls.);
     run;
 
-    proc sort data=SCDM_L1_CONT_D;
+    proc sort data=SCDM_L1_CONT_D NODUPKEY;
       by memname name;
     run;
 
-    proc sort nodupkey data=SCDM_L1_CONT_H;
+    proc sort nodupkey data=SCDM_L1_CONT_H NODUPKEY;
       by memname;
     run;
 
@@ -208,8 +210,7 @@
       else if b then sources = 'QA Only';
       length variable $32.  SCDM_value QA_value $32.;
       if (a & b) then do;
-        %compare_attribute(memtype,C);
-        %compare_attribute(nobs,N);
+        %compare_attribute(memtype,C);        
      /* Ignore daylight times savings switches of exactly 1 hour or 3600 seconds */
         if abs(crdate_n - QA_crdate_n) ne 3600 then do;
           %compare_attribute(crdate,C);

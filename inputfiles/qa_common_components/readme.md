@@ -15,7 +15,7 @@ This package also has the ability to execute the Sentinel Snapshot package. The 
 
 ### Folder Structure
 
-- **docs**: contains the QA Common Components functional specifications
+- **docs**: Please refer to the [Sentinel Distributed Quality Assurance Tools Documentation website](https://dev.sentinelsystem.org/pages/SENTINEL/sentinel-quality-assurance-documentation/master/browse/cc-program-package.html) for more information on the Common Components package
 - **dplocal**: houses saved datasets with patient identifiers. For more information about Sentinel's privacy standards, please refer to **[The Sentinel System Principles and Policies](https://www.sentinelinitiative.org/principles-and-policies-privacy)**
 - **inputfiles**: a subfolder that contains all input files and lookup tables needed to execute a request. Input files contain information on what tables should be output and the type of analyses conducted on the variables in each table
     - **dp_metadata**: folder contains QA package  output metadata files specific to a particular ETL

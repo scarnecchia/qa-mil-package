@@ -20,10 +20,10 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yyyy): 01/05/2017
-*  Last modified date (mm/dd/yyyy):  05/02/2024
-*  Package version: 2.4.0
+*  Last modified date (mm/dd/yyyy): 02/18/2025
+*  Package version: 3.1.2
 *
-*  Sentinel master program header version: 3.4.0 (DO NOT EDIT)
+*  Sentinel master program header version: 4.0.0 (DO NOT EDIT)
 ****************************************************************************************/
 
 /*---------------------------------------------------------------------------------------
@@ -37,6 +37,12 @@ options linesize=100 pagesize=50;
 *          - libname assignments (e.g. libref INDATA is assigned to SCDM tables)
 *        NOTE: This parameter needs to be set by programmer at the Data Partner/Data Site
 *              in QA CC request.
+*
+* NumSession... Number of parallel SAS sessions spawned by the master SAS program.
+*               NOTE: This parameter controls the number of parallel sessions (SAS Grid
+*                     or SAS/CONNECT) that may be spawned by the master program. It is
+*                     used by Data Partner/Data Site that have an SCDM ETL QA approved
+*                     for parallel processing.
 *
 * ReqID... Sentinel Project Request-ID (formerly MSReqID)
 *          NOTE: This parameter needs to be set by the programmer/analyst preparing the
@@ -69,11 +75,25 @@ options linesize=100 pagesize=50;
        NOTE: ORGANIZATIONS WITHOUT CC SHOULD LEAVE BLANK (DO NOT comment out)
              AND COMPLETE ALL OF SECTION 1c.
        Example: %let SCC = /sentinel/requests/etl4/soc_cca_wp001_xxxx_v01/             */
-  %let SCC = ;
+   %let SCC = ;
+
+/*    Edit macro variable NumSession if needed to set # of spawned parallel sessions.
+      NOTE: UNLESS THE ETL HAS BEEN QA APPROVED FOR PARALLEL SESSIONS, DO NOT CHANGE.
+            OTHERWISE THE QUERY MAY FAIL.                                              */
+   %let NumSession=0;
+
 /* 1b. Edit this parameter to identify the list of patients to exclude (if applicable).
        SAS Dataset should contain one variable, patid, and list all patids that should be
        excluded. Must include libname (e.g., indata.PtsToExclude).                          */
   %let PTSTOEXCLUDE= ;
+
+  	/* Edit this parameter to identify the list of patients and their encounterids to exclude (if applicable).
+       Dataset should contain two variables, patid and encounterid, and list all patids, encounterids that should be
+       excluded. Must include libname (e.g., indata.EncIdToExclude).
+     */
+
+	%let ENCIDTOEXCLUDE=;
+
 
 /***************************************************************************************/
 /* 1c. OPTIONAL: Organizations WITHOUT Common Components define parameters in this
@@ -145,11 +165,22 @@ options linesize=100 pagesize=50;
        %let _IPHARMTABLE= ; *specify the inpatient pharmacy table name *;
        %let _ITRANSTABLE= ; *specify the inpatient transfusion table name *;
        %let _MILTABLE= ;    *specify the mother-infant linkage table name (Phase B only);
-       %let _PRETABLE= ;    *specify the prescribing table name;
+       %let _PRETABLE= ;    *specify the prescribing table name *;
        %let _PRRTABLE= ;    *specify the patient reported response table name;
        %let _PRSTABLE= ;    *specify the patient reported survey table name;
        %let _FEATABLE= ;    *specify the feature engineering table name;
 
+    /*******************************************************************************\
+     The following parameters are for Data Partner/Data Site with ETL approved for
+     parallel processing of Sentinel queries and for partitioned SCDM tables.
+    \*******************************************************************************/
+
+     %let _SASCMD= ;     *specify command used to start new SAS session (e.g., sas);
+     %let _SASConnect= ; *specify if SAS/Connect can be used for queries [Y/N];
+     %let _SASGrid= ;    *specify if SAS Grid can be used for queries [Y/N];
+     %let _GridSrv= ;    *specify the name of the grid server, if applicable;
+     %let _NumPartitions= ; *specify # of partitions for the partitioned SCDM tables ;
+     %let _ParTable= ;   *specify the name of the PatID to PartitionID crosswalk table;
 
 /********************************** END OF SECTION 1 ***********************************/
 
@@ -172,11 +203,11 @@ options linesize=100 pagesize=50;
   *   The example values above would produce Request-ID --> cder_ahr_wp005_nsdp_b03 ;
  /*------------------------------------------------------------------------------------*/
  /* Specify project-ID, workplan-type, workplan-ID, workplan-type, dpid, version-ID    */
-   %let ProjID = <edit-projid>;
-   %let WPType = <edit-wptype>;
-   %let WPID   = <edit-wpid>;
-   %let DPID   = <edit-dpid>;
-   %let VerID  = <edit-verid>;
+   %let ProjID = <edit-project-id> ;
+   %let WPType = <edit-workplantype-id> ;
+   %let WPID = <edit-workplan-id> ;
+   %let DPID = <edit-DP-id> ;
+   %let VerID = <edit-version-id> ;
 
   /* Create request-id delimiter - Default is underscore (_)                           */
    %let dlm = _ ;  /* Do not edit */
@@ -211,7 +242,7 @@ options fmterr;
 %let ReqID = %lowcase(&ProjID.&dlm.&WPType.&dlm.&WPID.&dlm.&DPID.&dlm.&VerID);
 
 /* Sentinel master program header version for use in signature files */
-%let soc_master_program_version= 3.4.0 ;
+%let soc_master_program_version= 4.0.0;
 
 %macro scc_yn; /* Please DO NOT edit */
   /*-----------------------------------------------------------------------------------*/
@@ -232,8 +263,9 @@ options fmterr;
     %global etl dp phase scdmver dp_mindate dp_maxdate dplocal msoc infolder sasprograms
             enrtable demtable distable enctable diatable proctable factable pvdtable
             deathtable codtable labtable vittable ipharmtable itranstable miltable
-            pretable prrtable prstable featable;
-  /*-----------------------------------------------------------------------------------*/
+            pretable prstable prrtable featable
+            sascmd sasconnect sasgrid gridsrv
+            numpartitions partable;
   /*-----------------------------------------------------------------------------------*/
     /* Assign Macro variables*/
     %let dp=&_dp;
@@ -260,10 +292,18 @@ options fmterr;
     %let prrtable= &_prrtable;
     %let prstable= &_prstable;
     %let featable= &_featable;
+    %let sascmd= &_sascmd;
+    %let sasconnect= &_sasconnect;
+    %let sasgrid= &_sasgrid;
+    %let gridsrv= &_gridsrv;
+    %let numpartitions= &_numpartitions;
+    %let partable= &_partable;
 
     /* Delete temporary macro variables */
     %symdel _dp _etl _dp_mindate _dp_maxdate _scdmver _enrtable _demtable _distable _enctable _diatable _proctable;
     %symdel _deathtable _codtable _labtable _vittable _ipharmtable _itranstable _miltable _pretable _prrtable _prstable _featable;
+    %symdel _sascmd _sasconnect _sasgrid _gridsrv;
+    %symdel _numpartitions _partable;
     %macro soc_clean_paths(paths);
       %local j ln subpath temppath;
       %if %length(%superq(paths)) eq 0 %then %do;
@@ -328,6 +368,7 @@ options fmterr;
 proc datasets lib=work kill memtype=data nolist nodetails;
 quit;
 
+
 ****************************************************************************************
 *****                                BEGIN PROGRAM                                 *****
 ****************************************************************************************
@@ -336,7 +377,7 @@ quit;
 /*-------------------------------------------------------------------------------------*/
 /* 1- Execute package                                                                  */
 /*-------------------------------------------------------------------------------------*/
-%let SnapshotVer=2.4.0;
+%let SnapshotVer=3.1.2;
 
 /* Create clean output environment */
 proc datasets lib=msoc kill memtype=data nolist nodetails nowarn;
@@ -349,9 +390,13 @@ quit;
 %inc "&infolder.soc_scdm_formats_agecat.sas" / nosource2;
 %inc "&infolder.macros/ms_macros.sas" / nosource2;
 %inc "&infolder.macros/ms_delpatients.sas" / nosource2;
-%include "&infolder.macros/_mil_linkage_rates.sas";
+%inc "&infolder.macros/ms_delencounterids.sas" / nosource2;
 
-%inc "&infolder.soc_scdm_data_snapshot.sas" / source2;
+%include "&infolder./macros/compile_macros.sas";
+%compile_macros;
+
+
+%inc "&infolder.soc_snapshot_driver.sas" / source2;
 
 *+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+;
 * End soc_scdm_data_snapshot_master.sas                                                 ;
