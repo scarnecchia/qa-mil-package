@@ -22,6 +22,48 @@
 *  Sentinel Coordinating Center
 *  info@sentinel.org
 *--------------------------------------------------------------------------------------*/
+/* Check for existence of partitioning macrovariables and set if they exist */
+%macro macVarExists(name);
+  %let exist = 0;
+  proc sql noprint;
+    select count(*) into :exist 
+    from qaresult.qa_cc_metadata (where=(lowcase(variable)=lowcase("&name.")))
+    ;
+  quit;
+  %if &exist. %then %do;
+    %global &name;
+    proc sql noprint;
+      select value into :%superq(name) trimmed
+      from qaresult.qa_cc_metadata (where=(lowcase(variable)=lowcase("&name.")))
+    ;
+  quit;
+  %end;
+%mend;
+
+%macVarExists(sascmd);
+%macVarExists(sasconnect);
+%macVarExists(sasgrid);
+%macVarExists(gridsrv);
+%macVarExists(numpartitions);
+%macVarExists(partable);
+
+/* Condition for partitionedData */
+%global partitionedData;
+%macro partition_test;
+
+  %put =====> MACRO CALLED: partition_test;
+
+  %if ^%symexist(NUMPARTITIONS) or %str("&numpartitions.") eq %str("") or %str("&numpartitions.") le %str("1") %then %do;
+    %let partitionedData = N;
+  %end;
+  %else %do;
+    %let partitionedData = Y;
+  %end;
+
+%mend;
+
+%partition_test;
+
 %macro run_cc;
 
     %put =====> MACRO CALLED: run_cc;
