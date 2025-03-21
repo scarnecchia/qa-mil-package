@@ -134,12 +134,17 @@
       ;
     quit;
 
-    data SCDM_L1_CONT_H (keep=memname memtype nobs crdate modate crdate_n modate_n)
+      data SCDM_L1_CONT_H (keep=memname memtype nobs crdate modate crdate_n modate_n)
          SCDM_L1_CONT_D (keep=memname name type length format formatl formatd);
       set dplocal.SCDM_L1_CONT (rename=(crdate=crdate_n modate=modate_n memname = full_memname));
 
       length memname $ 32;
-      memname = lowcase(PRXCHANGE ('s/\d+$//', 1, trim(full_memname)));
+      partYN=symget('partitionedData');
+      
+      if partYN='N' then 
+        memname = lowcase(full_memname);
+      else if partYN='Y' then 
+        memname = lowcase(PRXCHANGE ('s/\d+$//', 1, trim(full_memname)));
       memtype = lowcase(memtype);
       name = lowcase(name);
       crdate = put(crdate_n, datetime.);

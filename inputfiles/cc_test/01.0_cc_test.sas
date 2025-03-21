@@ -124,20 +124,38 @@ run;
 * 1- test_group SCDM TABLE NAMES
 *--------------------------------------------------------------------------------------------------;
 /* Compare EXPECTED SCDM table names (in QARESULTS) to ACTUAL SCDM table names (in QADATA) */
-proc sql noprint;
-  create table dplocal.compare_table_names as
-  select a.*, b.actual
-  from (select variable as table
-             , lowcase(value) as expected length=32
-   from qaresult.qa_cc_metadata (where=(index (variable, "TABLE") ne 0 and value not in (" ", "NA") and first(value) ne "&"  and upcase(variable) ^= 'PARTABLE'))) as a
-        left join 
-            (select distinct(lowcase(PRXCHANGE ('s/\d+$//', 1, trim(memname) ))) as actual length=32
-   from dplocal.SCDM_L1_CONT) as b
-  on lowcase(a.expected)=lowcase(b.actual)
-  ;
-quit;
 
-;
+%macro check_table_names;
+  %if "&partitionedData." = "N" %then %do;
+    proc sql noprint;
+      create table dplocal.compare_table_names as
+      select a.*, b.actual
+      from (select variable as table
+             , lowcase(value) as expected length=32
+      from qaresult.qa_cc_metadata (where=(index (variable, "TABLE") ne 0 and value not in (" ", "NA") and first(value) ne "&"))) as a
+      left join (select distinct(lowcase(memname)) as actual length=32
+      from dplocal.SCDM_L1_CONT) as b
+      on lowcase(a.expected)=lowcase(b.actual)
+      ;
+  quit;
+%end;
+  %else %do;
+    proc sql noprint;
+      create table dplocal.compare_table_names as
+      select a.*, b.actual
+      from (select variable as table
+                 , lowcase(value) as expected length=32
+       from qaresult.qa_cc_metadata (where=(index (variable, "TABLE") ne 0 and value not in (" ", "NA") and first(value) ne "&"  and upcase(variable) ^= 'PARTABLE'))) as a
+            left join 
+                (select distinct(lowcase(PRXCHANGE ('s/\d+$//', 1, trim(memname) ))) as actual length=32
+       from dplocal.SCDM_L1_CONT) as b
+      on lowcase(a.expected)=lowcase(b.actual)
+      ;
+    quit;
+  %end;
+%mend;
+
+%check_table_names;
 
 data _test_group_1 ;
      set dplocal.compare_table_names ;
@@ -253,6 +271,23 @@ run ;
     %let test_group=%str(SCDM TABLE LABELS);
     %let details=%str(Check if SCDM MIL table labels match between QA results and actual table);
 
+    %if "&partitionedData." = "N" %then %do;
+    
+      proc sql noprint;
+        select lowcase(value) into :miltable trimmed
+        from qaresult.qa_cc_metadata (where=(lowcase(variable)="miltable"));
+        
+        select distinct lowcase(MEMLABEL) into :actual trimmed
+        from qaresult.all_l1_cont (where=(lowcase(memname)="&miltable."));
+
+        select distinct lowcase(MEMLABEL) into :expected trimmed
+        from dplocal.scdm_l1_cont (where=(lowcase(memname)="&miltable."))
+        ;
+    quit;
+    
+    %end;
+    %else %do;
+
     proc sql noprint;
       select lowcase(value) into :miltable trimmed
       from qaresult.qa_cc_metadata (where=(lowcase(variable)="miltable"))
@@ -264,6 +299,7 @@ run ;
       from dplocal.scdm_l1_cont (where=(lowcase(PRXCHANGE ('s/\d+$//', 1, trim(memname))))="&miltable."))
       ;
     quit;
+    %end;
 
     %if "&actual."="&expected." %then %do;
       %let grade=PASS;

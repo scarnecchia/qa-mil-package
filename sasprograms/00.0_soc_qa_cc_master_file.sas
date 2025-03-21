@@ -24,8 +24,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yy): 01/31/2019
-*  Last modified date (mm/dd/yy): 01/13/2025
-*  Version: 1.6.0
+*  Last modified date (mm/dd/yy): 03/18/2025
+*  Version: 1.6.1
 *
 ****************************************************************************************/
 
@@ -214,7 +214,7 @@ options fmterr;
 /*-------------------------------------------------------------------------------------*/
 
 /* Specify Common Components and SCDM Versions */
-%let CCVer = 1.6.0;
+%let CCVer = 1.6.1;
 
 /* Use this conditional code to set the current SCDM version (e.g. 7.0.0) if it is
   not already present in the metadata file. */
