@@ -3316,15 +3316,14 @@ run;
 /*-------------------------------------------------------------------------------*/
 
 
-
 /*********************************************************************************/
-/* START ==> %flag_255_258 :Mom-Infant Linkage table                             */
+/* START ==> %flag_255_257 :Mom-Infant Linkage table                             */
 /*********************************************************************************/
 * CBirth_Date must be between 3 days before the ADate through DDate;
 * if DDate is null, then CBirth_Date must be between 3 days before,
 *  through 1 day after the Adate;
 /*-------------------------------------------------------------------------------*/
-%macro flag_255_258;
+%macro flag_255_257;
   %local i;
   proc sql noprint;
     create table temp as
@@ -3395,29 +3394,12 @@ run;
         run;
       %end;
 
-      %if &checkid. = 258 %then %do;
-   /* Flag [TABID]_1_xx_00-0_258: value between min and max (inclusive) */
-        %date_ranges(variable=&var1., dataset=%if "%upcase(%sysfunc(substr(&var1., 1, 1)))"= "C" %then &inftable.; %else &deltable.;);
-        data flag_&i.;
-          set qadata.&table.;
-          length message $300;
-          message = "";
-          flag_12= 0;
-          if not missing(&var1.) & ((&var1. gt &date_max. | &var1. lt &date_min.)) then do;
-            flag_12 = 1;
-            message = cat(%if "%upcase(%sysfunc(substr(&var1., 1, 1)))" = "C" %then "CPatID (",strip(cpatid),; %else "MPatID (",strip(mpatid),;
-            ") &var1.(",strip(put(&var1.,mmddyy10.)),") not found in ",
-        %if "%upcase(%sysfunc(substr(&var1., 1, 1)))" = "C" %then "Infants table"; %else "Deliveries table";);
-          end;
-          if flag_12;
-        run;
-      %end;
       %get_flagid (ntabs=1, nvars=2);
     %end;
   %end;
-%mend flag_255_258;
+%mend flag_255_257;
 /*-------------------------------------------------------------------------------*/
-/* END ==> %flag_255_258                                                         */
+/* END ==> %flag_255_257                                                         */
 /*-------------------------------------------------------------------------------*/
 
 
@@ -3427,7 +3409,7 @@ run;
 /* CBirth_Date between (Adate-x) and Ddate                                       */
 /*-------------------------------------------------------------------------------*/
 %macro flag_255;
-  %flag_255_258
+  %flag_255_257
 %mend flag_255;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_255                                                             */
@@ -3439,20 +3421,8 @@ run;
 /* Support table name                                                            */
 /*-------------------------------------------------------------------------------*/
 %macro flag_257;
-  %flag_255_258
+  %flag_255_257
 %mend flag_257;
-/*-------------------------------------------------------------------------------*/
-/* END ==> %flag_257                                                             */
-/*-------------------------------------------------------------------------------*/
-
-/*********************************************************************************/
-/* START ==> %flag_258 :Mom-Infant Linkage table                                 */
-/*********************************************************************************/
-/* Min and Max values                      */
-/*-------------------------------------------------------------------------------*/
-%macro flag_258;
- %flag_255_258;
-%mend flag_258;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_257                                                             */
 /*-------------------------------------------------------------------------------*/
