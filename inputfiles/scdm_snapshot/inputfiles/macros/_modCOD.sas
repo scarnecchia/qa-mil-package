@@ -59,6 +59,12 @@
         from _cod_enr_&cov.&p.
         group by patid;
       quit;
+      
+      /* DEV-37929: Redefine COD_Count to hold formatted values */
+      data _cod_pat_codct_&cov.&p;
+        set _cod_pat_codct_&cov.&p (rename=(COD_Count=Pat_COD_Cnt));
+        COD_Count=(put(Pat_COD_Cnt, rec_ct.));
+     run;
 
     %end; /* end of partitions (p) loop 2 */
 
@@ -67,7 +73,7 @@
 
     %create_summary_ct(indsn=_cod_pat_codct_&cov.,
                        outdsn=cod_pat_codct_&cov.,
-                       var=%str(put(COD_Count, %str(rec_ct.)) as COD_Count),
+                       var=COD_Count,               /* DEV-37929: use formatted value */
                        varlabel="COD Record Count",
                        ctlabel="Enrollee Count",
                        group=%str(group by DP, COD_Count),
