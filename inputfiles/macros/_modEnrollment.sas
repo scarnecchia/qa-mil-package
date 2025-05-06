@@ -128,7 +128,7 @@
 
         %create_summary_ct(indsn=_enr_active_enroll_patid_&cov.,
                            outdsn=enr_active_patid_ct_&cov.,
-                           var=%str("&DP_MaxDate."),
+                           var=%str(&DP_MaxDate. as DP_MaxDate format=mmddyy10.),
                            varlabel="DP Max Date",
                            ctlabel="Active Enrollee Count");
 
