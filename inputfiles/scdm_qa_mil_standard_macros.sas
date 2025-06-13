@@ -1604,11 +1604,11 @@ quit;
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
-/* START ==> l2_flags_223_228_229                                                */
+/* START ==> l2_flags_228_229                                                */
 /*********************************************************************************/
-/* Create L2 flags for invalid value for 2-variable comp  (checkid=223,228,229)  */
+/* Create L2 flags for invalid value for 2-variable comp  (checkid=228,229)  */
 /*-------------------------------------------------------------------------------*/
-%macro l2_flags_223_228_229;
+%macro l2_flags_228_229;
   proc sql noprint;
     create table temp as
     select monotonic ( ) as row, *
@@ -1645,7 +1645,7 @@ quit;
       %get_flagid (ntabs=1, nvars=2);
     %end;
   %end;
-%mend l2_flags_223_228_229;
+%mend l2_flags_228_229;
 /*-------------------------------------------------------------------------------*/
 
 /*********************************************************************************/
@@ -2089,7 +2089,55 @@ quit;
 /* Intra-table check for invalid data relationship across 2 variables            */
 /*-------------------------------------------------------------------------------*/
 %macro flag_223;
-  %l2_flags_223_228_229;
+  proc sql noprint;
+  create table _mil_l2_encid_btype_delivct as
+      select encounterid
+          ,  birth_type label="Birth Type"
+          ,  count(*) as n_deliveries label="# of Deliveries"
+      from qadata.mil 
+      where not missing(mpatid)
+      group by encounterid, birth_type
+      order by n_deliveries desc, birth_type desc;
+      quit;
+  
+      /* Output to dplocal (but drop the flag column) */
+  proc sql noprint;
+  create table dplocal.mil_l2_encid_btype_delivct as
+  select *
+      ,  case 
+              when n_deliveries gt birth_type then 1
+              else 0
+         end as flag
+      from _mil_l2_encid_btype_delivct
+      where birth_type not in (0, 8, 9) and calculated flag eq 1
+      group by encounterid, birth_type
+      order by n_deliveries desc, birth_type desc, encounterid;
+      quit;
+  
+      /* MSOC output */
+  proc sql noprint;
+      create table msoc.mil_l2_nencid_btype_delivct as 
+          select count(distinct encounterid) as n_encounterid label="# of Encounters"
+              ,  birth_type
+              ,  n_deliveries
+          from _mil_l2_encid_btype_delivct
+          group by birth_type, n_deliveries
+          order by n_encounterid desc, birth_type desc, n_deliveries desc;
+  quit;
+
+  proc sql noprint;
+    create table flag_l2_&checkid. as
+    select b.flagid
+         , b.flag_descr
+         , b.flagtype
+         , b.abortyn
+         , a.count
+    from (select count(*) as count, "&checkid." as checkid from dplocal.mil_l2_encid_btype_delivct) a
+        , temp_l2_flags (where=(checkid="&checkid.")) b
+    where a.checkid=b.checkid
+    ;
+   quit;
+
 %mend flag_223;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_223                                                             */
@@ -2130,7 +2178,7 @@ quit;
 /* Intra-table check for invalid data value relationship across 2 variables      */
 /*-------------------------------------------------------------------------------*/
 %macro flag_228;
-  %l2_flags_223_228_229;
+  %l2_flags_228_229;
 %mend flag_228;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_228                                                             */
@@ -2142,7 +2190,7 @@ quit;
 /* Intra-table check for invalid variable value based on specified date          */
 /*-------------------------------------------------------------------------------*/
 %macro flag_229;
-  %l2_flags_223_228_229;
+  %l2_flags_228_229;
 %mend flag_229;
 /*-------------------------------------------------------------------------------*/
 /* END ==> %flag_229                                                             */
