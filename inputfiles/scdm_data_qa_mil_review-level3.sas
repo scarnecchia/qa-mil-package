@@ -457,7 +457,7 @@
 /*---------------------------------------------------------------------------------*/
 /* Move specific files from DPLOCAL to MSOC                                        */
 /*---------------------------------------------------------------------------------*/
-%macro move_files;
+%macro move_files /minoperator ;
    
     proc sql;
       select memname
@@ -465,8 +465,10 @@
       into :filelist separated by ' '
          , :filect trimmed
       from dictionary.tables 
-      where libname="DPLOCAL" and (index(memname, "MSTR")=0 and memname ne "ALL_L1_FLAGS" and memname ne "ALL_L1_FLAGS_MSTR"
-         and memname ne "L2_MSTR" and memname ne "ALL_L3_FLAGS_MSTR" and memname ne "ALL_L2_FLAGS")  
+      where libname="DPLOCAL" and (index(memname, "MSTR")=0
+         and memname not in ("ALL_L1_FLAGS", "ALL_L1_FLAGS_MSTR", "L2_MSTR",  "ALL_L3_FLAGS_MSTR"
+                           , "ALL_L2_FLAGS", "MIL_L2_ENCID_BTYPE_DELIVCT")
+         )
       ;
     quit;
 
@@ -478,7 +480,9 @@
              , *
         from dplocal.&file.
         ;
-        drop table dplocal.&file.
+        %if not %eval(&file in MIL_L2_ENCID_BTYPE_DELIVCT) %then %do;
+          drop table dplocal.&file.
+        %end ;
         ;
       quit;
 
