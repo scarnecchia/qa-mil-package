@@ -2094,7 +2094,7 @@ quit;
       select encounterid
           ,  birth_type label="Birth Type"
           ,  count(*) as n_deliveries label="# of Deliveries"
-      from qadata.mil 
+      from qadata.&table.
       where not missing(mpatid)
       group by encounterid, birth_type
       order by n_deliveries desc, birth_type desc;
