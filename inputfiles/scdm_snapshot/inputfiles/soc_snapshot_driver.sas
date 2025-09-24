@@ -48,10 +48,9 @@ proc printto log="&MSOC./soc_scdm_data_snapshot.log" new; run;
 %modCOD;
 %mil_linkage_rates(inlib=indata, outlib=msoc);
 
-/** Preserve temp dplocal datasets if debug = 0 */
+/** Delete dplocal datasets for production runs **/
 %if debug ne 0 %then %do;
-  proc datasets lib=dplocal mt=data nolist nodetails nowarn;
-    delete temp_enr: ;
+  proc datasets kill lib=dplocal mt=data nolist nodetails nowarn;
   run;
 %end;
 

@@ -20,8 +20,8 @@ options linesize=100 pagesize=50;
 *----------------------------------------------------------------------------------------
 * HISTORY:
 *  Create date (mm/dd/yyyy): 01/05/2017
-*  Last modified date (mm/dd/yyyy): 05/06/2025
-*  Package version: 3.1.4
+*  Last modified date (mm/dd/yyyy): 09/08/2025
+*  Package version: 3.2.0
 *
 *  Sentinel master program header version: 4.0.0 (DO NOT EDIT)
 ****************************************************************************************/
@@ -377,7 +377,7 @@ quit;
 /*-------------------------------------------------------------------------------------*/
 /* 1- Execute package                                                                  */
 /*-------------------------------------------------------------------------------------*/
-%let SnapshotVer=3.1.4;
+%let SnapshotVer=3.2.0;
 
 /* Create clean output environment */
 proc datasets lib=msoc kill memtype=data nolist nodetails nowarn;
