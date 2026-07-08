@@ -195,14 +195,18 @@ class TableSortOrderCheck:
                 )
             )
 
-        # Assign a stable ingestion row ordinal so LAG references the actual
-        # input sequence. SQL relations don't guarantee physical row order,
-        # so we materialize a sequential number first and use it as the
-        # explicit window order_by.
-        mil_numbered = mil.mutate(_row_ord=ibis.row_number())
-        w = ibis.window(order_by="_row_ord")
+        # Use the stable Parquet scan ordinal injected by the engine at table
+        # registration time. SQL row_number() without a source-order column is
+        # arbitrary and would not preserve the SAS input/file sequence.
+        row_ord_col = "file_row_number"
+        if row_ord_col not in mil.columns:
+            raise ValueError(
+                "Check 102 requires a stable input row ordinal; "
+                f"registered MIL table is missing {row_ord_col!r}"
+            )
+        w = ibis.window(order_by=row_ord_col)
 
-        mil_lagged = mil_numbered
+        mil_lagged = mil
         for col in sort_cols:
             mil_lagged = mil_lagged.mutate(**{f"_lag_{col}": mil_lagged[col].lag().over(w)})
 

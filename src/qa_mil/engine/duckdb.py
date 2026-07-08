@@ -57,8 +57,10 @@ class DuckDbSession:
         key_lower = key.lower()
         raw_path = str(path)
         try:
-            # Use read_parquet for lazy registration via DuckDB's parquet scanner
-            self._conn.read_parquet(raw_path, table_name=key_lower)
+            # Use DuckDB's Parquet scanner and expose a stable input-row ordinal.
+            # Check 102 validates SAS-style file sort order, which cannot be
+            # reconstructed later from an unordered SQL relation.
+            self._conn.read_parquet(raw_path, table_name=key_lower, file_row_number=True)
             self._registered.add(key_lower)
         except Exception as e:
             raise FileNotFoundError(
