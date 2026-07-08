@@ -1,0 +1,20 @@
+[
+  {"check_id": "100", "level": 1, "tabid": "MIL", "varid": "00", "flag_descr": "Table does not exist", "flag_type": "Abort", "abort_yn": "Y", "flagyn": "Y", "variable1": ""},
+  {"check_id": "101", "level": 1, "tabid": "MIL", "varid": "00", "flag_descr": "Table is not populated", "flag_type": "Abort", "abort_yn": "Y", "flagyn": "Y", "variable1": ""},
+  {"check_id": "102", "level": 1, "tabid": "MIL", "varid": "00", "flag_descr": "Table is not sorted correctly", "flag_type": "Abort", "abort_yn": "Y", "flagyn": "Y", "variable1": ""},
+  {"check_id": "110", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Required SCDM variable is missing", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "110", "level": 1, "tabid": "MIL", "varid": "02", "flag_descr": "Required SCDM variable is missing", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "CPatID"},
+  {"check_id": "110", "level": 1, "tabid": "MIL", "varid": "03", "flag_descr": "Required SCDM variable is missing", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "ADate"},
+  {"check_id": "110", "level": 1, "tabid": "MIL", "varid": "04", "flag_descr": "Required SCDM variable is missing", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "EncounterID"},
+  {"check_id": "110", "level": 1, "tabid": "MIL", "varid": "05", "flag_descr": "Required SCDM variable is missing", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "111", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Variable is not populated", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "111", "level": 1, "tabid": "MIL", "varid": "02", "flag_descr": "Variable is not populated", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "CPatID"},
+  {"check_id": "112", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Variable type does not match SCDM", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "113", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Variable length does not match SCDM", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "120", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Variable contains null values", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "121", "level": 1, "tabid": "MIL", "varid": "05", "flag_descr": "Invalid data value", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "122", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Leading spaces in character variable", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "126", "level": 1, "tabid": "MIL", "varid": "06", "flag_descr": "Age value outside range 10-54", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Age"},
+  {"check_id": "131", "level": 1, "tabid": "MIL", "varid": "03", "flag_descr": "Date outside DP min/max range", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "ADate"},
+  {"check_id": "133", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Name contains invalid characters", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"}
+]
