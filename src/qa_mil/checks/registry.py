@@ -111,6 +111,18 @@ for bt_value in range(1, 6):
     )
 
 
+# --- Register Level 3 checks 394, 396, 397 ---
+from qa_mil.checks.level3.linkage_checks import (  # noqa: E402
+    BirthTypeNoLinkageCheck,
+    InfantNotLinkedCheck,
+    MotherNotLinkedCheck,
+)
+
+_register(BirthTypeNoLinkageCheck(tabid=_TABID_MIL))
+_register(MotherNotLinkedCheck(tabid=_TABID_MIL))
+_register(InfantNotLinkedCheck(tabid=_TABID_MIL))
+
+
 # --- Register Level 1 checks ---
 from qa_mil.checks.level1.checks import (  # noqa: E402
     AgeRangeCheck,
