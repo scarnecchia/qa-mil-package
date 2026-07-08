@@ -188,6 +188,15 @@ def _execute_checks(cfg: Config, session: Any) -> list[dict[str, Any]]:
     return outcomes
 
 
+_FLAG_COLUMNS = {"flagid", "flag_descr", "message", "flag_type", "abort_yn"}
+
+
+def _project_to_flag_schema(table: pa.Table) -> pa.Table:
+    """Project any result table to the standard flag column schema."""
+    available = [c for c in _FLAG_COLUMNS if c in table.column_names]
+    return table.select(available)
+
+
 def _write_outputs(cfg: Config, outcomes: list[dict[str, Any]]) -> dict[str, Any]:
     """Write check results to dplocal/msoc outputs.
 
@@ -205,13 +214,15 @@ def _write_outputs(cfg: Config, outcomes: list[dict[str, Any]]) -> dict[str, Any
         if result is None or len(result) == 0:
             continue
 
+        # Project to standard flag schema for consistent concatenation
+        projected = _project_to_flag_schema(result)
         scope = outcome.get("output_scope", "dplocal")
         if scope == OutputScope.DPLOCAL.value:
-            dplocal_tables.append(result)
-            dplocal_count += len(result)
+            dplocal_tables.append(projected)
+            dplocal_count += projected.num_rows
         elif scope == OutputScope.MSOC.value:
-            msoc_tables.append(result)
-            msoc_count += len(result)
+            msoc_tables.append(projected)
+            msoc_count += projected.num_rows
 
     dplocal_path = write_dplocal_flags(dplocal_tables, cfg.output_dir)
     msoc_path = write_msoc_flags(msoc_tables, cfg.output_dir)

@@ -1,0 +1,8 @@
+[
+  {"tabid": "MIL", "variable": "MPatID", "varid": "01", "vartype": "C", "varlength": 20, "sortorder": 1, "flagcondition": "", "validvaluetype": "not_missing"},
+  {"tabid": "MIL", "variable": "CPatID", "varid": "02", "vartype": "C", "varlength": 20, "sortorder": 2, "flagcondition": "", "validvaluetype": "not_missing"},
+  {"tabid": "MIL", "variable": "ADate", "varid": "03", "vartype": "N", "varlength": 8, "sortorder": 3, "flagcondition": "", "validvaluetype": "not_missing"},
+  {"tabid": "MIL", "variable": "EncounterID", "varid": "04", "vartype": "C", "varlength": 20, "sortorder": 4, "flagcondition": "", "validvaluetype": "not_missing"},
+  {"tabid": "MIL", "variable": "Birth_Type", "varid": "05", "vartype": "N", "varlength": 8, "sortorder": 5, "flagcondition": "birth_type < 1 or birth_type > 8", "validvaluetype": "not_missing"},
+  {"tabid": "MIL", "variable": "Age", "varid": "06", "vartype": "N", "varlength": 8, "sortorder": null, "flagcondition": "age < 10 or age > 54", "validvaluetype": "not_missing"}
+]
