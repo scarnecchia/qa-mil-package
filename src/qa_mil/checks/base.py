@@ -16,6 +16,46 @@ class Severity(StrEnum):
     ABORT = "Abort"
 
 
+def flag_type_to_severity(flag_type: str) -> Severity:
+    """Map a CheckFlagDef flag_type ('Warn'/'Abort') to a Severity enum.
+
+    Raises ValueError for any value other than 'Warn' or 'Abort'.
+    """
+    if flag_type == "Abort":
+        return Severity.ABORT
+    if flag_type == "Warn":
+        return Severity.WARN
+    raise ValueError(f"flag_type must be 'Warn' or 'Abort', got {flag_type!r}")
+
+
+def validate_flag_def_identity(
+    flag_def_check_id: str,
+    flag_def_level: int,
+    flag_def_tabid: str,
+    flag_def_varid: str,
+    *,
+    expected_check_id: str,
+    expected_level: int,
+    expected_tabid: str,
+    expected_varid: str = "00",
+) -> None:
+    """Validate that a CheckFlagDef row matches the expected check identity.
+
+    Raises ValueError with all mismatches listed.
+    """
+    errors: list[str] = []
+    if flag_def_check_id != expected_check_id:
+        errors.append(f"check_id={flag_def_check_id!r} (expected {expected_check_id!r})")
+    if flag_def_level != expected_level:
+        errors.append(f"level={flag_def_level} (expected {expected_level})")
+    if flag_def_tabid.upper() != expected_tabid.upper():
+        errors.append(f"tabid={flag_def_tabid!r} (expected {expected_tabid!r})")
+    if flag_def_varid != expected_varid:
+        errors.append(f"varid={flag_def_varid!r} (expected {expected_varid!r})")
+    if errors:
+        raise ValueError(f"flag_def mismatch: {'; '.join(errors)}")
+
+
 class OutputScope(StrEnum):
     """Output destination: dplocal for patient-level, msoc for aggregate."""
 

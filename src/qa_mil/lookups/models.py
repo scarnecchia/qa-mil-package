@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class CheckFlagDef(BaseModel):
     """A single check flag definition from lkp_all_flags."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     check_id: str = Field(..., description="Check number, e.g. '110'.")
     level: int = Field(..., description="Check level: 1, 2, or 3.")

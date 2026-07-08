@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from qa_mil.checks.base import CheckContext
+from qa_mil.checks.base import CheckContext, flag_type_to_severity
 from qa_mil.checks.level3.linkage_checks import (
     BirthTypeNoLinkageCheck,
     InfantNotLinkedCheck,
     MotherNotLinkedCheck,
 )
 from qa_mil.checks.registry import list_checks
+from qa_mil.lookups.loader import get_check_flag
 from tests.conftest import write_parquet
 
 
@@ -55,7 +56,7 @@ class TestCheck394:
             },
         )
         with _make_session(mil_path) as session:
-            check = BirthTypeNoLinkageCheck()
+            check = BirthTypeNoLinkageCheck(flag_def=get_check_flag("394"))
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 2  # M001 (BT=2) and M003 (BT=5)
@@ -74,7 +75,7 @@ class TestCheck394:
             },
         )
         with _make_session(mil_path) as session:
-            check = BirthTypeNoLinkageCheck()
+            check = BirthTypeNoLinkageCheck(flag_def=get_check_flag("394"))
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 0
@@ -92,7 +93,7 @@ class TestCheck394:
             },
         )
         with _make_session(mil_path) as session:
-            check = BirthTypeNoLinkageCheck()
+            check = BirthTypeNoLinkageCheck(flag_def=get_check_flag("394"))
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 0
@@ -112,7 +113,7 @@ class TestCheck396:
             },
         )
         with _make_session(mil_path) as session:
-            check = MotherNotLinkedCheck()
+            check = MotherNotLinkedCheck(flag_def=get_check_flag("396"))
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 1  # M001 flagged
@@ -131,7 +132,7 @@ class TestCheck396:
             },
         )
         with _make_session(mil_path) as session:
-            check = MotherNotLinkedCheck()
+            check = MotherNotLinkedCheck(flag_def=get_check_flag("396"))
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 0
@@ -151,7 +152,7 @@ class TestCheck397:
             },
         )
         with _make_session(mil_path) as session:
-            check = InfantNotLinkedCheck()
+            check = InfantNotLinkedCheck(flag_def=get_check_flag("397"))
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 1  # C002 flagged
@@ -170,7 +171,7 @@ class TestCheck397:
             },
         )
         with _make_session(mil_path) as session:
-            check = InfantNotLinkedCheck()
+            check = InfantNotLinkedCheck(flag_def=get_check_flag("397"))
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 0
@@ -183,3 +184,22 @@ class TestLevel3FlagIDs:
         assert make_flagid("MIL", 3, "00", 394) == "MIL_3_00_00-0_394"
         assert make_flagid("MIL", 3, "00", 396) == "MIL_3_00_00-0_396"
         assert make_flagid("MIL", 3, "00", 397) == "MIL_3_00_00-0_397"
+
+
+# ---------------------------------------------------------------------------
+# Lookup-driven metadata validation
+# ---------------------------------------------------------------------------
+
+
+class TestLookupDrivenMetadata:
+    """Verify that L3 check metadata is driven by checks.json, not hard-coded."""
+
+    def test_registered_l3_metadata_matches_lookup(self) -> None:
+        checks = list_checks()
+        for check in checks:
+            if check.metadata.level != 3:
+                continue
+            flag_def = getattr(check, "flag_def", None)
+            assert flag_def is not None
+            assert check.metadata.description == flag_def.flag_descr
+            assert check.metadata.severity == flag_type_to_severity(flag_def.flag_type)

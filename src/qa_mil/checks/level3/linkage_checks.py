@@ -17,9 +17,11 @@ from qa_mil.checks.base import (
     CheckContext,
     CheckMetadata,
     OutputScope,
-    Severity,
+    flag_type_to_severity,
     make_flagid,
+    validate_flag_def_identity,
 )
+from qa_mil.lookups.models import CheckFlagDef
 
 _MIL_TABID = "MIL"
 
@@ -32,17 +34,29 @@ class BirthTypeNoLinkageCheck:
     These are 'orphaned' mother records that should have linked infant records.
     """
 
+    flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id="394",
+            expected_level=3,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
             check_id="394",
             level=3,
-            severity=Severity.WARN,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil"}),
             output_scope=OutputScope.DPLOCAL,
-            description="Birth_Type 2-8 with no CPatIDs linked",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -53,10 +67,10 @@ class BirthTypeNoLinkageCheck:
         flagged = mil.filter(col.notnull() & (col >= 2) & (col <= 8) & mil["CPatID"].isnull())
         return flagged.mutate(
             flagid=ibis.literal(make_flagid(self.tabid, 3, "00", 394)),
-            flag_descr=ibis.literal("Birth_Type= 2-8 and no CPatIDs are linked"),
+            flag_descr=ibis.literal(self.flag_def.flag_descr),
             message=ibis.literal(""),
-            flag_type=ibis.literal("Warn"),
-            abort_yn=ibis.literal("N"),
+            flag_type=ibis.literal(self.flag_def.flag_type),
+            abort_yn=ibis.literal(self.flag_def.abort_yn),
         )
 
 
@@ -67,17 +81,29 @@ class MotherNotLinkedCheck:
     Flags records where MPatID exists but CPatID is missing.
     """
 
+    flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id="396",
+            expected_level=3,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
             check_id="396",
             level=3,
-            severity=Severity.WARN,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil"}),
             output_scope=OutputScope.DPLOCAL,
-            description="MPatID not linked to CPatID",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -87,10 +113,10 @@ class MotherNotLinkedCheck:
         flagged = mil.filter(mil["CPatID"].isnull() & mil["MPatID"].notnull())
         return flagged.mutate(
             flagid=ibis.literal(make_flagid(self.tabid, 3, "00", 396)),
-            flag_descr=ibis.literal("MPatID not linked to CPatID"),
+            flag_descr=ibis.literal(self.flag_def.flag_descr),
             message=ibis.literal(""),
-            flag_type=ibis.literal("Warn"),
-            abort_yn=ibis.literal("N"),
+            flag_type=ibis.literal(self.flag_def.flag_type),
+            abort_yn=ibis.literal(self.flag_def.abort_yn),
         )
 
 
@@ -101,17 +127,29 @@ class InfantNotLinkedCheck:
     Flags records where CPatID exists but MPatID is missing.
     """
 
+    flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id="397",
+            expected_level=3,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
             check_id="397",
             level=3,
-            severity=Severity.WARN,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil"}),
             output_scope=OutputScope.DPLOCAL,
-            description="CPatID not linked to MPatID",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -121,8 +159,8 @@ class InfantNotLinkedCheck:
         flagged = mil.filter(mil["CPatID"].notnull() & mil["MPatID"].isnull())
         return flagged.mutate(
             flagid=ibis.literal(make_flagid(self.tabid, 3, "00", 397)),
-            flag_descr=ibis.literal("CPatID not linked to MPatID"),
+            flag_descr=ibis.literal(self.flag_def.flag_descr),
             message=ibis.literal(""),
-            flag_type=ibis.literal("Warn"),
-            abort_yn=ibis.literal("N"),
+            flag_type=ibis.literal(self.flag_def.flag_type),
+            abort_yn=ibis.literal(self.flag_def.abort_yn),
         )

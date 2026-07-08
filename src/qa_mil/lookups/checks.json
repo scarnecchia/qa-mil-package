@@ -16,5 +16,22 @@
   {"check_id": "122", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Leading spaces in character variable", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
   {"check_id": "126", "level": 1, "tabid": "MIL", "varid": "06", "flag_descr": "Age value outside range 10-54", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Age"},
   {"check_id": "131", "level": 1, "tabid": "MIL", "varid": "03", "flag_descr": "Date outside DP min/max range", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "ADate"},
-  {"check_id": "133", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Name contains invalid characters", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"}
+  {"check_id": "133", "level": 1, "tabid": "MIL", "varid": "01", "flag_descr": "Name contains invalid characters", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "200", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "MIL ADate outside enrollment coverage", "flag_type": "Abort", "abort_yn": "Y", "flagyn": "Y", "variable1": "ADate"},
+  {"check_id": "201", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "Date ADate outside valid range", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "ADate"},
+  {"check_id": "204", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "Variable Birth_Type has invalid value", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "211", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "Duplicate records by MPatID, CPatID, ADate", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": ""},
+  {"check_id": "217", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "Duplicate records by MPatID, ADate, EncounterID", "flag_type": "Abort", "abort_yn": "Y", "flagyn": "Y", "variable1": ""},
+  {"check_id": "218", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "Duplicate records by MPatID, ADate", "flag_type": "Abort", "abort_yn": "Y", "flagyn": "Y", "variable1": ""},
+  {"check_id": "219", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "Duplicate records by CPatID", "flag_type": "Abort", "abort_yn": "Y", "flagyn": "Y", "variable1": ""},
+  {"check_id": "221", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "MIL records without matching enr record", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "223", "level": 2, "tabid": "MIL", "varid": "00", "flag_descr": "MIL records without matching enr record", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "CPatID"},
+  {"check_id": "371", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "Birth_Type (1) not consistent with number of linkages; confirmation required", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "372", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "Birth_Type (2) not consistent with number of linkages; confirmation required", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "373", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "Birth_Type (3) not consistent with number of linkages; confirmation required", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "374", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "Birth_Type (4) not consistent with number of linkages; confirmation required", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "375", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "Birth_Type (5) not consistent with number of linkages; confirmation required", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "394", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "Birth_Type= 2-8 and no CPatIDs are linked", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "Birth_Type"},
+  {"check_id": "396", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "MPatID not linked to CPatID", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "MPatID"},
+  {"check_id": "397", "level": 3, "tabid": "MIL", "varid": "00", "flag_descr": "CPatID not linked to MPatID", "flag_type": "Warn", "abort_yn": "N", "flagyn": "Y", "variable1": "CPatID"}
 ]

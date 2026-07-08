@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from qa_mil.checks.base import CheckContext, Severity
+from qa_mil.checks.base import CheckContext, Severity, flag_type_to_severity
 from qa_mil.checks.level2.checks import (
     CrossTableConsistencyCheck,
     DateRangeCheck,
@@ -13,6 +13,7 @@ from qa_mil.checks.level2.checks import (
     ValueDomainCheck,
 )
 from qa_mil.checks.registry import list_checks
+from qa_mil.lookups.loader import get_check_flag
 from tests.conftest import write_parquet
 
 
@@ -66,7 +67,11 @@ class TestDuplicateKeyCheck:
             },
         )
         with _make_session({"mil": mil_path}) as session:
-            check = DuplicateKeyCheck(check_id="211", key_columns=("MPatID", "CPatID", "ADate"))
+            check = DuplicateKeyCheck(
+                check_id="211",
+                key_columns=("MPatID", "CPatID", "ADate"),
+                flag_def=get_check_flag("211"),
+            )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) >= 2  # At least the duplicate rows flagged
@@ -85,7 +90,9 @@ class TestDuplicateKeyCheck:
             },
         )
         with _make_session({"mil": mil_path}) as session:
-            check = DuplicateKeyCheck(check_id="211", key_columns=("MPatID", "CPatID"))
+            check = DuplicateKeyCheck(
+                check_id="211", key_columns=("MPatID", "CPatID"), flag_def=get_check_flag("211")
+            )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 0
@@ -111,7 +118,11 @@ class TestDateRangeCheck:
         )
         with _make_session({"mil": mil_path}) as session:
             check = DateRangeCheck(
-                check_id="201", date_column="ADate", min_date="2010-01-01", max_date="2025-12-31"
+                check_id="201",
+                date_column="ADate",
+                flag_def=get_check_flag("201"),
+                min_date="2010-01-01",
+                max_date="2025-12-31",
             )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
@@ -125,7 +136,11 @@ class TestDateRangeCheck:
         write_parquet(mil_path, make_mil_data())
         with _make_session({"mil": mil_path}) as session:
             check = DateRangeCheck(
-                check_id="201", date_column="ADate", min_date="2010-01-01", max_date="2025-12-31"
+                check_id="201",
+                date_column="ADate",
+                flag_def=get_check_flag("201"),
+                min_date="2010-01-01",
+                max_date="2025-12-31",
             )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
@@ -147,7 +162,10 @@ class TestValueDomainCheck:
         )
         with _make_session({"mil": mil_path}) as session:
             check = ValueDomainCheck(
-                check_id="204", variable="Birth_Type", allowed_values=(1, 2, 3, 4, 5, 6, 7, 8)
+                check_id="204",
+                variable="Birth_Type",
+                allowed_values=(1, 2, 3, 4, 5, 6, 7, 8),
+                flag_def=get_check_flag("204"),
             )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
@@ -184,7 +202,10 @@ class TestCrossTableConsistency:
         )
         with _make_session({"mil": mil_path, "enr": enr_path}) as session:
             check = CrossTableConsistencyCheck(
-                check_id="221", reference_table="enr", join_column="MPatID"
+                check_id="221",
+                reference_table="enr",
+                join_column="MPatID",
+                flag_def=get_check_flag("221"),
             )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
@@ -214,7 +235,10 @@ class TestCrossTableConsistency:
         )
         with _make_session({"mil": mil_path, "enr": enr_path}) as session:
             check = CrossTableConsistencyCheck(
-                check_id="221", reference_table="enr", join_column="MPatID"
+                check_id="221",
+                reference_table="enr",
+                join_column="MPatID",
+                flag_def=get_check_flag("221"),
             )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
@@ -249,7 +273,9 @@ class TestEnrollmentCoverage:
             },
         )
         with _make_session({"mil": mil_path, "enr": enr_path}) as session:
-            check = EnrollmentCoverageCheck(check_id="200", date_column="ADate")
+            check = EnrollmentCoverageCheck(
+                check_id="200", date_column="ADate", flag_def=get_check_flag("200")
+            )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) >= 1  # M002 flagged
@@ -277,7 +303,28 @@ class TestEnrollmentCoverage:
             },
         )
         with _make_session({"mil": mil_path, "enr": enr_path}) as session:
-            check = EnrollmentCoverageCheck(check_id="200", date_column="ADate")
+            check = EnrollmentCoverageCheck(
+                check_id="200", date_column="ADate", flag_def=get_check_flag("200")
+            )
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 0
+
+
+# ---------------------------------------------------------------------------
+# Lookup-driven metadata validation
+# ---------------------------------------------------------------------------
+
+
+class TestLookupDrivenMetadata:
+    """Verify that L2 check metadata is driven by checks.json, not hard-coded."""
+
+    def test_registered_l2_metadata_matches_lookup(self) -> None:
+        checks = list_checks()
+        for check in checks:
+            if check.metadata.level != 2:
+                continue
+            flag_def = getattr(check, "flag_def", None)
+            assert flag_def is not None
+            assert check.metadata.description == flag_def.flag_descr
+            assert check.metadata.severity == flag_type_to_severity(flag_def.flag_type)

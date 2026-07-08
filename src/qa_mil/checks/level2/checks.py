@@ -15,9 +15,11 @@ from qa_mil.checks.base import (
     CheckContext,
     CheckMetadata,
     OutputScope,
-    Severity,
+    flag_type_to_severity,
     make_flagid,
+    validate_flag_def_identity,
 )
+from qa_mil.lookups.models import CheckFlagDef
 
 _MIL_TABID = "MIL"
 
@@ -32,13 +34,23 @@ class DuplicateKeyCheck:
     """Check 211/217-219: Duplicate records by key columns.
 
     Flags rows where the specified key columns have duplicates.
-    Severity is configurable (Warn for 211, Abort for 217-219).
     """
 
     check_id: str
     key_columns: tuple[str, ...]
-    severity: Severity = Severity.WARN
+    flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -46,10 +58,10 @@ class DuplicateKeyCheck:
         return CheckMetadata(
             check_id=self.check_id,
             level=2,
-            severity=self.severity,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil"}),
             output_scope=OutputScope.DPLOCAL,
-            description=f"Duplicate records by {', '.join(self.key_columns)}",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -63,15 +75,13 @@ class DuplicateKeyCheck:
         dups = grouped.filter(grouped["count"] > 1)
 
         check_num = int(self.check_id)
-        flag_type = "Warn" if self.severity == Severity.WARN else "Abort"
-        abort_yn = "N" if self.severity == Severity.WARN else "Y"
 
         result = mil.join(dups, key_list).select(
             ibis.literal(make_flagid(self.tabid, 2, "00", check_num)).name("flagid"),
-            ibis.literal(f"Duplicate records by {', '.join(self.key_columns)}").name("flag_descr"),
+            ibis.literal(self.flag_def.flag_descr).name("flag_descr"),
             ibis.literal("").name("message"),
-            ibis.literal(flag_type).name("flag_type"),
-            ibis.literal(abort_yn).name("abort_yn"),
+            ibis.literal(self.flag_def.flag_type).name("flag_type"),
+            ibis.literal(self.flag_def.abort_yn).name("abort_yn"),
         )
         return result
 
@@ -90,19 +100,31 @@ class DateRangeCheck:
 
     check_id: str
     date_column: str
+    flag_def: CheckFlagDef
     min_date: str | None = None
     max_date: str | None = None
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
             check_id=self.check_id,
             level=2,
-            severity=Severity.WARN,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil"}),
             output_scope=OutputScope.DPLOCAL,
-            description=f"Date {self.date_column} outside valid range",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -112,10 +134,10 @@ class DateRangeCheck:
         if self.date_column not in mil.columns:
             return mil.filter(ibis.literal(False)).mutate(
                 flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-                flag_descr=ibis.literal(f"Date {self.date_column} outside valid range"),
+                flag_descr=ibis.literal(self.flag_def.flag_descr),
                 message=ibis.literal(""),
-                flag_type=ibis.literal("Warn"),
-                abort_yn=ibis.literal("N"),
+                flag_type=ibis.literal(self.flag_def.flag_type),
+                abort_yn=ibis.literal(self.flag_def.abort_yn),
             )
 
         col = mil[self.date_column]
@@ -128,10 +150,10 @@ class DateRangeCheck:
         if not conditions:
             return mil.filter(ibis.literal(False)).mutate(
                 flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-                flag_descr=ibis.literal(f"Date {self.date_column} outside valid range"),
+                flag_descr=ibis.literal(self.flag_def.flag_descr),
                 message=ibis.literal(""),
-                flag_type=ibis.literal("Warn"),
-                abort_yn=ibis.literal("N"),
+                flag_type=ibis.literal(self.flag_def.flag_type),
+                abort_yn=ibis.literal(self.flag_def.abort_yn),
             )
 
         combined = conditions[0]
@@ -141,10 +163,10 @@ class DateRangeCheck:
         flagged = mil.filter(col.notnull() & combined)
         return flagged.mutate(
             flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-            flag_descr=ibis.literal(f"Date {self.date_column} outside valid range"),
+            flag_descr=ibis.literal(self.flag_def.flag_descr),
             message=ibis.literal(""),
-            flag_type=ibis.literal("Warn"),
-            abort_yn=ibis.literal("N"),
+            flag_type=ibis.literal(self.flag_def.flag_type),
+            abort_yn=ibis.literal(self.flag_def.abort_yn),
         )
 
 
@@ -158,17 +180,29 @@ class ValueDomainCheck:
     check_id: str
     variable: str
     allowed_values: tuple[Any, ...]
+    flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
             check_id=self.check_id,
             level=2,
-            severity=Severity.WARN,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil"}),
             output_scope=OutputScope.DPLOCAL,
-            description=f"Variable {self.variable} has invalid value",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -178,10 +212,10 @@ class ValueDomainCheck:
         if self.variable not in mil.columns:
             return mil.filter(ibis.literal(False)).mutate(
                 flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-                flag_descr=ibis.literal(f"Variable {self.variable} has invalid value"),
+                flag_descr=ibis.literal(self.flag_def.flag_descr),
                 message=ibis.literal(""),
-                flag_type=ibis.literal("Warn"),
-                abort_yn=ibis.literal("N"),
+                flag_type=ibis.literal(self.flag_def.flag_type),
+                abort_yn=ibis.literal(self.flag_def.abort_yn),
             )
 
         col = mil[self.variable]
@@ -193,10 +227,10 @@ class ValueDomainCheck:
         flagged = mil.filter(col.notnull() & ~in_set)  # type: ignore[operator]
         return flagged.mutate(
             flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-            flag_descr=ibis.literal(f"Variable {self.variable} has invalid value"),
+            flag_descr=ibis.literal(self.flag_def.flag_descr),
             message=ibis.literal(""),
-            flag_type=ibis.literal("Warn"),
-            abort_yn=ibis.literal("N"),
+            flag_type=ibis.literal(self.flag_def.flag_type),
+            abort_yn=ibis.literal(self.flag_def.abort_yn),
         )
 
 
@@ -215,17 +249,29 @@ class CrossTableConsistencyCheck:
     check_id: str
     reference_table: str
     join_column: str
+    flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
             check_id=self.check_id,
             level=2,
-            severity=Severity.WARN,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil", self.reference_table}),
             output_scope=OutputScope.DPLOCAL,
-            description=f"MIL records without matching {self.reference_table} record",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -237,12 +283,10 @@ class CrossTableConsistencyCheck:
         if self.join_column not in mil.columns or self.join_column not in ref.columns:
             return mil.filter(ibis.literal(False)).mutate(
                 flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-                flag_descr=ibis.literal(
-                    f"MIL records without matching {self.reference_table} record"
-                ),
+                flag_descr=ibis.literal(self.flag_def.flag_descr),
                 message=ibis.literal(""),
-                flag_type=ibis.literal("Warn"),
-                abort_yn=ibis.literal("N"),
+                flag_type=ibis.literal(self.flag_def.flag_type),
+                abort_yn=ibis.literal(self.flag_def.abort_yn),
             )
 
         # Find MIL records not in reference table
@@ -253,10 +297,10 @@ class CrossTableConsistencyCheck:
         )
         return flagged.mutate(
             flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-            flag_descr=ibis.literal(f"MIL records without matching {self.reference_table} record"),
+            flag_descr=ibis.literal(self.flag_def.flag_descr),
             message=ibis.literal(""),
-            flag_type=ibis.literal("Warn"),
-            abort_yn=ibis.literal("N"),
+            flag_type=ibis.literal(self.flag_def.flag_type),
+            abort_yn=ibis.literal(self.flag_def.abort_yn),
         )
 
 
@@ -274,21 +318,32 @@ class EnrollmentCoverageCheck:
 
     check_id: str
     date_column: str
+    flag_def: CheckFlagDef
     patid_column: str = "MPatID"
     enr_start_column: str = "EnrStart"
     enr_end_column: str = "EnrEnd"
-    severity: Severity = Severity.ABORT
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
             check_id=self.check_id,
             level=2,
-            severity=self.severity,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil", "enr"}),
             output_scope=OutputScope.DPLOCAL,
-            description=f"MIL {self.date_column} outside enrollment coverage",
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -300,10 +355,10 @@ class EnrollmentCoverageCheck:
         if self.date_column not in mil.columns:
             return mil.filter(ibis.literal(False)).mutate(
                 flagid=ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)),
-                flag_descr=ibis.literal(f"MIL {self.date_column} outside enrollment coverage"),
+                flag_descr=ibis.literal(self.flag_def.flag_descr),
                 message=ibis.literal(""),
-                flag_type=ibis.literal("Warn" if self.severity == Severity.WARN else "Abort"),
-                abort_yn=ibis.literal("N" if self.severity == Severity.WARN else "Y"),
+                flag_type=ibis.literal(self.flag_def.flag_type),
+                abort_yn=ibis.literal(self.flag_def.abort_yn),
             )
 
         date_col = mil[self.date_column]
@@ -337,8 +392,8 @@ class EnrollmentCoverageCheck:
 
         return outside.select(
             ibis.literal(make_flagid(self.tabid, 2, "00", self.check_id)).name("flagid"),
-            ibis.literal(f"MIL {self.date_column} outside enrollment coverage").name("flag_descr"),
+            ibis.literal(self.flag_def.flag_descr).name("flag_descr"),
             ibis.literal("").name("message"),
-            ibis.literal("Warn" if self.severity == Severity.WARN else "Abort").name("flag_type"),
-            ibis.literal("N" if self.severity == Severity.WARN else "Y").name("abort_yn"),
+            ibis.literal(self.flag_def.flag_type).name("flag_type"),
+            ibis.literal(self.flag_def.abort_yn).name("abort_yn"),
         )

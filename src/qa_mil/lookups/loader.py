@@ -7,6 +7,7 @@ unknown severities, invalid levels, and inconsistent check IDs.
 
 from __future__ import annotations
 
+import functools
 import json
 from pathlib import Path
 
@@ -41,8 +42,12 @@ def _validate_no_duplicate_ids(items: list[dict], id_field: str, filename: str) 
         seen.add(item_id)
 
 
-def load_check_flags() -> list[CheckFlagDef]:
-    """Load and validate check flag definitions from checks.json."""
+@functools.lru_cache(maxsize=1)
+def _load_check_flags_cached() -> tuple[CheckFlagDef, ...]:
+    """Load and validate check flag definitions from checks.json (cached).
+
+    Returns an immutable tuple so callers cannot corrupt the shared cache.
+    """
     raw = _load_json("checks.json")
     # Validate no duplicate check_id within same tabid+varid
     seen: set[str] = set()
@@ -51,7 +56,42 @@ def load_check_flags() -> list[CheckFlagDef]:
         if key in seen:
             raise ValueError(f"Duplicate check definition: {key} in checks.json")
         seen.add(key)
-    return [CheckFlagDef.model_validate(item) for item in raw]
+    return tuple(CheckFlagDef.model_validate(item) for item in raw)
+
+
+def load_check_flags() -> list[CheckFlagDef]:
+    """Load and validate check flag definitions from checks.json.
+
+    Returns a defensive copy; the underlying cached data is immutable.
+    """
+    return list(_load_check_flags_cached())
+
+
+def get_check_flag(check_id: str, tabid: str = "MIL", varid: str = "00") -> CheckFlagDef:
+    """Fetch a single active CheckFlagDef by (check_id, tabid, varid).
+
+    Raises ValueError if not found or if multiple active rows match.
+    """
+    flags = _load_check_flags_cached()
+    matches = [
+        f
+        for f in flags
+        if f.check_id == check_id
+        and f.tabid.upper() == tabid.upper()
+        and f.varid == varid
+        and f.flagyn == "Y"
+    ]
+    if not matches:
+        raise ValueError(
+            f"No active check flag found for check_id={check_id!r}, "
+            f"tabid={tabid!r}, varid={varid!r}"
+        )
+    if len(matches) > 1:
+        raise ValueError(
+            f"Multiple active check flags for check_id={check_id!r}, "
+            f"tabid={tabid!r}, varid={varid!r}"
+        )
+    return matches[0]
 
 
 def load_l1_rules() -> list[L1VariableRule]:
