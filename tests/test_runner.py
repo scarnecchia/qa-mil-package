@@ -173,6 +173,57 @@ class TestRunnerWalkingSkeleton:
 
 
 class TestWarnAbortBehavior:
+    def test_failed_check_stops_subsequent(self, tmp_path: Path) -> None:
+        """A check that raises must stop subsequent checks (fail closed)."""
+        from qa_mil.checks.registry import _registry as reg_list
+
+        original = list(reg_list)
+        try:
+            reg_list.clear()
+
+            class FailingCheck:
+                @property
+                def metadata(self) -> CheckMetadata:
+                    return CheckMetadata(
+                        check_id="F001",
+                        level=9,
+                        severity=Severity.WARN,
+                        tables=frozenset({"mil"}),
+                        output_scope=OutputScope.DPLOCAL,
+                        description="Always fails",
+                        tabid="MIL",
+                    )
+
+                def build(self, ctx: CheckContext) -> Any:
+                    raise RuntimeError("intentional failure")
+
+            _register(FailingCheck())
+            _register(FakeWarnCheck("W001"))
+
+            mil_path = tmp_path / "mil.parquet"
+            write_parquet(mil_path, make_mil_data())
+            manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path})
+            config_path = make_config_yaml(tmp_path, manifest_path)
+            cfg = load_config(config_path)
+
+            result = run_pipeline(cfg)
+            rm = result["run_manifest"]
+            outcomes = rm["check_outcomes"]
+
+            # F001 should be failed
+            f001 = next(o for o in outcomes if o["check_id"] == "F001")
+            assert f001["status"] == "failed"
+
+            # W001 should be skipped (not completed)
+            w001 = next(o for o in outcomes if o["check_id"] == "W001")
+            assert w001["status"] == "skipped"
+
+            # Run status should be failed
+            assert result["run_status"] == "failed"
+        finally:
+            reg_list.clear()
+            reg_list.extend(original)
+
     def test_warn_check_continues(self, tmp_path: Path) -> None:
         """Warn check with rows should allow subsequent checks to run."""
         from qa_mil.checks.registry import _registry as reg_list

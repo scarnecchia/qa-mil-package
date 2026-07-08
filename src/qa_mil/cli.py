@@ -102,6 +102,14 @@ def run(
     typer.echo(f"dplocal flags: {summary['dplocal_flag_count']}")
     typer.echo(f"msoc flags: {summary['msoc_flag_count']}")
 
+    run_status = result.get("run_status", "completed")
+    if run_status == "failed":
+        typer.echo("Run FAILED — one or more checks raised exceptions.", err=True)
+        raise typer.Exit(1)
+    elif run_status == "aborted":
+        typer.echo("Run ABORTED — one or more Abort checks produced flags.", err=True)
+        raise typer.Exit(2)
+
 
 if __name__ == "__main__":
     app()

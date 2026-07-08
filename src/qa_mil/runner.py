@@ -76,6 +76,7 @@ def run(cfg: Config) -> dict[str, Any]:
 
         return {
             "request_id": cfg.request_id,
+            "run_status": run_manifest_data.get("run_status", "completed"),
             "outcomes": outcomes,
             "output_summary": output_summary,
             "run_manifest": run_manifest_data,
@@ -183,6 +184,8 @@ def _execute_checks(cfg: Config, session: Any) -> list[dict[str, Any]]:
                         }
                     )
                     record_counter("qa_mil.checks.failed", check_id=check.metadata.check_id)
+                    # Fail closed: stop executing subsequent checks
+                    aborted = True
 
     return outcomes
 
@@ -241,8 +244,16 @@ def _build_run_manifest(
     output_summary: dict[str, Any],
 ) -> dict[str, Any]:
     """Build the run manifest data structure."""
+    has_failed = any(o["status"] == "failed" for o in outcomes)
+    has_aborted = any(o["status"] == "skipped" for o in outcomes) and any(
+        o["status"] == "completed" and o["flag_count"] > 0
+        and o.get("severity") == "Abort"
+        for o in outcomes
+    )
+    run_status = "failed" if has_failed else ("aborted" if has_aborted else "completed")
     return {
         "package_version": __version__,
+        "run_status": run_status,
         "request": {
             "project_id": cfg.request.project_id,
             "workplan_type": cfg.request.workplan_type,
