@@ -5,6 +5,7 @@ Tests skip gracefully if PySpark is not installed.
 
 from __future__ import annotations
 
+import os
 import tomllib
 from pathlib import Path
 
@@ -18,9 +19,11 @@ try:
 except ImportError:
     pyspark_available = False
 
+spark_runtime_available = pyspark_available and bool(os.environ.get("JAVA_HOME"))
+
 spark_skip = pytest.mark.skipif(
-    not pyspark_available,
-    reason="PySpark not installed — Spark tests are integration tests",
+    not spark_runtime_available,
+    reason="PySpark or JAVA_HOME not available — Spark tests are integration tests",
 )
 
 
@@ -29,6 +32,14 @@ def test_project_declares_spark_extra() -> None:
     project = tomllib.loads(Path("pyproject.toml").read_text())
 
     assert "ibis-framework[pyspark]>=9.0" in project["project"]["optional-dependencies"]["spark"]
+
+
+@pytest.mark.skipif(not pyspark_available, reason="PySpark backend is not installed")
+def test_ibis_pyspark_backend_exposes_connect() -> None:
+    """SparkSession should use the Ibis PySpark connection API available in Ibis 12."""
+    import ibis
+
+    assert hasattr(ibis.pyspark, "connect")
 
 
 @pytest.mark.skipif(pyspark_available, reason="only checks missing-dependency guidance")

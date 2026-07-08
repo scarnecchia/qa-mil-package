@@ -47,7 +47,7 @@ class SparkSession:
             if "temp_directory" in self._options:
                 builder = builder.config("spark.sql.warehouse.dir", self._options["temp_directory"])
             spark = builder.getOrCreate()
-            return ibis.pyspark.from_session(spark)
+            return ibis.pyspark.connect(spark)
         except ImportError as e:
             raise ImportError(
                 "Spark backend dependencies are required. Install with: "
