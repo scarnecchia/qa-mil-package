@@ -37,6 +37,7 @@ def validate_flag_def_identity(
     expected_check_id: str,
     expected_level: int,
     expected_tabid: str,
+    expected_varid: str = "00",
 ) -> None:
     """Validate that a CheckFlagDef row matches the expected check identity.
 
@@ -49,8 +50,8 @@ def validate_flag_def_identity(
         errors.append(f"level={flag_def_level} (expected {expected_level})")
     if flag_def_tabid.upper() != expected_tabid.upper():
         errors.append(f"tabid={flag_def_tabid!r} (expected {expected_tabid!r})")
-    if flag_def_varid != "00":
-        errors.append(f'varid={flag_def_varid!r} (expected "00")')
+    if flag_def_varid != expected_varid:
+        errors.append(f"varid={flag_def_varid!r} (expected {expected_varid!r})")
     if errors:
         raise ValueError(f"flag_def mismatch: {'; '.join(errors)}")
 

@@ -254,6 +254,40 @@ class TestFlagTypeToSeverity:
             flag_type_to_severity("Error")
 
 
+class TestCheckFlagDefImmutability:
+    """Verify CheckFlagDef is frozen — prevents cache corruption via shared objects."""
+
+    def test_cannot_mutate_flag_descr(self) -> None:
+        from pydantic import ValidationError
+
+        from qa_mil.lookups.models import CheckFlagDef
+
+        fd = CheckFlagDef(
+            check_id="999",
+            level=2,
+            tabid="MIL",
+            varid="00",
+            flag_descr="test",
+            flag_type="Warn",
+            abort_yn="N",
+        )
+        with pytest.raises(ValidationError):
+            fd.flag_descr = "mutated"  # type: ignore[misc]
+
+    def test_cached_objects_not_corrupted(self) -> None:
+        """Mutating a returned CheckFlagDef must not affect later get_check_flag() results."""
+        from pydantic import ValidationError
+
+        flag = get_check_flag("211")
+        original_descr = flag.flag_descr
+        # Attempt mutation (should fail because CheckFlagDef is frozen)
+        with pytest.raises(ValidationError):
+            flag.flag_descr = "POISONED"  # type: ignore[misc]
+        # Verify cache is not corrupted
+        flag_again = get_check_flag("211")
+        assert flag_again.flag_descr == original_descr
+
+
 class TestFlagDefValidation:
     """Verify __post_init__ catches mismatched flag_def.check_id."""
 
