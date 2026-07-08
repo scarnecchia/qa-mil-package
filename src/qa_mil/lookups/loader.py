@@ -54,6 +54,33 @@ def load_check_flags() -> list[CheckFlagDef]:
     return [CheckFlagDef.model_validate(item) for item in raw]
 
 
+def get_check_flag(check_id: str, tabid: str = "MIL", varid: str = "00") -> CheckFlagDef:
+    """Fetch a single active CheckFlagDef by (check_id, tabid, varid).
+
+    Raises ValueError if not found or if multiple active rows match.
+    """
+    flags = load_check_flags()
+    matches = [
+        f
+        for f in flags
+        if f.check_id == check_id
+        and f.tabid.upper() == tabid.upper()
+        and f.varid == varid
+        and f.flagyn == "Y"
+    ]
+    if not matches:
+        raise ValueError(
+            f"No active check flag found for check_id={check_id!r}, "
+            f"tabid={tabid!r}, varid={varid!r}"
+        )
+    if len(matches) > 1:
+        raise ValueError(
+            f"Multiple active check flags for check_id={check_id!r}, "
+            f"tabid={tabid!r}, varid={varid!r}"
+        )
+    return matches[0]
+
+
 def load_l1_rules() -> list[L1VariableRule]:
     """Load and validate Level 1 variable rules from level1_rules.json."""
     raw = _load_json("level1_rules.json")

@@ -16,6 +16,13 @@ class Severity(StrEnum):
     ABORT = "Abort"
 
 
+def flag_type_to_severity(flag_type: str) -> Severity:
+    """Map a CheckFlagDef flag_type ('Warn'/'Abort') to a Severity enum."""
+    if flag_type == "Abort":
+        return Severity.ABORT
+    return Severity.WARN
+
+
 class OutputScope(StrEnum):
     """Output destination: dplocal for patient-level, msoc for aggregate."""
 

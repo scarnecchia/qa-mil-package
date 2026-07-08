@@ -17,9 +17,10 @@ from qa_mil.checks.base import (
     CheckContext,
     CheckMetadata,
     OutputScope,
-    Severity,
+    flag_type_to_severity,
     make_flagid,
 )
+from qa_mil.lookups.models import CheckFlagDef
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class BirthTypeLinkageCheck:
     """
 
     birth_type: int
+    flag_def: CheckFlagDef
     tabid: str = "MIL"
 
     @property
@@ -38,13 +40,10 @@ class BirthTypeLinkageCheck:
         return CheckMetadata(
             check_id=str(check_num),
             level=3,
-            severity=Severity.WARN,
+            severity=flag_type_to_severity(self.flag_def.flag_type),
             tables=frozenset({"mil"}),
             output_scope=OutputScope.DPLOCAL,
-            description=(
-                f"Birth_Type ({self.birth_type}) not consistent with number of "
-                f"linkages; confirmation required"
-            ),
+            description=self.flag_def.flag_descr,
             tabid=self.tabid,
         )
 
@@ -60,10 +59,6 @@ class BirthTypeLinkageCheck:
 
         check_num = 370 + self.birth_type
         flagid = make_flagid(self.tabid, 3, "00", check_num)
-        flag_descr = (
-            f"Birth_Type ({self.birth_type}) not consistent with number of "
-            f"linkages; confirmation required"
-        )
 
         # Filter to this Birth_Type value, non-null CPatID and MPatID
         filtered = mil.filter(
@@ -83,10 +78,10 @@ class BirthTypeLinkageCheck:
         # Add flag columns
         result = flagged.mutate(
             flagid=ibis.literal(flagid),
-            flag_descr=ibis.literal(flag_descr),
+            flag_descr=ibis.literal(self.flag_def.flag_descr),
             message=(ibis.literal("")),  # message is informational, built per-row in output layer
-            flag_type=ibis.literal("Warn"),
-            abort_yn=ibis.literal("N"),
+            flag_type=ibis.literal(self.flag_def.flag_type),
+            abort_yn=ibis.literal(self.flag_def.abort_yn),
         )
 
         return result

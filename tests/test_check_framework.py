@@ -18,6 +18,7 @@ from qa_mil.checks.registry import (
     list_checks,
     required_tables,
 )
+from qa_mil.lookups.loader import get_check_flag
 
 # ---------------------------------------------------------------------------
 # flagid helper
@@ -127,6 +128,16 @@ class TestRegistry:
     def test_level_ordered_groups(self) -> None:
         groups = level_ordered_groups()
         assert len(groups) >= 1  # at least Level 1 and/or Level 3
+
+    def test_registered_l2l3_checks_have_lookup_rows(self) -> None:
+        """Every registered L2/L3 check must have a matching active lookup row."""
+        checks = list_checks()
+        for check in checks:
+            if check.metadata.level not in (2, 3):
+                continue
+            # Should not raise
+            flag_def = get_check_flag(check.metadata.check_id, check.metadata.tabid, "00")
+            assert flag_def is not None
 
 
 # ---------------------------------------------------------------------------

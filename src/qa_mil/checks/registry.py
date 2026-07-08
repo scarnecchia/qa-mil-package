@@ -6,7 +6,6 @@ from typing import Any
 
 from qa_mil.checks.base import (
     Check,
-    Severity,  # noqa: E402
 )
 from qa_mil.checks.level2.checks import (  # noqa: E402
     CrossTableConsistencyCheck,
@@ -16,7 +15,7 @@ from qa_mil.checks.level2.checks import (  # noqa: E402
     ValueDomainCheck,
 )
 from qa_mil.checks.level3.birth_type import BirthTypeLinkageCheck
-from qa_mil.lookups.loader import load_l1_rules  # noqa: E402
+from qa_mil.lookups.loader import get_check_flag, load_l1_rules  # noqa: E402
 
 # --- Registry of all checks ---
 # Each entry is one logical check instance.
@@ -106,6 +105,7 @@ for bt_value in range(1, 6):
     _register(
         BirthTypeLinkageCheck(
             birth_type=bt_value,
+            flag_def=get_check_flag(str(check_num)),
             tabid=_TABID_MIL,
         )
     )
@@ -118,9 +118,9 @@ from qa_mil.checks.level3.linkage_checks import (  # noqa: E402
     MotherNotLinkedCheck,
 )
 
-_register(BirthTypeNoLinkageCheck(tabid=_TABID_MIL))
-_register(MotherNotLinkedCheck(tabid=_TABID_MIL))
-_register(InfantNotLinkedCheck(tabid=_TABID_MIL))
+_register(BirthTypeNoLinkageCheck(flag_def=get_check_flag("394"), tabid=_TABID_MIL))
+_register(MotherNotLinkedCheck(flag_def=get_check_flag("396"), tabid=_TABID_MIL))
+_register(InfantNotLinkedCheck(flag_def=get_check_flag("397"), tabid=_TABID_MIL))
 
 
 # --- Register Level 1 checks ---
@@ -166,30 +166,59 @@ _register(AgeRangeCheck())
 # --- Register Level 2 checks ---
 
 # NUM-40: Duplicate/key family
-_register(DuplicateKeyCheck(check_id="211", key_columns=("MPatID", "CPatID", "ADate")))
 _register(
     DuplicateKeyCheck(
-        check_id="217", key_columns=("MPatID", "ADate", "EncounterID"), severity=Severity.ABORT
+        check_id="211", key_columns=("MPatID", "CPatID", "ADate"), flag_def=get_check_flag("211")
     )
 )
 _register(
-    DuplicateKeyCheck(check_id="218", key_columns=("MPatID", "ADate"), severity=Severity.ABORT)
+    DuplicateKeyCheck(
+        check_id="217",
+        key_columns=("MPatID", "ADate", "EncounterID"),
+        flag_def=get_check_flag("217"),
+    )
 )
-_register(DuplicateKeyCheck(check_id="219", key_columns=("CPatID",), severity=Severity.ABORT))
+_register(
+    DuplicateKeyCheck(
+        check_id="218", key_columns=("MPatID", "ADate"), flag_def=get_check_flag("218")
+    )
+)
+_register(
+    DuplicateKeyCheck(check_id="219", key_columns=("CPatID",), flag_def=get_check_flag("219"))
+)
 
 # NUM-41: Date/range/value-domain family
 _register(
     DateRangeCheck(
-        check_id="201", date_column="ADate", min_date="2010-01-01", max_date="2025-12-31"
+        check_id="201",
+        date_column="ADate",
+        flag_def=get_check_flag("201"),
+        min_date="2010-01-01",
+        max_date="2025-12-31",
     )
 )
 _register(
-    ValueDomainCheck(check_id="204", variable="Birth_Type", allowed_values=(1, 2, 3, 4, 5, 6, 7, 8))
+    ValueDomainCheck(
+        check_id="204",
+        variable="Birth_Type",
+        allowed_values=(1, 2, 3, 4, 5, 6, 7, 8),
+        flag_def=get_check_flag("204"),
+    )
 )
 
 # NUM-42: Cross-table consistency family
-_register(CrossTableConsistencyCheck(check_id="221", reference_table="enr", join_column="MPatID"))
-_register(CrossTableConsistencyCheck(check_id="223", reference_table="enr", join_column="CPatID"))
+_register(
+    CrossTableConsistencyCheck(
+        check_id="221", reference_table="enr", join_column="MPatID", flag_def=get_check_flag("221")
+    )
+)
+_register(
+    CrossTableConsistencyCheck(
+        check_id="223", reference_table="enr", join_column="CPatID", flag_def=get_check_flag("223")
+    )
+)
 
 # NUM-43: Enrollment/eligibility family
-_register(EnrollmentCoverageCheck(check_id="200", date_column="ADate", severity=Severity.ABORT))
+_register(
+    EnrollmentCoverageCheck(check_id="200", date_column="ADate", flag_def=get_check_flag("200"))
+)
