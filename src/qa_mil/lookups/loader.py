@@ -7,6 +7,7 @@ unknown severities, invalid levels, and inconsistent check IDs.
 
 from __future__ import annotations
 
+import functools
 import json
 from pathlib import Path
 
@@ -41,6 +42,7 @@ def _validate_no_duplicate_ids(items: list[dict], id_field: str, filename: str) 
         seen.add(item_id)
 
 
+@functools.lru_cache(maxsize=1)
 def load_check_flags() -> list[CheckFlagDef]:
     """Load and validate check flag definitions from checks.json."""
     raw = _load_json("checks.json")

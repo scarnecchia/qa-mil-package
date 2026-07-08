@@ -40,6 +40,13 @@ class DuplicateKeyCheck:
     flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
 
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != self.check_id:
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
+                f"check_id={self.check_id!r}"
+            )
+
     @property
     def metadata(self) -> CheckMetadata:
         int(self.check_id)
@@ -92,6 +99,13 @@ class DateRangeCheck:
     min_date: str | None = None
     max_date: str | None = None
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != self.check_id:
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
+                f"check_id={self.check_id!r}"
+            )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -160,6 +174,13 @@ class ValueDomainCheck:
     flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
 
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != self.check_id:
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
+                f"check_id={self.check_id!r}"
+            )
+
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
@@ -217,6 +238,13 @@ class CrossTableConsistencyCheck:
     join_column: str
     flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != self.check_id:
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
+                f"check_id={self.check_id!r}"
+            )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -278,6 +306,13 @@ class EnrollmentCoverageCheck:
     enr_start_column: str = "EnrStart"
     enr_end_column: str = "EnrEnd"
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != self.check_id:
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
+                f"check_id={self.check_id!r}"
+            )
 
     @property
     def metadata(self) -> CheckMetadata:

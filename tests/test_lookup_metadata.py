@@ -13,12 +13,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from qa_mil.checks.base import CheckContext, flag_type_to_severity
 from qa_mil.checks.level2.checks import DuplicateKeyCheck
 from qa_mil.checks.level3.linkage_checks import MotherNotLinkedCheck
 from qa_mil.checks.registry import list_checks
 from qa_mil.lookups.loader import get_check_flag, load_check_flags
-from qa_mil.lookups.models import CheckFlagDef
 from tests.conftest import write_parquet
 
 
@@ -169,21 +170,37 @@ class TestLookupDrivenFlagOutput:
             assert result["flag_descr"].iloc[0] == flag_def.flag_descr
             assert result["flag_type"].iloc[0] == flag_def.flag_type
 
-    def test_mutated_checks_json_changes_flag_output(self, tmp_path: Path) -> None:
-        """Mutate flag_descr in a temp checks.json and prove the check emits the new value."""
+    def test_mutated_checks_json_changes_flag_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mutate flag_descr in checks.json via the loader and prove the check emits the new value.
+
+        This exercises the full loader path: monkeypatch the lookup directory, clear the
+        lru_cache, call get_check_flag(), instantiate the check, and execute it.
+        """
         from qa_mil.lookups import loader as loader_mod
 
-        # Load the real checks.json, mutate one entry
-        lookup_dir = Path(loader_mod.__file__).parent
-        raw = json.loads((lookup_dir / "checks.json").read_text())
+        # Load the real checks.json, mutate one entry, write to temp dir
+        real_json = Path(loader_mod.__file__).parent / "checks.json"
+        raw = json.loads(real_json.read_text())
         mutated_descr = "MUTATED: duplicate records test description"
         for entry in raw:
             if entry["check_id"] == "211":
                 entry["flag_descr"] = mutated_descr
                 break
 
-        # Build a CheckFlagDef directly from the mutated dict (no file I/O needed)
-        mutated_def = CheckFlagDef.model_validate(next(e for e in raw if e["check_id"] == "211"))
+        # Write mutated checks.json to a temp directory
+        tmp_lookup = tmp_path / "lookups"
+        tmp_lookup.mkdir()
+        (tmp_lookup / "checks.json").write_text(json.dumps(raw, indent=2))
+
+        # Point the loader at the temp directory and clear the cache
+        monkeypatch.setattr(loader_mod, "_LOOKUP_DIR", tmp_lookup)
+        loader_mod.load_check_flags.cache_clear()
+
+        # Retrieve via get_check_flag — exercises the loader path
+        mutated_def = loader_mod.get_check_flag("211")
+        assert mutated_def.flag_descr == mutated_descr
 
         mil_path = tmp_path / "mil.parquet"
         write_parquet(
@@ -204,3 +221,54 @@ class TestLookupDrivenFlagOutput:
             result = session.execute(check.build(ctx))
             assert len(result) >= 1
             assert result["flag_descr"].iloc[0] == mutated_descr
+
+
+# ---------------------------------------------------------------------------
+# Validation tests
+# ---------------------------------------------------------------------------
+
+
+class TestFlagTypeToSeverity:
+    """Verify flag_type_to_severity() handles valid and invalid inputs."""
+
+    def test_warn(self) -> None:
+        from qa_mil.checks.base import Severity
+
+        assert flag_type_to_severity("Warn") == Severity.WARN
+
+    def test_abort(self) -> None:
+        from qa_mil.checks.base import Severity
+
+        assert flag_type_to_severity("Abort") == Severity.ABORT
+
+    def test_invalid_raises(self) -> None:
+        with pytest.raises(ValueError, match="flag_type must be"):
+            flag_type_to_severity("Error")
+
+
+class TestFlagDefValidation:
+    """Verify __post_init__ catches mismatched flag_def.check_id."""
+
+    def test_l2_check_rejects_mismatched_flag_def(self) -> None:
+        """DuplicateKeyCheck raises when flag_def.check_id != check_id."""
+        flag_def_211 = get_check_flag("211")
+        with pytest.raises(ValueError, match="does not match"):
+            DuplicateKeyCheck(
+                check_id="217",  # wrong check_id
+                key_columns=("MPatID",),
+                flag_def=flag_def_211,  # flag_def for 211
+            )
+
+    def test_l3_linkage_check_rejects_mismatched_flag_def(self) -> None:
+        """MotherNotLinkedCheck raises when flag_def.check_id != '396'."""
+        flag_def_394 = get_check_flag("394")
+        with pytest.raises(ValueError, match="does not match"):
+            MotherNotLinkedCheck(flag_def=flag_def_394)  # flag_def for 394
+
+    def test_l3_birth_type_check_rejects_mismatched_flag_def(self) -> None:
+        """BirthTypeLinkageCheck raises when flag_def.check_id != str(370+birth_type)."""
+        from qa_mil.checks.level3.birth_type import BirthTypeLinkageCheck
+
+        flag_def_372 = get_check_flag("372")
+        with pytest.raises(ValueError, match="does not match"):
+            BirthTypeLinkageCheck(birth_type=1, flag_def=flag_def_372)  # expects 371

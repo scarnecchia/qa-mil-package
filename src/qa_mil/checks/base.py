@@ -17,10 +17,15 @@ class Severity(StrEnum):
 
 
 def flag_type_to_severity(flag_type: str) -> Severity:
-    """Map a CheckFlagDef flag_type ('Warn'/'Abort') to a Severity enum."""
+    """Map a CheckFlagDef flag_type ('Warn'/'Abort') to a Severity enum.
+
+    Raises ValueError for any value other than 'Warn' or 'Abort'.
+    """
     if flag_type == "Abort":
         return Severity.ABORT
-    return Severity.WARN
+    if flag_type == "Warn":
+        return Severity.WARN
+    raise ValueError(f"flag_type must be 'Warn' or 'Abort', got {flag_type!r}")
 
 
 class OutputScope(StrEnum):

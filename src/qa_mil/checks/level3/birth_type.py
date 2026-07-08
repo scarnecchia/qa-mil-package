@@ -34,6 +34,14 @@ class BirthTypeLinkageCheck:
     flag_def: CheckFlagDef
     tabid: str = "MIL"
 
+    def __post_init__(self) -> None:
+        expected_id = str(370 + self.birth_type)
+        if self.flag_def.check_id != expected_id:
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
+                f"expected {expected_id!r} for birth_type={self.birth_type}"
+            )
+
     @property
     def metadata(self) -> CheckMetadata:
         check_num = 370 + self.birth_type

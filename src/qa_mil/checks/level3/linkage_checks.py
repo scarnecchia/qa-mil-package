@@ -36,6 +36,12 @@ class BirthTypeNoLinkageCheck:
     flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
 
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != "394":
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match expected '394'"
+            )
+
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
@@ -72,6 +78,12 @@ class MotherNotLinkedCheck:
     flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
 
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != "396":
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match expected '396'"
+            )
+
     @property
     def metadata(self) -> CheckMetadata:
         return CheckMetadata(
@@ -106,6 +118,12 @@ class InfantNotLinkedCheck:
 
     flag_def: CheckFlagDef
     tabid: str = _MIL_TABID
+
+    def __post_init__(self) -> None:
+        if self.flag_def.check_id != "397":
+            raise ValueError(
+                f"flag_def.check_id={self.flag_def.check_id!r} does not match expected '397'"
+            )
 
     @property
     def metadata(self) -> CheckMetadata:
