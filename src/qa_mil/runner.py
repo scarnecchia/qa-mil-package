@@ -62,11 +62,23 @@ def run(cfg: Config) -> dict[str, Any]:
         with span("qa_mil.execute_checks"):
             outcomes = _execute_checks(cfg, session)
 
-        # 6. Write outputs
-        with span("qa_mil.write_outputs"):
-            output_summary = _write_outputs(cfg, outcomes)
+        # Determine if any check failed (exception)
+        has_failed = any(o["status"] == "failed" for o in outcomes)
 
-        # 7. Write run manifest
+        # 6. Write outputs (skip on failure — don't produce potentially-invalid artifacts)
+        if has_failed:
+            output_summary: dict[str, Any] = {
+                "dplocal_flags": None,
+                "msoc_flags": None,
+                "dplocal_flag_count": 0,
+                "msoc_flag_count": 0,
+                "skipped": "check failure — outputs not written",
+            }
+        else:
+            with span("qa_mil.write_outputs"):
+                output_summary = _write_outputs(cfg, outcomes)
+
+        # 7. Write run manifest (always written for diagnostics)
         with span("qa_mil.write_run_manifest"):
             run_manifest_data = _build_run_manifest(cfg, manifest, outcomes, output_summary)
             _write_run_manifest(cfg, run_manifest_data)

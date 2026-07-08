@@ -166,22 +166,30 @@ class TableSortOrderCheck:
 
         if not sort_vars:
             # No sort order defined — nothing to check
-            return mil.aggregate(_count=mil.count()).filter(ibis.literal(False)).select(
-                ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
-                ibis.literal("Table is not sorted correctly").name("flag_descr"),
-                ibis.literal("").name("message"),
-                ibis.literal("Abort").name("flag_type"),
-                ibis.literal("Y").name("abort_yn"),
+            return (
+                mil.aggregate(_count=mil.count())
+                .filter(ibis.literal(False))
+                .select(
+                    ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
+                    ibis.literal("Table is not sorted correctly").name("flag_descr"),
+                    ibis.literal("").name("message"),
+                    ibis.literal("Abort").name("flag_type"),
+                    ibis.literal("Y").name("abort_yn"),
+                )
             )
 
         sort_cols = [r.variable for r in sort_vars if r.variable in mil.columns]
         if not sort_cols:
-            return mil.aggregate(_count=mil.count()).filter(ibis.literal(False)).select(
-                ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
-                ibis.literal("Table is not sorted correctly").name("flag_descr"),
-                ibis.literal("").name("message"),
-                ibis.literal("Abort").name("flag_type"),
-                ibis.literal("Y").name("abort_yn"),
+            return (
+                mil.aggregate(_count=mil.count())
+                .filter(ibis.literal(False))
+                .select(
+                    ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
+                    ibis.literal("Table is not sorted correctly").name("flag_descr"),
+                    ibis.literal("").name("message"),
+                    ibis.literal("Abort").name("flag_type"),
+                    ibis.literal("Y").name("abort_yn"),
+                )
             )
 
         # Build a concatenated sort key by casting all sort columns to strings.
@@ -195,9 +203,7 @@ class TableSortOrderCheck:
 
         # Use a LAG window to get the previous row's sort key in physical order
         w = ibis.window(order_by=None)
-        mil_lagged = mil_keyed.mutate(
-            _prev_key=mil_keyed["_sort_key"].lag().over(w)
-        )
+        mil_lagged = mil_keyed.mutate(_prev_key=mil_keyed["_sort_key"].lag().over(w))
 
         # Flag rows where the current sort key is less than the previous row's.
         # Null values sort first in SAS; treat null < any string value.

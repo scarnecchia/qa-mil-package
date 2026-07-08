@@ -245,6 +245,12 @@ class TestWarnAbortBehavior:
 
             # Run status should be failed
             assert result["run_status"] == "failed"
+
+            # Output files should NOT be written (no potentially-invalid artifacts)
+            assert not (cfg.output_dir / "dplocal" / "flags.parquet").exists()
+
+            # Run manifest should still be written (for diagnostics)
+            assert (cfg.output_dir / "run_manifest.yaml").exists()
         finally:
             reg_list.clear()
             reg_list.extend(original)
