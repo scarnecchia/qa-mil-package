@@ -298,6 +298,16 @@ duckdb = [
     { name = "pyarrow-hotfix" },
     { name = "rich" },
 ]
+pyspark = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "pyarrow" },
+    { name = "pyarrow-hotfix" },
+    { name = "pyspark" },
+    { name = "rich" },
+]
 
 [[package]]
 name = "idna"
@@ -675,6 +685,15 @@ wheels = [
 ]
 
 [[package]]
+name = "py4j"
+version = "0.10.9.9"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/31/0b210511177070c8d5d3059556194352e5753602fa64b85b7ab81ec1a009/py4j-0.10.9.9.tar.gz", hash = "sha256:f694cad19efa5bd1dee4f3e5270eb406613c974394035e5bfc4ec1aba870b879", size = 761089, upload-time = "2025-01-15T03:53:18.624Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/db/ea0203e495be491c85af87b66e37acfd3bf756fd985f87e46fc5e3bf022c/py4j-0.10.9.9-py2.py3-none-any.whl", hash = "sha256:c7c26e4158defb37b0bb124933163641a2ff6e3a3913f7811b0ddbe07ed61533", size = 203008, upload-time = "2025-01-15T03:53:15.648Z" },
+]
+
+[[package]]
 name = "pyarrow"
 version = "24.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -873,6 +892,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyspark"
+version = "4.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "py4j" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6e/c1/671a7a00aea800d25fbbfc7d91539b4cf34a995d085ae708f26a2aeaa140/pyspark-4.0.3.tar.gz", hash = "sha256:9ed23e8601d73afae857eb5f9e11050b59cd11bbe50777564fcc4923cb117c1c", size = 434225451, upload-time = "2026-06-11T07:06:42.661Z" }
+
+[[package]]
 name = "pytest"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -983,6 +1011,11 @@ dependencies = [
     { name = "typer" },
 ]
 
+[package.optional-dependencies]
+spark = [
+    { name = "ibis-framework", extra = ["pyspark"] },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "pyright" },
@@ -994,6 +1027,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ibis-framework", extras = ["duckdb"], specifier = ">=9.0" },
+    { name = "ibis-framework", extras = ["pyspark"], marker = "extra == 'spark'", specifier = ">=9.0" },
     { name = "opentelemetry-api", specifier = ">=1.24" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.24" },
     { name = "opentelemetry-sdk", specifier = ">=1.24" },
@@ -1001,6 +1035,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "typer", specifier = ">=0.12" },
 ]
+provides-extras = ["spark"]
 
 [package.metadata.requires-dev]
 dev = [
