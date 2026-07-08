@@ -1,0 +1,4 @@
+[
+  {"tabid": "MIL", "variable": "MPatID", "idLength": 20},
+  {"tabid": "MIL", "variable": "CPatID", "idLength": 20}
+]

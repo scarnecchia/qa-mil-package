@@ -98,3 +98,44 @@ for bt_value in range(1, 6):
             tabid=_TABID_MIL,
         )
     )
+
+
+# --- Register Level 1 checks ---
+from qa_mil.checks.level1.checks import (  # noqa: E402
+    AgeRangeCheck,
+    MissingColumnCheck,
+    NullValuesCheck,
+    TableExistsCheck,
+    TablePopulatedCheck,
+    TableSortOrderCheck,
+    VariableLengthCheck,
+    VariableNotPopulatedCheck,
+    VariableTypeCheck,
+)
+from qa_mil.lookups.loader import load_l1_rules  # noqa: E402
+
+# Table-level checks
+_register(TableExistsCheck())
+_register(TablePopulatedCheck())
+_register(TableSortOrderCheck())
+
+# Variable-level checks (parameterized from lookup rules)
+_l1_rules = load_l1_rules()
+for rule in _l1_rules:
+    if rule.tabid.upper() != _TABID_MIL:
+        continue
+    _register(MissingColumnCheck(variable=rule.variable, varid=rule.varid))
+    _register(VariableNotPopulatedCheck(variable=rule.variable, varid=rule.varid))
+    _register(
+        VariableTypeCheck(variable=rule.variable, varid=rule.varid, expected_type=rule.vartype)
+    )
+    if rule.varlength > 0:
+        _register(
+            VariableLengthCheck(
+                variable=rule.variable, varid=rule.varid, expected_length=rule.varlength
+            )
+        )
+    _register(NullValuesCheck(variable=rule.variable, varid=rule.varid))
+
+# Special variable checks
+_register(AgeRangeCheck())

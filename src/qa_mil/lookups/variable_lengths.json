@@ -1,0 +1,8 @@
+[
+  {"tabid": "MIL", "variable": "MPatID", "length": 20},
+  {"tabid": "MIL", "variable": "CPatID", "length": 20},
+  {"tabid": "MIL", "variable": "ADate", "length": 8},
+  {"tabid": "MIL", "variable": "EncounterID", "length": 20},
+  {"tabid": "MIL", "variable": "Birth_Type", "length": 8},
+  {"tabid": "MIL", "variable": "Age", "length": 8}
+]
