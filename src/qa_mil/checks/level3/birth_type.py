@@ -19,6 +19,7 @@ from qa_mil.checks.base import (
     OutputScope,
     flag_type_to_severity,
     make_flagid,
+    validate_flag_def_identity,
 )
 from qa_mil.lookups.models import CheckFlagDef
 
@@ -36,11 +37,15 @@ class BirthTypeLinkageCheck:
 
     def __post_init__(self) -> None:
         expected_id = str(370 + self.birth_type)
-        if self.flag_def.check_id != expected_id:
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
-                f"expected {expected_id!r} for birth_type={self.birth_type}"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=expected_id,
+            expected_level=3,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:

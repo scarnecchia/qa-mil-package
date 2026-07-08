@@ -116,6 +116,8 @@ class TestRegistryLookupCrossValidation:
             flag_def = get_check_flag(check.metadata.check_id, check.metadata.tabid, "00")
             assert check.metadata.description == flag_def.flag_descr
             assert check.metadata.severity == flag_type_to_severity(flag_def.flag_type)
+            assert check.metadata.level == flag_def.level
+            assert check.metadata.tabid == flag_def.tabid
 
 
 # ---------------------------------------------------------------------------
@@ -196,31 +198,37 @@ class TestLookupDrivenFlagOutput:
 
         # Point the loader at the temp directory and clear the cache
         monkeypatch.setattr(loader_mod, "_LOOKUP_DIR", tmp_lookup)
-        loader_mod.load_check_flags.cache_clear()
+        loader_mod._load_check_flags_cached.cache_clear()
 
-        # Retrieve via get_check_flag — exercises the loader path
-        mutated_def = loader_mod.get_check_flag("211")
-        assert mutated_def.flag_descr == mutated_descr
+        try:
+            # Retrieve via get_check_flag — exercises the loader path
+            mutated_def = loader_mod.get_check_flag("211")
+            assert mutated_def.flag_descr == mutated_descr
 
-        mil_path = tmp_path / "mil.parquet"
-        write_parquet(
-            mil_path,
-            {
-                "MPatID": ["M001", "M001"],
-                "CPatID": ["C001", "C001"],
-                "ADate": ["2020-01-15", "2020-01-15"],
-                "EncounterID": ["E1", "E1"],
-                "Birth_Type": [1, 1],
-            },
-        )
-        check = DuplicateKeyCheck(
-            check_id="211", key_columns=("MPatID", "CPatID", "ADate"), flag_def=mutated_def
-        )
-        with _make_session({"mil": mil_path}) as session:
-            ctx = CheckContext(session=session, metadata=check.metadata)
-            result = session.execute(check.build(ctx))
-            assert len(result) >= 1
-            assert result["flag_descr"].iloc[0] == mutated_descr
+            mil_path = tmp_path / "mil.parquet"
+            write_parquet(
+                mil_path,
+                {
+                    "MPatID": ["M001", "M001"],
+                    "CPatID": ["C001", "C001"],
+                    "ADate": ["2020-01-15", "2020-01-15"],
+                    "EncounterID": ["E1", "E1"],
+                    "Birth_Type": [1, 1],
+                },
+            )
+            check = DuplicateKeyCheck(
+                check_id="211",
+                key_columns=("MPatID", "CPatID", "ADate"),
+                flag_def=mutated_def,
+            )
+            with _make_session({"mil": mil_path}) as session:
+                ctx = CheckContext(session=session, metadata=check.metadata)
+                result = session.execute(check.build(ctx))
+                assert len(result) >= 1
+                assert result["flag_descr"].iloc[0] == mutated_descr
+        finally:
+            # Restore cache so later tests see the real checks.json
+            loader_mod._load_check_flags_cached.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +260,7 @@ class TestFlagDefValidation:
     def test_l2_check_rejects_mismatched_flag_def(self) -> None:
         """DuplicateKeyCheck raises when flag_def.check_id != check_id."""
         flag_def_211 = get_check_flag("211")
-        with pytest.raises(ValueError, match="does not match"):
+        with pytest.raises(ValueError, match="flag_def mismatch"):
             DuplicateKeyCheck(
                 check_id="217",  # wrong check_id
                 key_columns=("MPatID",),
@@ -262,7 +270,7 @@ class TestFlagDefValidation:
     def test_l3_linkage_check_rejects_mismatched_flag_def(self) -> None:
         """MotherNotLinkedCheck raises when flag_def.check_id != '396'."""
         flag_def_394 = get_check_flag("394")
-        with pytest.raises(ValueError, match="does not match"):
+        with pytest.raises(ValueError, match="flag_def mismatch"):
             MotherNotLinkedCheck(flag_def=flag_def_394)  # flag_def for 394
 
     def test_l3_birth_type_check_rejects_mismatched_flag_def(self) -> None:
@@ -270,5 +278,5 @@ class TestFlagDefValidation:
         from qa_mil.checks.level3.birth_type import BirthTypeLinkageCheck
 
         flag_def_372 = get_check_flag("372")
-        with pytest.raises(ValueError, match="does not match"):
+        with pytest.raises(ValueError, match="flag_def mismatch"):
             BirthTypeLinkageCheck(birth_type=1, flag_def=flag_def_372)  # expects 371

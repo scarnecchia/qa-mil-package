@@ -17,6 +17,7 @@ from qa_mil.checks.base import (
     OutputScope,
     flag_type_to_severity,
     make_flagid,
+    validate_flag_def_identity,
 )
 from qa_mil.lookups.models import CheckFlagDef
 
@@ -41,11 +42,15 @@ class DuplicateKeyCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != self.check_id:
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
-                f"check_id={self.check_id!r}"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -101,11 +106,15 @@ class DateRangeCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != self.check_id:
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
-                f"check_id={self.check_id!r}"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -175,11 +184,15 @@ class ValueDomainCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != self.check_id:
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
-                f"check_id={self.check_id!r}"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -240,11 +253,15 @@ class CrossTableConsistencyCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != self.check_id:
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
-                f"check_id={self.check_id!r}"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -308,11 +325,15 @@ class EnrollmentCoverageCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != self.check_id:
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match "
-                f"check_id={self.check_id!r}"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id=self.check_id,
+            expected_level=2,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:

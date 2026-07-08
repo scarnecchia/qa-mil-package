@@ -43,8 +43,11 @@ def _validate_no_duplicate_ids(items: list[dict], id_field: str, filename: str) 
 
 
 @functools.lru_cache(maxsize=1)
-def load_check_flags() -> list[CheckFlagDef]:
-    """Load and validate check flag definitions from checks.json."""
+def _load_check_flags_cached() -> tuple[CheckFlagDef, ...]:
+    """Load and validate check flag definitions from checks.json (cached).
+
+    Returns an immutable tuple so callers cannot corrupt the shared cache.
+    """
     raw = _load_json("checks.json")
     # Validate no duplicate check_id within same tabid+varid
     seen: set[str] = set()
@@ -53,7 +56,15 @@ def load_check_flags() -> list[CheckFlagDef]:
         if key in seen:
             raise ValueError(f"Duplicate check definition: {key} in checks.json")
         seen.add(key)
-    return [CheckFlagDef.model_validate(item) for item in raw]
+    return tuple(CheckFlagDef.model_validate(item) for item in raw)
+
+
+def load_check_flags() -> list[CheckFlagDef]:
+    """Load and validate check flag definitions from checks.json.
+
+    Returns a defensive copy; the underlying cached data is immutable.
+    """
+    return list(_load_check_flags_cached())
 
 
 def get_check_flag(check_id: str, tabid: str = "MIL", varid: str = "00") -> CheckFlagDef:
@@ -61,7 +72,7 @@ def get_check_flag(check_id: str, tabid: str = "MIL", varid: str = "00") -> Chec
 
     Raises ValueError if not found or if multiple active rows match.
     """
-    flags = load_check_flags()
+    flags = _load_check_flags_cached()
     matches = [
         f
         for f in flags

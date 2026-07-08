@@ -19,6 +19,7 @@ from qa_mil.checks.base import (
     OutputScope,
     flag_type_to_severity,
     make_flagid,
+    validate_flag_def_identity,
 )
 from qa_mil.lookups.models import CheckFlagDef
 
@@ -37,10 +38,15 @@ class BirthTypeNoLinkageCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != "394":
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match expected '394'"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id="394",
+            expected_level=3,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -79,10 +85,15 @@ class MotherNotLinkedCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != "396":
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match expected '396'"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id="396",
+            expected_level=3,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
@@ -120,10 +131,15 @@ class InfantNotLinkedCheck:
     tabid: str = _MIL_TABID
 
     def __post_init__(self) -> None:
-        if self.flag_def.check_id != "397":
-            raise ValueError(
-                f"flag_def.check_id={self.flag_def.check_id!r} does not match expected '397'"
-            )
+        validate_flag_def_identity(
+            self.flag_def.check_id,
+            self.flag_def.level,
+            self.flag_def.tabid,
+            self.flag_def.varid,
+            expected_check_id="397",
+            expected_level=3,
+            expected_tabid=self.tabid,
+        )
 
     @property
     def metadata(self) -> CheckMetadata:
