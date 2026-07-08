@@ -36,8 +36,10 @@ two deferred sub-packages). Key structural facts that shape the re-design:
 - Execution is already table-driven: `control_flow.csv` lists modules with execute flags and
   sequence numbers; an orchestrator macro loops them in order.
 - Checks are organized in three levels:
-  - **Level 1** (5 check families: 100, 101, 102, 111, 120) — structural and existence checks:
-    table exists, is populated, complies with SCDM variable definitions and lengths.
+  - **Level 1** (SAS check families: 100, 101, 102, 111, 120) — structural and existence
+    checks: table exists, is populated, complies with SCDM variable definitions and lengths.
+    Check 102 is documented as SAS-only/de-scoped for parquet-backed execution because it
+    validates physical input row order.
   - **Level 2** (~26 `flag_2xx` macros, 200–280 series) — duplicates, ranges, cross-table and
     enrollment-overlap checks.
   - **Level 3** (8 checks: 371–375, 394, 396, 397) — suspect-linkage checks on mother-infant

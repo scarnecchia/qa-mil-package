@@ -23,9 +23,10 @@ end.
 
 - A Python package (`qa-mil`) reproduces the core QA MIL pipeline — Level 1, Level 2, and
   Level 3 checks — against SCDM data in parquet format.
-- Flag output matches the existing SAS package on synthetic SCDM data, preserving the
-  `flagid` scheme, the flag record schema, and the `dplocal` (patient-level) / `msoc`
-  (aggregate) output split.
+- Flag output for applicable registered checks matches the existing SAS package on synthetic
+  SCDM data, preserving the `flagid` scheme, the flag record schema, and the `dplocal`
+  (patient-level) / `msoc` (aggregate) output split. SAS-only physical-row-order checks are
+  documented as de-scoped for parquet-backed execution.
 - A full run completes on a single node against data larger than available memory, and the
   same run executes on a Spark cluster by changing configuration only.
 - Runs are configured entirely through a CLI and config file; no per-run code editing.
@@ -49,9 +50,9 @@ end.
 
 ### qa-mil-python-port.AC2: Check correctness and SAS parity
 
-- **qa-mil-python-port.AC2.1 Success:** Each ported check's flag output matches the SAS
-  package's output on the parity fixture data, row for row, modulo documented type mappings
-  (SAS dates/lengths to Arrow types).
+- **qa-mil-python-port.AC2.1 Success:** Each applicable ported check's flag output matches
+  the SAS package's output on the parity fixture data, row for row, modulo documented type
+  mappings (SAS dates/lengths to Arrow types) and documented de-scopes such as CheckID 102.
 - **qa-mil-python-port.AC2.2 Success:** Generated flagids match the existing format
   `{TABID}_{level}_00_00-0_{checknum}` exactly.
 - **qa-mil-python-port.AC2.3 Success:** A failing abort-type check halts the run and reports
@@ -390,15 +391,17 @@ test of the harness itself).
 **Components:**
 - YAML lookups in `src/qa_mil/lookups/` converted from `lkp_all_flags`, `lkp_all_l1`,
   `lkp_all_saslength`, `lkp_l1_idlength`, with typed loader models
-- Level 1 check families (100, 101, 102, 111, 120) in `src/qa_mil/checks/level1/` — table
-  exists, table populated, SCDM variable compliance, variable lengths
+- Applicable Level 1 check families (100, 101, 111, 120) in `src/qa_mil/checks/level1/` —
+  table exists, table populated, SCDM variable compliance, variable lengths. CheckID 102 is
+  documented as SAS-only / de-scoped because it validates physical input row order.
 
 **Covers:** qa-mil-python-port.AC2.1 for Level 1 checks.
 
 **Dependencies:** Phase 5 (parity harness is the per-check gate).
 
-**Done when:** Each Level 1 check passes parity against SAS output; lookup YAML round-trips
-against the original sas7bdat contents (one-time migration verification test).
+**Done when:** Each applicable Level 1 check passes parity against SAS output; documented
+Level 1 de-scopes are excluded from active registration; lookup YAML round-trips against the
+original sas7bdat contents (one-time migration verification test).
 <!-- END_PHASE_6 -->
 
 <!-- START_PHASE_7 -->
@@ -445,10 +448,12 @@ in tests.
 ## Additional Considerations
 
 **Parity tolerance policy.** "Matches SAS output" needs a written policy before Phase 5:
-exact match on flag decisions and flagids; documented, reviewed mappings for type-level
-differences (SAS dates vs Arrow date32, trailing-blank padding from fixed SAS lengths,
-numeric missing vs null). Every accepted difference is recorded in the parity harness
-config, not waved through ad hoc.
+exact match on flag decisions and flagids for applicable registered checks; documented,
+reviewed mappings for type-level differences (SAS dates vs Arrow date32, trailing-blank
+padding from fixed SAS lengths, numeric missing vs null); and documented, reviewed de-scopes
+for SAS-only semantics that do not survive the parquet contract. CheckID 102 is such a
+de-scope because SAS physical/input row order is not a stable parquet/DuckDB table invariant.
+Every accepted difference is recorded in the parity harness config, not waved through ad hoc.
 
 **Message-text fidelity.** SAS `cat()`/`put()` formatting in flag messages (e.g., mmddyy10.
 dates) must be reproduced exactly if downstream tooling parses messages; if nothing parses

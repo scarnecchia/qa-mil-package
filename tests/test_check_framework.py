@@ -82,7 +82,8 @@ class TestRegistry:
     def test_list_checks_has_level_1(self) -> None:
         checks = list_checks()
         check_ids = {c.metadata.check_id for c in checks}
-        assert {"100", "101", "102", "110"}.issubset(check_ids)
+        assert {"100", "101", "110"}.issubset(check_ids)
+        assert "102" not in check_ids  # SAS-only physical sort-order check is de-scoped
 
     def test_list_checks_all_dplocal(self) -> None:
         checks = list_checks()

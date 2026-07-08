@@ -79,16 +79,6 @@ class TestTableRegistration:
             assert tbl is not None
             assert "MPatID" in tbl.columns
 
-    def test_registers_stable_file_row_number(self, table_paths: dict[str, Path]) -> None:
-        with DuckDbSession(table_paths) as session:
-            tbl = session.table("mil")
-            assert "file_row_number" in tbl.columns
-            result = session.execute(
-                tbl.select("MPatID", "file_row_number").order_by("file_row_number")
-            )
-            assert result["MPatID"].tolist() == ["P001", "P002", "P003", "P004"]
-            assert result["file_row_number"].tolist() == [0, 1, 2, 3]
-
     def test_tables_exposed_by_manifest_key(self, table_paths: dict[str, Path]) -> None:
         with DuckDbSession(table_paths) as session:
             all_tables = session.tables()

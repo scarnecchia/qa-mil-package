@@ -5,7 +5,9 @@ Source: inputfiles/scdm_data_qa_mil_review-level1.sas
 Table-level checks (varid="00"):
   100: Table exists (Abort)
   101: Table populated (Abort)
-  102: Table sort order (Abort)
+
+De-scoped checks:
+  102: Table sort order (SAS-only physical row-order validation; not applicable to parquet)
 
 Variable-level checks (varid=variable-specific):
   110: Required column missing (Warn)
@@ -124,127 +126,6 @@ class TablePopulatedCheck:
                 ibis.literal("Abort").name("flag_type"),
                 ibis.literal("Y").name("abort_yn"),
             )
-        )
-
-
-@dataclass(frozen=True)
-class TableSortOrderCheck:
-    """Check 102: Confirm correct table sort order."""
-
-    tabid: str = _MIL_TABID
-
-    @property
-    def metadata(self) -> CheckMetadata:
-        return CheckMetadata(
-            check_id="102",
-            level=1,
-            severity=Severity.ABORT,
-            tables=frozenset({"mil"}),
-            output_scope=OutputScope.DPLOCAL,
-            description="Table is not sorted correctly",
-            tabid=self.tabid,
-        )
-
-    def build(self, ctx: CheckContext) -> ibis.Table:
-        """Check sort order against expected sort variables.
-
-        Uses lookup metadata sortorder to determine expected sort columns.
-        Flags rows that violate the expected non-decreasing sort order.
-
-        Implements typed lexicographic comparison per sort column (not string
-        concatenation), with null-first ordering matching SAS semantics:
-        null sorts before any non-null value.
-
-        Note: In the parquet/SQL runtime, physical row order is not
-        operationally required (all operations are set-based), but this
-        check preserves the SAS QA flag behavior for diagnostic purposes.
-        """
-        session = ctx.session
-        mil = session.table("mil")
-        rules = _get_mil_rules()
-        sort_vars = sorted(
-            [r for r in rules if r.sortorder is not None],
-            key=lambda r: r.sortorder,
-        )
-
-        if not sort_vars:
-            # No sort order defined — nothing to check
-            return (
-                mil.aggregate(_count=mil.count())
-                .filter(ibis.literal(False))
-                .select(
-                    ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
-                    ibis.literal("Table is not sorted correctly").name("flag_descr"),
-                    ibis.literal("").name("message"),
-                    ibis.literal("Abort").name("flag_type"),
-                    ibis.literal("Y").name("abort_yn"),
-                )
-            )
-
-        sort_cols = [r.variable for r in sort_vars if r.variable in mil.columns]
-        if not sort_cols:
-            return (
-                mil.aggregate(_count=mil.count())
-                .filter(ibis.literal(False))
-                .select(
-                    ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
-                    ibis.literal("Table is not sorted correctly").name("flag_descr"),
-                    ibis.literal("").name("message"),
-                    ibis.literal("Abort").name("flag_type"),
-                    ibis.literal("Y").name("abort_yn"),
-                )
-            )
-
-        # Use the stable Parquet scan ordinal injected by the engine at table
-        # registration time. SQL row_number() without a source-order column is
-        # arbitrary and would not preserve the SAS input/file sequence.
-        row_ord_col = "file_row_number"
-        if row_ord_col not in mil.columns:
-            raise ValueError(
-                "Check 102 requires a stable input row ordinal; "
-                f"registered MIL table is missing {row_ord_col!r}"
-            )
-        w = ibis.window(order_by=row_ord_col)
-
-        mil_lagged = mil
-        for col in sort_cols:
-            mil_lagged = mil_lagged.mutate(**{f"_lag_{col}": mil_lagged[col].lag().over(w)})
-
-        # Build cascading typed lexicographic comparison.
-        # For each sort column position i, the row violates sort order if:
-        #   all columns 0..i-1 are equal AND column i is less than predecessor.
-        # Null-first ordering: null < non-null, null == null.
-        violates = ibis.literal(False)
-        all_prev_equal = ibis.literal(True)
-
-        for col in sort_cols:
-            curr = mil_lagged[col]
-            prev = mil_lagged[f"_lag_{col}"]
-
-            # null-first "less than":
-            #   (curr null AND prev not-null) → null before non-null → violation
-            #   (both not-null AND curr < prev) → native typed comparison
-            col_less = (curr.isnull() & prev.notnull()) | (
-                curr.notnull() & prev.notnull() & (curr < prev)
-            )
-
-            # null-safe equality (for cascading):
-            #   (both null) OR (both not-null AND curr == prev)
-            col_equal = (curr.isnull() & prev.isnull()) | (
-                curr.notnull() & prev.notnull() & (curr == prev)
-            )
-
-            violates = violates | (all_prev_equal & col_less)
-            all_prev_equal = all_prev_equal & col_equal
-
-        flagged = mil_lagged.filter(violates)
-
-        return flagged.select(
-            ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
-            ibis.literal("Table is not sorted correctly").name("flag_descr"),
-            ibis.literal("").name("message"),
-            ibis.literal("Abort").name("flag_type"),
-            ibis.literal("Y").name("abort_yn"),
         )
 
 

@@ -130,7 +130,6 @@ from qa_mil.checks.level1.checks import (  # noqa: E402
     NullValuesCheck,
     TableExistsCheck,
     TablePopulatedCheck,
-    TableSortOrderCheck,
     VariableLengthCheck,
     VariableNotPopulatedCheck,
     VariableTypeCheck,
@@ -139,7 +138,8 @@ from qa_mil.checks.level1.checks import (  # noqa: E402
 # Table-level checks
 _register(TableExistsCheck())
 _register(TablePopulatedCheck())
-_register(TableSortOrderCheck())
+# Check 102 (table sort order) is intentionally not registered: it depends on
+# SAS physical/input row order, which is not a reliable parquet table invariant.
 
 # Variable-level checks (parameterized from lookup rules)
 _l1_rules = load_l1_rules()

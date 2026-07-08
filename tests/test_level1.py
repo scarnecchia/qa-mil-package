@@ -77,10 +77,16 @@ class TestLevel1Registry:
         level1 = [c for c in checks if c.metadata.level == 1]
         assert len(level1) > 0
 
-    def test_list_checks_includes_100_101_102(self) -> None:
+    def test_list_checks_includes_100_101(self) -> None:
         checks = list_checks()
         ids = {c.metadata.check_id for c in checks}
-        assert {"100", "101", "102"}.issubset(ids)
+        assert {"100", "101"}.issubset(ids)
+
+    def test_check_102_not_registered(self) -> None:
+        """Check 102 is SAS-only physical sort-order validation, de-scoped for parquet."""
+        checks = list_checks()
+        ids = {c.metadata.check_id for c in checks}
+        assert "102" not in ids
 
     def test_list_checks_includes_110_111_112_113(self) -> None:
         checks = list_checks()
@@ -94,7 +100,7 @@ class TestLevel1Registry:
 
     def test_table_checks_are_abort(self) -> None:
         checks = list_checks()
-        table_checks = [c for c in checks if c.metadata.check_id in ("100", "101", "102")]
+        table_checks = [c for c in checks if c.metadata.check_id in ("100", "101")]
         for check in table_checks:
             assert check.metadata.severity == Severity.ABORT
 
@@ -274,110 +280,6 @@ class TestLevel1CheckBehavior:
             ctx = CheckContext(session=session, metadata=check.metadata)
             result = session.execute(check.build(ctx))
             assert len(result) == 0  # No flags — table is populated
-
-    def test_sort_order_check_flags_unsorted(self, tmp_path: Path) -> None:
-        """Check 102 must flag rows when MIL is not sorted by expected columns."""
-        from qa_mil.checks.level1.checks import TableSortOrderCheck
-
-        mil_path = tmp_path / "mil.parquet"
-        # Data sorted in REVERSE of expected (MPatID, CPatID, ...)
-        write_parquet(
-            mil_path,
-            {
-                "MPatID": ["M003", "M002", "M001"],
-                "CPatID": ["C003", "C002", "C001"],
-                "ADate": ["2020-03-10", "2020-02-20", "2020-01-15"],
-                "EncounterID": ["E003", "E002", "E001"],
-                "Birth_Type": [3, 2, 1],
-            },
-        )
-        with _make_session(mil_path) as session:
-            from qa_mil.checks.base import CheckContext
-
-            check = TableSortOrderCheck()
-            ctx = CheckContext(session=session, metadata=check.metadata)
-            result = session.execute(check.build(ctx))
-            assert len(result) >= 1  # At least one row violates sort order
-            assert result["flagid"].iloc[0] == "MIL_1_00_00-0_102"
-            assert result["flag_type"].iloc[0] == "Abort"
-
-    def test_sort_order_check_no_flags_when_sorted(self, tmp_path: Path) -> None:
-        """Check 102 must NOT flag rows when MIL is correctly sorted."""
-        from qa_mil.checks.level1.checks import TableSortOrderCheck
-
-        mil_path = tmp_path / "mil.parquet"
-        # Data sorted correctly: MPatID asc, CPatID asc, etc.
-        write_parquet(
-            mil_path,
-            {
-                "MPatID": ["M001", "M002", "M003"],
-                "CPatID": ["C001", "C002", "C003"],
-                "ADate": ["2020-01-15", "2020-02-20", "2020-03-10"],
-                "EncounterID": ["E001", "E002", "E003"],
-                "Birth_Type": [1, 2, 3],
-            },
-        )
-        with _make_session(mil_path) as session:
-            from qa_mil.checks.base import CheckContext
-
-            check = TableSortOrderCheck()
-            ctx = CheckContext(session=session, metadata=check.metadata)
-            result = session.execute(check.build(ctx))
-            assert len(result) == 0  # No flags — correctly sorted
-
-    def test_sort_order_check_numeric_not_lexicographic(self, tmp_path: Path) -> None:
-        """Check 102 must use native numeric ordering, not lexicographic string.
-
-        Birth_Type values 2, 10 are in correct numeric sort order.
-        String comparison would incorrectly flag "10" < "2".
-        All preceding sort columns are held equal so the cascade
-        actually reaches Birth_Type.
-        """
-        from qa_mil.checks.level1.checks import TableSortOrderCheck
-
-        mil_path = tmp_path / "mil.parquet"
-        # Only Birth_Type varies (2 then 10); all earlier sort columns equal
-        write_parquet(
-            mil_path,
-            {
-                "MPatID": ["M001", "M001"],
-                "CPatID": ["C001", "C001"],
-                "ADate": ["2020-01-15", "2020-01-15"],
-                "EncounterID": ["E001", "E001"],
-                "Birth_Type": [2, 10],
-            },
-        )
-        with _make_session(mil_path) as session:
-            from qa_mil.checks.base import CheckContext
-
-            check = TableSortOrderCheck()
-            ctx = CheckContext(session=session, metadata=check.metadata)
-            result = session.execute(check.build(ctx))
-            assert len(result) == 0  # No false flag — native numeric comparison
-
-    def test_sort_order_check_flags_null_after_nonnull(self, tmp_path: Path) -> None:
-        """Check 102 must flag a null value appearing after a non-null (null-first)."""
-        from qa_mil.checks.level1.checks import TableSortOrderCheck
-
-        mil_path = tmp_path / "mil.parquet"
-        # MPatID goes "M001" then null — null should sort first, so this is a violation
-        write_parquet(
-            mil_path,
-            {
-                "MPatID": ["M001", None],
-                "CPatID": ["C001", "C002"],
-                "ADate": ["2020-01-15", "2020-02-20"],
-                "EncounterID": ["E001", "E002"],
-                "Birth_Type": [1, 2],
-            },
-        )
-        with _make_session(mil_path) as session:
-            from qa_mil.checks.base import CheckContext
-
-            check = TableSortOrderCheck()
-            ctx = CheckContext(session=session, metadata=check.metadata)
-            result = session.execute(check.build(ctx))
-            assert len(result) >= 1  # Null after non-null is a sort violation
 
     def test_flagid_format_for_level1(self) -> None:
         """FlagID format: {TABID}_1_{varid}_00-0_{checknum}"""

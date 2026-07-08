@@ -2,7 +2,7 @@
 
 **Status:** Complete
 **Source:** `inputfiles/scdm_data_qa_mil_review-level1.sas`
-**Last updated:** 2026-07-07
+**Last updated:** 2026-07-08
 
 ## Table-level checks (varid = "00")
 
@@ -10,12 +10,9 @@
 |-------|-------------|----------|----------------|-----------|
 | 100 | Table exists | Abort | `{TABID}_1_00_00-0_100` | 38–50 |
 | 101 | Table populated | Abort | `{TABID}_1_00_00-0_101` | 53–95 |
-| 102 | Table sort order correct | Abort | `{TABID}_1_00_00-0_102` | 100–153 |
 
 - Check 100 aborts if a table from the control flow cannot be found.
 - Check 101 aborts if a table has zero rows.
-- Check 102 only runs for the first table in the list (j=1) and uses
-  `lkp_all_l1.sortorder` to verify sort order.
 
 ## Variable-level checks (varid = variable-specific)
 
@@ -36,6 +33,7 @@
 
 | Check | Status | Reason |
 |-------|--------|--------|
+| 102 | **SAS-only / de-scoped** | SAS validates physical/input row order using `lkp_all_l1.sortorder` for the first table in the list. Parquet/DuckDB tables are relational inputs where global physical row order is not a reliable table invariant, especially for partitioned or multi-file datasets. The Python port does not register or emulate this check. |
 | 130 | **Not applicable** | Referenced in SAS metadata join logic (line 492) alongside 121, 122, 126, 131, 133, but no explicit branch handler exists in `l1_value_12x_13x`. The check is metadata-driven but inactive because no condition is set for checkid=130. Documented as not applicable for the Python port. |
 
 ## Metadata dependencies
