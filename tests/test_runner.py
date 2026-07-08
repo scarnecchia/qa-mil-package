@@ -18,7 +18,13 @@ from qa_mil.checks.base import (
 from qa_mil.checks.registry import _register
 from qa_mil.config import load_config
 from qa_mil.runner import run as run_pipeline
-from tests.conftest import make_config_yaml, make_manifest_yaml, make_mil_data, write_parquet
+from tests.conftest import (
+    make_config_yaml,
+    make_full_fixture,
+    make_manifest_yaml,
+    make_mil_data,
+    write_parquet,
+)
 
 runner = CliRunner()
 
@@ -107,10 +113,8 @@ def ibis_literal(val: str) -> Any:
 class TestRunnerWalkingSkeleton:
     def test_run_produces_outputs(self, tmp_path: Path) -> None:
         """Full run with 371-375 produces dplocal flags and run manifest."""
-        mil_path = tmp_path / "mil.parquet"
-        write_parquet(mil_path, make_mil_data())
-        manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path})
-        config_path = make_config_yaml(tmp_path, manifest_path)
+        setup = make_full_fixture(tmp_path)
+        config_path = setup["config"]
         cfg = load_config(config_path)
 
         result = run_pipeline(cfg)
@@ -129,10 +133,8 @@ class TestRunnerWalkingSkeleton:
         assert len(completed) > 0  # At least some checks completed
 
     def test_run_manifest_has_flag_counts(self, tmp_path: Path) -> None:
-        mil_path = tmp_path / "mil.parquet"
-        write_parquet(mil_path, make_mil_data())
-        manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path})
-        config_path = make_config_yaml(tmp_path, manifest_path)
+        setup = make_full_fixture(tmp_path)
+        config_path = setup["config"]
         cfg = load_config(config_path)
 
         result = run_pipeline(cfg)
@@ -141,10 +143,8 @@ class TestRunnerWalkingSkeleton:
         assert "msoc" in rm["flag_counts"]
 
     def test_disabled_checks_recorded(self, tmp_path: Path) -> None:
-        mil_path = tmp_path / "mil.parquet"
-        write_parquet(mil_path, make_mil_data())
-        manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path})
-        config_path = make_config_yaml(tmp_path, manifest_path, disabled=["371"])
+        setup = make_full_fixture(tmp_path)
+        config_path = make_config_yaml(tmp_path, setup["manifest"], disabled=["371"])
         cfg = load_config(config_path)
 
         result = run_pipeline(cfg)
@@ -155,10 +155,8 @@ class TestRunnerWalkingSkeleton:
         assert all(o["check_id"] != "371" for o in completed)
 
     def test_run_manifest_yaml_round_trip(self, tmp_path: Path) -> None:
-        mil_path = tmp_path / "mil.parquet"
-        write_parquet(mil_path, make_mil_data())
-        manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path})
-        config_path = make_config_yaml(tmp_path, manifest_path)
+        setup = make_full_fixture(tmp_path)
+        config_path = setup["config"]
         cfg = load_config(config_path)
 
         run_pipeline(cfg)

@@ -57,6 +57,26 @@ def make_mil_data(
     return {"MPatID": [], "CPatID": [], "ADate": [], "EncounterID": [], "Birth_Type": []}
 
 
+def make_enr_data() -> dict[str, list]:
+    """Generate ENR (enrollment) table data matching the default MIL fixture."""
+    return {
+        "MPatID": ["M001", "M002", "M003"],
+        "EnrStart": ["2020-01-01", "2020-01-01", "2020-01-01"],
+        "EnrEnd": ["2020-12-31", "2020-12-31", "2020-12-31"],
+    }
+
+
+def make_full_fixture(tmp_path: Path) -> dict[str, Path]:
+    """Create both MIL and ENR parquet files, manifest, and config."""
+    mil_path = tmp_path / "mil.parquet"
+    write_parquet(mil_path, make_mil_data())
+    enr_path = tmp_path / "enr.parquet"
+    write_parquet(enr_path, make_enr_data())
+    manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path, "enr": enr_path})
+    config_path = make_config_yaml(tmp_path, manifest_path)
+    return {"mil": mil_path, "enr": enr_path, "manifest": manifest_path, "config": config_path}
+
+
 def make_config_yaml(
     tmp_path: Path,
     manifest_path: Path,
@@ -121,11 +141,21 @@ def full_setup(tmp_path: Path) -> dict[str, Path]:
     """Create a full config + manifest + parquet fixture set."""
     mil_path = tmp_path / "mil.parquet"
     write_parquet(mil_path, make_mil_data())
-    manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path})
+    enr_path = tmp_path / "enr.parquet"
+    write_parquet(
+        enr_path,
+        {
+            "MPatID": ["M001", "M002", "M003"],
+            "EnrStart": ["2020-01-01", "2020-01-01", "2020-01-01"],
+            "EnrEnd": ["2020-12-31", "2020-12-31", "2020-12-31"],
+        },
+    )
+    manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path, "enr": enr_path})
     config_path = make_config_yaml(tmp_path, manifest_path)
     return {
         "config": config_path,
         "manifest": manifest_path,
         "mil": mil_path,
+        "enr": enr_path,
         "output_dir": tmp_path / "output",
     }
