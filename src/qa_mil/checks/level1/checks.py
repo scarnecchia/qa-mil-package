@@ -149,7 +149,12 @@ class TableSortOrderCheck:
         """Check sort order against expected sort variables.
 
         Uses lookup metadata sortorder to determine expected sort columns.
-        Returns rows that violate the expected sort order.
+        Flags rows that violate the expected non-decreasing sort order by
+        comparing each row's concatenated sort key against the previous row's.
+
+        Note: In the parquet/SQL runtime, physical row order is not
+        operationally required (all operations are set-based), but this
+        check preserves the SAS QA flag behavior for diagnostic purposes.
         """
         session = ctx.session
         mil = session.table("mil")
@@ -160,25 +165,54 @@ class TableSortOrderCheck:
         )
 
         if not sort_vars:
-            return mil.filter(ibis.literal(False)).mutate(
-                flagid=ibis.literal(make_flagid(self.tabid, 1, "00", 102)),
-                flag_descr=ibis.literal("Table is not sorted correctly"),
-                message=ibis.literal(""),
-                flag_type=ibis.literal("Abort"),
-                abort_yn=ibis.literal("Y"),
+            # No sort order defined — nothing to check
+            return mil.aggregate(_count=mil.count()).filter(ibis.literal(False)).select(
+                ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
+                ibis.literal("Table is not sorted correctly").name("flag_descr"),
+                ibis.literal("").name("message"),
+                ibis.literal("Abort").name("flag_type"),
+                ibis.literal("Y").name("abort_yn"),
             )
 
-        [r.variable for r in sort_vars]
-        # Check if data is sorted by these columns
-        # Simple approach: compare with sorted version
-        # If any row differs, the table isn't sorted
-        # For now, return empty (sort check is complex in SQL)
-        return mil.filter(ibis.literal(False)).mutate(
-            flagid=ibis.literal(make_flagid(self.tabid, 1, "00", 102)),
-            flag_descr=ibis.literal("Table is not sorted correctly"),
-            message=ibis.literal(""),
-            flag_type=ibis.literal("Abort"),
-            abort_yn=ibis.literal("Y"),
+        sort_cols = [r.variable for r in sort_vars if r.variable in mil.columns]
+        if not sort_cols:
+            return mil.aggregate(_count=mil.count()).filter(ibis.literal(False)).select(
+                ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
+                ibis.literal("Table is not sorted correctly").name("flag_descr"),
+                ibis.literal("").name("message"),
+                ibis.literal("Abort").name("flag_type"),
+                ibis.literal("Y").name("abort_yn"),
+            )
+
+        # Build a concatenated sort key by casting all sort columns to strings.
+        # Uses a delimiter to preserve lexicographic ordering for multi-column sort.
+        delim = "\x1f"  # ASCII unit separator — unlikely in data
+        key_expr = ibis.literal("")
+        for col in sort_cols:
+            key_expr = key_expr + mil[col].cast("string") + ibis.literal(delim)
+
+        mil_keyed = mil.mutate(_sort_key=key_expr)
+
+        # Use a LAG window to get the previous row's sort key in physical order
+        w = ibis.window(order_by=None)
+        mil_lagged = mil_keyed.mutate(
+            _prev_key=mil_keyed["_sort_key"].lag().over(w)
+        )
+
+        # Flag rows where the current sort key is less than the previous row's.
+        # Null values sort first in SAS; treat null < any string value.
+        flagged = mil_lagged.filter(
+            mil_lagged["_prev_key"].notnull()
+            & mil_lagged["_sort_key"].notnull()
+            & (mil_lagged["_sort_key"] < mil_lagged["_prev_key"])
+        )
+
+        return flagged.select(
+            ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),
+            ibis.literal("Table is not sorted correctly").name("flag_descr"),
+            ibis.literal("").name("message"),
+            ibis.literal("Abort").name("flag_type"),
+            ibis.literal("Y").name("abort_yn"),
         )
 
 

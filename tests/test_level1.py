@@ -275,6 +275,56 @@ class TestLevel1CheckBehavior:
             result = session.execute(check.build(ctx))
             assert len(result) == 0  # No flags — table is populated
 
+    def test_sort_order_check_flags_unsorted(self, tmp_path: Path) -> None:
+        """Check 102 must flag rows when MIL is not sorted by expected columns."""
+        from qa_mil.checks.level1.checks import TableSortOrderCheck
+
+        mil_path = tmp_path / "mil.parquet"
+        # Data sorted in REVERSE of expected (MPatID, CPatID, ...)
+        write_parquet(
+            mil_path,
+            {
+                "MPatID": ["M003", "M002", "M001"],
+                "CPatID": ["C003", "C002", "C001"],
+                "ADate": ["2020-03-10", "2020-02-20", "2020-01-15"],
+                "EncounterID": ["E003", "E002", "E001"],
+                "Birth_Type": [3, 2, 1],
+            },
+        )
+        with _make_session(mil_path) as session:
+            from qa_mil.checks.base import CheckContext
+
+            check = TableSortOrderCheck()
+            ctx = CheckContext(session=session, metadata=check.metadata)
+            result = session.execute(check.build(ctx))
+            assert len(result) >= 1  # At least one row violates sort order
+            assert result["flagid"].iloc[0] == "MIL_1_00_00-0_102"
+            assert result["flag_type"].iloc[0] == "Abort"
+
+    def test_sort_order_check_no_flags_when_sorted(self, tmp_path: Path) -> None:
+        """Check 102 must NOT flag rows when MIL is correctly sorted."""
+        from qa_mil.checks.level1.checks import TableSortOrderCheck
+
+        mil_path = tmp_path / "mil.parquet"
+        # Data sorted correctly: MPatID asc, CPatID asc, etc.
+        write_parquet(
+            mil_path,
+            {
+                "MPatID": ["M001", "M002", "M003"],
+                "CPatID": ["C001", "C002", "C003"],
+                "ADate": ["2020-01-15", "2020-02-20", "2020-03-10"],
+                "EncounterID": ["E001", "E002", "E003"],
+                "Birth_Type": [1, 2, 3],
+            },
+        )
+        with _make_session(mil_path) as session:
+            from qa_mil.checks.base import CheckContext
+
+            check = TableSortOrderCheck()
+            ctx = CheckContext(session=session, metadata=check.metadata)
+            result = session.execute(check.build(ctx))
+            assert len(result) == 0  # No flags — correctly sorted
+
     def test_flagid_format_for_level1(self) -> None:
         """FlagID format: {TABID}_1_{varid}_00-0_{checknum}"""
         # Table-level check
