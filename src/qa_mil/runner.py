@@ -183,7 +183,6 @@ def _execute_checks(cfg: Config, session: Any) -> list[dict[str, Any]]:
                         }
                     )
                     record_counter("qa_mil.checks.failed", check_id=check.metadata.check_id)
-                    raise
 
     return outcomes
 

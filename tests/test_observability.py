@@ -106,7 +106,16 @@ class TestNoPHIInTelemetry:
                 "Birth_Type": [2],
             },
         )
-        manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path})
+        enr_path = tmp_path / "enr.parquet"
+        write_parquet(
+            enr_path,
+            {
+                "MPatID": ["SECRET_MOTHER_1"],
+                "EnrStart": ["2020-01-01"],
+                "EnrEnd": ["2020-12-31"],
+            },
+        )
+        manifest_path = make_manifest_yaml(tmp_path, {"mil": mil_path, "enr": enr_path})
         config_path = make_config_yaml(tmp_path, manifest_path)
         from qa_mil.config import load_config
         from qa_mil.runner import run as run_pipeline

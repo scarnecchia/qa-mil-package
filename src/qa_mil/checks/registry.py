@@ -4,8 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from qa_mil.checks.base import Check
+from qa_mil.checks.base import (
+    Check,
+    Severity,  # noqa: E402
+)
+from qa_mil.checks.level2.checks import (  # noqa: E402
+    CrossTableConsistencyCheck,
+    DateRangeCheck,
+    DuplicateKeyCheck,
+    EnrollmentCoverageCheck,
+    ValueDomainCheck,
+)
 from qa_mil.checks.level3.birth_type import BirthTypeLinkageCheck
+from qa_mil.lookups.loader import load_l1_rules  # noqa: E402
 
 # --- Registry of all checks ---
 # Each entry is one logical check instance.
@@ -112,7 +123,6 @@ from qa_mil.checks.level1.checks import (  # noqa: E402
     VariableNotPopulatedCheck,
     VariableTypeCheck,
 )
-from qa_mil.lookups.loader import load_l1_rules  # noqa: E402
 
 # Table-level checks
 _register(TableExistsCheck())
@@ -139,3 +149,35 @@ for rule in _l1_rules:
 
 # Special variable checks
 _register(AgeRangeCheck())
+
+
+# --- Register Level 2 checks ---
+
+# NUM-40: Duplicate/key family
+_register(DuplicateKeyCheck(check_id="211", key_columns=("MPatID", "CPatID", "ADate")))
+_register(
+    DuplicateKeyCheck(
+        check_id="217", key_columns=("MPatID", "ADate", "EncounterID"), severity=Severity.ABORT
+    )
+)
+_register(
+    DuplicateKeyCheck(check_id="218", key_columns=("MPatID", "ADate"), severity=Severity.ABORT)
+)
+_register(DuplicateKeyCheck(check_id="219", key_columns=("CPatID",), severity=Severity.ABORT))
+
+# NUM-41: Date/range/value-domain family
+_register(
+    DateRangeCheck(
+        check_id="201", date_column="ADate", min_date="2010-01-01", max_date="2025-12-31"
+    )
+)
+_register(
+    ValueDomainCheck(check_id="204", variable="Birth_Type", allowed_values=(1, 2, 3, 4, 5, 6, 7, 8))
+)
+
+# NUM-42: Cross-table consistency family
+_register(CrossTableConsistencyCheck(check_id="221", reference_table="enr", join_column="MPatID"))
+_register(CrossTableConsistencyCheck(check_id="223", reference_table="enr", join_column="CPatID"))
+
+# NUM-43: Enrollment/eligibility family
+_register(EnrollmentCoverageCheck(check_id="200", date_column="ADate", severity=Severity.ABORT))
