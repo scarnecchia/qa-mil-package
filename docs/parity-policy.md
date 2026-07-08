@@ -11,15 +11,28 @@ behavior.
 
 ## Strict fields (must match)
 
-The following must match SAS output exactly:
+For applicable, registered checks, the following must match SAS output exactly:
 
 - **`flagid`**: Exact format `{TABID}_{level}_{varid}_00-0_{checknum}`.
-- **Flag emission**: A row must be flagged if and only if SAS flags it.
+- **Flag emission**: A row must be flagged if and only if SAS flags it for the
+  same applicable registered check.
 - **Keyed entities**: The set of keyed entities (e.g., patient/encounter
   combinations) that trigger a flag must match.
 - **Severity**: `Warn` vs `Abort` classification must match.
 - **Routing**: dplocal vs msoc output destination must match.
 - **Aggregate values**: Count and numeric aggregate outputs must match.
+
+## Documented de-scopes
+
+Some SAS checks depend on runtime semantics that are not meaningful parquet data
+quality invariants. These checks are documented as not applicable and are
+excluded from strict flag-emission parity.
+
+- **CheckID 102**: SAS table sort-order validation depends on physical/input row
+  sequence. Parquet/DuckDB execution is set-oriented, and physical row order is
+  not a durable table invariant, especially for multi-file or partitioned data.
+  The Python parquet-backed implementation does not register or emulate CheckID
+  102.
 
 ## Non-failing fields (informational by default)
 

@@ -107,6 +107,20 @@ class TestBackendEquivalence:
         assert session.backend_name == "duckdb"
         session.close()
 
+    @spark_skip
+    def test_backend_factory_creates_spark(self, tmp_path: Path) -> None:
+        """The shared engine factory should route Spark configs to SparkSession."""
+        from qa_mil.engine.base import create_session
+
+        paths = _write_test_parquets(tmp_path)
+
+        session = create_session(paths, backend="spark")
+        try:
+            assert session.backend_name == "spark"
+            assert "mil" in session.tables()
+        finally:
+            session.close()
+
     def test_no_backend_specific_check_forks(self) -> None:
         """Check code should not contain backend-specific conditionals."""
         # Check source for backend-specific conditionals

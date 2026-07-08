@@ -40,4 +40,8 @@ def create_session(
         from qa_mil.engine.duckdb import DuckDbSession
 
         return DuckDbSession(table_paths, options=dict(options or {}))
+    if backend == "spark":
+        from qa_mil.engine.spark import SparkSession
+
+        return SparkSession(table_paths, options=dict(options or {}))
     raise ValueError(f"Unsupported backend: {backend!r}")
