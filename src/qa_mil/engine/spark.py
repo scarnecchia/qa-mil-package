@@ -50,7 +50,8 @@ class SparkSession:
             return ibis.pyspark.from_session(spark)
         except ImportError as e:
             raise ImportError(
-                "PySpark is required for the Spark backend. Install with: pip install pyspark"
+                "Spark backend dependencies are required. Install with: "
+                "pip install 'qa-mil[spark]' or uv sync --extra spark"
             ) from e
 
     def _register_table(self, key: str, path: Path) -> None:

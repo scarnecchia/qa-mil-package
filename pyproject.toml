@@ -20,6 +20,9 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.24",
 ]
 
+[project.optional-dependencies]
+spark = ["ibis-framework[pyspark]>=9.0"]
+
 [project.scripts]
 qa-mil = "qa_mil.cli:app"
 

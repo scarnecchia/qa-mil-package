@@ -5,6 +5,7 @@ Tests skip gracefully if PySpark is not installed.
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,24 @@ spark_skip = pytest.mark.skipif(
     not pyspark_available,
     reason="PySpark not installed — Spark tests are integration tests",
 )
+
+
+def test_project_declares_spark_extra() -> None:
+    """Spark backend users should have an installable optional dependency extra."""
+    project = tomllib.loads(Path("pyproject.toml").read_text())
+
+    assert "ibis-framework[pyspark]>=9.0" in project["project"]["optional-dependencies"]["spark"]
+
+
+@pytest.mark.skipif(pyspark_available, reason="only checks missing-dependency guidance")
+def test_spark_factory_error_mentions_project_extra(tmp_path: Path) -> None:
+    """Missing Spark dependencies should tell users how to install the backend."""
+    from qa_mil.engine.base import create_session
+
+    paths = _write_test_parquets(tmp_path)
+
+    with pytest.raises(ImportError, match="qa-mil\\[spark\\]"):
+        create_session(paths, backend="spark")
 
 
 def _write_test_parquets(tmp_path: Path) -> dict[str, Path]:
