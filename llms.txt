@@ -1,0 +1,535 @@
+# qa_mil_package - LLM Documentation
+
+## Executive Summary
+
+The **qa_mil_package** is a comprehensive quality assurance system for validating the Mother-Infant Linkage (MIL) table within the Sentinel Common Data Model (SCDM). This SAS-based package implements a sophisticated three-tier quality control framework designed to ensure data integrity, completeness, and consistency across maternal and infant health records.
+
+**Core Purpose**: Validate MIL table data against SCDM specifications through automated checks spanning basic structure validation (Level 1), critical data quality assessment (Level 2), and comprehensive characterization reporting (Level 3).
+
+**Version**: 4.2.1 (September 24, 2025)
+
+**Primary Users**: Sentinel data partners, quality assurance analysts, data coordinators
+
+**Output Destinations**:
+- dplocal: Patient-identified records and detailed flag datasets for local investigation
+- msoc: Aggregated, de-identified results for Sentinel Operations Center reporting
+
+## Project Architecture
+
+### Design Philosophy
+
+The package follows a **master-driven orchestration pattern** where a central master file (`00.0_scdm_mil_data_qa_review_master_file.sas`) coordinates execution of modular components based on a control flow specification (`control_flow.csv`). This architecture provides:
+
+- **Modularity**: Independent QA levels can run separately or together
+- **Configurability**: Control flow CSV enables dynamic program execution without code changes
+- **Traceability**: Comprehensive logging and signature generation for audit trails
+- **Reusability**: Extensive macro library enables consistent checks across all levels
+
+### Three-Tier QA Framework
+
+**Level 1 - Basic Structure Validation** (757 lines)
+- File: `/programs/01.0_scdm_mil_data_qa_review_l1_basic_structure.sas`
+- Purpose: Verify table existence, required variables, data types, lengths, formats
+- Approach: Non-fatal checks that catalog structural deficiencies
+- Key Macros: `%check_table_exists`, `%check_col`, `%check_col_type`, `%check_col_length`
+- Output: Basic structure compliance report, missing variable flags
+
+**Level 2 - Critical Data Quality** (176 lines)
+- File: `/programs/02.0_scdm_mil_data_qa_review_l2_run_abort_flags.sas`
+- Purpose: Execute mandatory quality checks that may halt processing on critical failures
+- Approach: Validates data integrity with optional abort-on-error logic
+- Dependencies: Requires lkp_all_flags lookup table defining check specifications
+- Output: Critical error flags, potential processing halt on failures
+
+**Level 3 - Comprehensive Characterization** (662 lines)
+- File: `/programs/03.0_scdm_mil_data_qa_review_l3_characterization.sas`
+- Purpose: Deep data profiling including distributions, patterns, linkage quality metrics
+- Approach: Statistical analysis and frequency reporting across all MIL variables
+- Key Outputs: Maternal-infant linkage quality metrics, temporal distribution patterns
+- Special Focus: Linked delivery events, mother-infant relationship verification
+
+### Directory Structure
+
+```
+/qa_mil_package/
+├── 00.0_scdm_mil_data_qa_review_master_file.sas          # Master orchestrator (v4.2.1)
+├── control_flow.csv                                       # Program execution specification
+├── README.md                                              # Setup and usage documentation
+├── /programs/                                             # Core QA programs
+│   ├── 01.0_scdm_mil_data_qa_review_l1_basic_structure.sas
+│   ├── 02.0_scdm_mil_data_qa_review_l2_run_abort_flags.sas
+│   ├── 03.0_scdm_mil_data_qa_review_l3_characterization.sas
+│   └── /infolder/                                         # Lookup tables and reference data
+│       ├── lkp_all_flags.sas7bdat                         # L2 check definitions
+│       ├── lkp_all_l1.sas7bdat                           # L1 validation specs
+│       ├── lkp_all_saslength.sas7bdat                    # Expected SAS variable lengths
+│       └── lkp_l1_idlength.sas7bdat                      # ID field length specifications
+├── /infolder_ccs/                                         # Common components inputs
+├── /inputfiles/                                           # Sub-packages and dependencies
+│   ├── /scdm_snapshot/                                    # SCDM snapshot generation suite
+│   │   ├── programs/                                      # Snapshot transformation programs
+│   │   ├── infolder/                                      # Snapshot lookup tables
+│   │   └── README.md                                      # Snapshot documentation
+│   └── /qa_common_components/                             # Shared QA utilities
+│       ├── programs/                                      # Common QA programs
+│       └── infolder/                                      # Common lookup tables
+├── /macros/                                               # Macro library
+│   └── scdm_qa_mil_standard_macros.sas                   # 3,502 lines of reusable macros
+└── /support/                                              # Utility programs
+    ├── 00.1_scdm_mil_data_qa_review_formats_build_generic.sas
+    ├── 00.2_scdm_mil_data_qa_review_output_log.sas
+    └── 00.3_scdm_mil_data_qa_review_output_signature.sas
+```
+
+## Control Flow and Orchestration
+
+### Master File Execution Logic
+
+The master file (`00.0_scdm_mil_data_qa_review_master_file.sas`) implements a CSV-driven execution model:
+
+1. **Initialization**: Sets global macro variables (libnames, options, paths)
+2. **Control Flow Parsing**: Reads `control_flow.csv` to determine which programs to execute
+3. **Sequential Execution**: Runs programs in specified order with dependency checking
+4. **Logging**: Captures all output to dated log files
+5. **Signature Generation**: Creates execution signature for audit trail
+
+**Key Macro Variables Set by Master**:
+- `&dmlocal`: Local data source library
+- `&dplocal`: Patient-identified output library
+- `&msoc`: Aggregated MSOC output library
+- `&qpath`: Root path to QA package
+- `&mil_version`: Package version (4.2.1)
+- `&sysdate`: Execution date for output naming
+
+**Control Flow CSV Structure**:
+- `program_name`: Filename without extension
+- `run_flag`: Y/N execution toggle
+- `level`: QA tier (1, 2, or 3)
+- `dependencies`: Required prerequisite programs
+- `description`: Human-readable purpose statement
+
+### Program Entry Points
+
+**Primary Entry Point**: `/00.0_scdm_mil_data_qa_review_master_file.sas`
+- **Usage**: Submit this file to run entire QA suite or configure control_flow.csv to run specific levels
+- **Prerequisites**: Configure site-specific paths, ensure SCDM tables exist in &dmlocal
+
+**Individual Level Entry Points** (advanced use):
+- **Level 1 Only**: `/programs/01.0_scdm_mil_data_qa_review_l1_basic_structure.sas`
+- **Level 2 Only**: `/programs/02.0_scdm_mil_data_qa_review_l2_run_abort_flags.sas`
+- **Level 3 Only**: `/programs/03.0_scdm_mil_data_qa_review_l3_characterization.sas`
+- Note: Running individual levels requires manual macro library inclusion
+
+## Technology Stack and Dependencies
+
+### SAS Requirements
+- **SAS Version**: 9.4 or higher
+- **Required Components**: BASE SAS, SAS/STAT (for PROC FREQ, PROC MEANS)
+- **Procedures Used**: PROC SQL, PROC DATASETS, PROC CONTENTS, PROC FREQ, PROC MEANS, PROC FORMAT
+- **Programming Paradigms**: Macro programming, DATA step, SQL processing
+
+### Required SCDM Tables
+
+**Always Required**:
+- `enrollment`: Patient enrollment periods
+- `demographic`: Patient demographics (gender, race, ethnicity, birth/death dates)
+- `mil`: Mother-Infant Linkage table (primary validation target)
+
+**Commonly Required**:
+- `dispensing`: Medication dispensings (for maternal medication exposure checks)
+- `encounter`: Healthcare encounters (for delivery event validation)
+- `diagnosis`: Diagnosis codes (for condition-based linkage validation)
+- `procedure`: Procedure codes (for delivery procedure validation)
+- `facility`: Healthcare facilities
+- `provider`: Healthcare providers
+
+**Optional/Conditional**:
+- `death`: Mortality data
+- `laboratory_results`: Lab test results
+- `vital_signs`: Vital sign measurements
+- `condition`: Condition episodes
+- `prescribing`: Medication prescriptions
+- `immunization`: Immunization records
+- `medadmin`: Medication administration
+- `pro_cm`: Patient-reported outcomes
+
+### Lookup Table Dependencies
+
+Located in `/programs/infolder/`:
+
+**lkp_all_flags** (Level 2 Checks):
+- Defines all mandatory quality checks with abort logic
+- Columns: flag_name, flag_type, severity, abort_on_fail
+
+**lkp_all_l1** (Level 1 Specifications):
+- Column-level validation rules for MIL table
+- Defines expected variables, types, formats, labels
+
+**lkp_all_saslength** (SAS Length Validation):
+- Expected SAS storage lengths for all MIL variables
+- Ensures consistency with SCDM specifications
+
+**lkp_l1_idlength** (ID Field Validation):
+- Length specifications for identifier fields
+- Critical for data partner compatibility
+
+### Common Components Integration
+
+The package integrates with the Sentinel Common Components (CC) request package:
+- Shared lookup tables in `/infolder_ccs/`
+- Common validation macros from `/inputfiles/qa_common_components/`
+- Standardized output formats for cross-package compatibility
+
+## Data Flow and Processing Pipeline
+
+### Input Data Flow
+
+1. **Source Data**: SCDM-formatted tables in &dmlocal library
+2. **Lookup Tables**: Reference data in /programs/infolder/
+3. **Common Components**: Shared utilities from /infolder_ccs/
+
+### Processing Pipeline
+
+**Stage 1: Initialization and Format Building**
+- File: `/support/00.1_scdm_mil_data_qa_review_formats_build_generic.sas`
+- Creates user-defined formats for data categorization
+- Establishes standardized value labels for reporting
+
+**Stage 2: Level 1 Structure Validation**
+- Verifies MIL table existence
+- Checks all required variables present
+- Validates data types (character vs. numeric)
+- Confirms variable lengths match specifications
+- Verifies formats and informats
+- Output: `/dplocal/mil_l1_structure_report_&sysdate..sas7bdat`
+
+**Stage 3: Level 2 Critical Quality Checks**
+- Executes checks defined in lkp_all_flags
+- Validates referential integrity (mother/infant IDs exist in demographic)
+- Checks temporal consistency (infant birth after mother enrollment)
+- Verifies linkage type validity
+- Flags critical errors with optional abort logic
+- Output: `/dplocal/mil_l2_flags_&sysdate..sas7bdat`, `/msoc/mil_l2_summary_&sysdate..sas7bdat`
+
+**Stage 4: Level 3 Characterization**
+- Generates frequency distributions for all categorical variables
+- Calculates summary statistics for continuous variables
+- Analyzes maternal-infant linkage patterns
+- Profiles linked delivery events
+- Assesses data completeness and coverage
+- Output: `/dplocal/mil_l3_detailed_&sysdate..sas7bdat`, `/msoc/mil_l3_aggregated_&sysdate..sas7bdat`
+
+**Stage 5: Logging and Signature**
+- File: `/support/00.2_scdm_mil_data_qa_review_output_log.sas`
+- Copies SAS log to permanent storage with timestamp
+- File: `/support/00.3_scdm_mil_data_qa_review_output_signature.sas`
+- Generates execution signature with version, date, parameters
+- Creates audit trail for regulatory compliance
+
+### Output Data Flow
+
+**dplocal Library** (Patient-Identified):
+- Detailed flag datasets with patient IDs
+- Full record-level quality issue listings
+- Suitable for local investigation and remediation
+- Contains PHI - must remain local
+
+**msoc Library** (Aggregated):
+- De-identified summary statistics
+- Count-based quality metrics
+- Suitable for submission to Sentinel Operations Center
+- No patient-level identifiers
+
+## Macro Library: Core Components
+
+Location: `/macros/scdm_qa_mil_standard_macros.sas` (3,502 lines)
+
+### Key Validation Macros
+
+**%check_table_exists(table=, lib=)**
+- Purpose: Verify SAS dataset existence before processing
+- Returns: &tableexists macro variable (1=exists, 0=not found)
+- Usage: Gate checks to prevent errors on missing tables
+
+**%check_col(table=, var=)**
+- Purpose: Verify variable exists in specified dataset
+- Returns: &colexists macro variable (1=exists, 0=not found)
+- Common Pattern: Used before type/length checks
+
+**%check_col_type(table=, var=, expected_type=)**
+- Purpose: Validate variable is expected type (CHAR or NUM)
+- Expected Types: "CHAR" for character, "NUM" for numeric
+- Output: Flags type mismatches for correction
+
+**%check_col_length(table=, var=, expected_length=)**
+- Purpose: Verify SAS storage length matches specification
+- Critical For: Cross-platform compatibility, storage optimization
+- References: lkp_all_saslength for expected values
+
+**%check_col_format(table=, var=, expected_format=)**
+- Purpose: Validate applied SAS format matches specification
+- Handles: Both format name and width (e.g., DATE9.)
+
+### Data Quality Macros
+
+**%flag_duplicate_records(table=, keyvar=, flagname=)**
+- Purpose: Identify duplicate records based on key variables
+- Output: Dataset of duplicate records flagged for review
+- Common Use: Detect duplicate mother-infant linkages
+
+**%flag_missing_values(table=, var=, flagname=, required=)**
+- Purpose: Flag records with missing required values
+- Parameters: required=Y marks as critical error
+- Output: Record-level flags for missing data
+
+**%check_referential_integrity(parent_table=, parent_key=, child_table=, child_key=, flagname=)**
+- Purpose: Validate foreign key relationships (e.g., infant_patid exists in demographic)
+- Critical For: MIL linkage validity
+- Output: Orphan records flagged for investigation
+
+**%check_temporal_consistency(table=, start_var=, end_var=, flagname=)**
+- Purpose: Verify date/datetime logical ordering
+- Common Use: Ensure infant birth after mother enrollment start
+- Handles: Both DATE and DATETIME formats
+
+### Characterization Macros
+
+**%freq_all_vars(table=, output=)**
+- Purpose: Generate frequency distributions for all categorical variables
+- Optimization: Automatically identifies categorical vs. continuous
+- Output: Comprehensive frequency tables for L3 reporting
+
+**%summarize_continuous(table=, var=, output=)**
+- Purpose: Calculate N, mean, median, min, max, std for numeric variables
+- Usage: Profile continuous MIL variables (e.g., gestational age)
+
+**%profile_linkage_quality(table=, output=)**
+- Purpose: Specialized macro for MIL linkage quality metrics
+- Metrics: Linkage completeness, linkage type distribution, temporal patterns
+- Critical For: Assessing maternal-infant relationship data quality
+
+### Utility Macros
+
+**%create_signature(version=, rundate=, output=)**
+- Purpose: Generate execution metadata for audit trails
+- Includes: Version, date, SAS version, user, parameters
+- Output: Signature dataset for regulatory compliance
+
+**%log_message(message=, severity=)**
+- Purpose: Standardized logging with severity levels
+- Severity Levels: INFO, WARNING, ERROR, CRITICAL
+- Integration: Feeds into consolidated log output
+
+**%cleanup_temp_datasets(prefix=)**
+- Purpose: Remove temporary work datasets after processing
+- Pattern: Deletes datasets matching prefix pattern
+- Housekeeping: Prevents work library bloat
+
+## Configuration and Setup
+
+### Initial Setup Steps
+
+1. **Extract Package**: Unzip qa_mil_package to local directory
+2. **Review README.md**: Read `/README.md` for site-specific requirements
+3. **Configure Paths**: Edit master file lines 20-50 to set local paths
+4. **Verify Data**: Ensure SCDM tables exist in source library
+5. **Review Control Flow**: Examine `control_flow.csv` to select QA levels
+6. **Test Run**: Execute master file with sample data
+
+### Critical Configuration Variables
+
+**In Master File** (`00.0_scdm_mil_data_qa_review_master_file.sas`):
+
+```sas
+/* Lines 20-50: Site-Specific Configuration */
+%let dmlocal = /* Path to source SCDM data library */;
+%let dplocal = /* Path for patient-identified output */;
+%let msoc = /* Path for aggregated MSOC output */;
+%let qpath = /* Root path to qa_mil_package */;
+%let infolder = &qpath/programs/infolder;
+%let infolder_ccs = &qpath/infolder_ccs;
+```
+
+**Control Flow Configuration** (`control_flow.csv`):
+
+- Set `run_flag=Y` for programs to execute
+- Set `run_flag=N` to skip programs
+- Respect `dependencies` to ensure proper execution order
+- Modify `level` to organize custom workflow
+
+### Environment Requirements
+
+**SAS Options**: Set in master file initialization
+- `mprint`: Enable macro debugging
+- `symbolgen`: Show macro variable resolution
+- `mlogic`: Display macro logic flow
+- `source2`: Include source code in log
+- `errors=max`: Display all errors
+
+**Library Assignments**: Critical for proper execution
+- dmlocal: Must point to existing SCDM data
+- dplocal: Must have write permissions for local output
+- msoc: Must have write permissions for MSOC output
+- infolder/infolder_ccs: Must point to lookup tables
+
+## Use Case Guidance
+
+### Navigation: Finding Specific Functionality
+
+**Locating a Check**:
+1. Identify QA level (structure=L1, critical=L2, profiling=L3)
+2. Open corresponding program file in /programs/
+3. Search for variable name or check description in comments
+4. Trace back to macro definition in /macros/scdm_qa_mil_standard_macros.sas
+
+**Understanding a Macro**:
+1. Open /macros/scdm_qa_mil_standard_macros.sas
+2. Search for macro name (e.g., `%macro check_col`)
+3. Read header comments for purpose, parameters, usage
+4. Examine code for implementation details
+
+**Tracing Data Flow**:
+1. Start at master file to see execution order
+2. Follow control_flow.csv to understand program sequence
+3. Check each program's input/output comments
+4. Review PROC CONTENTS output for dataset structures
+
+### Contributing: Adding New Checks
+
+**Adding a Level 2 Critical Check**:
+1. Define check in `/programs/infolder/lkp_all_flags.sas7bdat`
+2. Add row with: flag_name, flag_type, severity, abort_on_fail
+3. Implement check logic in `02.0_scdm_mil_data_qa_review_l2_run_abort_flags.sas`
+4. Use existing macros from standard_macros.sas when possible
+5. Test with sample data before production deployment
+6. Document in program header comments
+
+**Creating a New Characterization**:
+1. Add analysis to `03.0_scdm_mil_data_qa_review_l3_characterization.sas`
+2. Use %freq_all_vars or %summarize_continuous for standard reporting
+3. Create custom macro in standard_macros.sas for reusable logic
+4. Output to both dplocal (detailed) and msoc (aggregated)
+5. Update control_flow.csv if adding separate program
+
+**Extending Macro Library**:
+1. Open `/macros/scdm_qa_mil_standard_macros.sas`
+2. Add macro at appropriate section (validation, quality, characterization, utility)
+3. Include comprehensive header: purpose, parameters, returns, usage example
+4. Follow naming convention: verb_noun pattern (e.g., check_col, flag_missing)
+5. Test thoroughly before integrating into main programs
+
+### Debugging: Common Issues and Solutions
+
+**Issue: Table Not Found**
+- Check: &dmlocal library assignment in master file
+- Verify: SCDM table naming conventions (case-sensitive on some platforms)
+- Validate: User has read permissions on source data library
+
+**Issue: Macro Not Resolved**
+- Check: Macro library included via %include in master file
+- Verify: Macro name spelling (case-insensitive but check underscore placement)
+- Validate: Macro parameters match definition
+
+**Issue: Lookup Table Missing**
+- Check: &infolder path points to /programs/infolder/
+- Verify: Lookup table exists in expected location
+- Validate: Lookup table has expected structure (use PROC CONTENTS)
+
+**Issue: Output Not Generated**
+- Check: &dplocal and &msoc library assignments have write permissions
+- Verify: Control_flow.csv has run_flag=Y for relevant programs
+- Review: SAS log for errors or warnings (captured in dated log file)
+
+**Issue: Check Produces Unexpected Results**
+- Enable: SAS options mprint, symbolgen, mlogic for macro debugging
+- Review: Macro variable resolution in log output
+- Test: Run macro with minimal test data to isolate issue
+- Validate: Input data meets expected format and structure
+
+### Features: Key Functional Areas
+
+**Mother-Infant Linkage Validation** (Primary Focus):
+- Files: All three level programs, specialized macros in standard_macros.sas
+- Checks: Referential integrity (mother/infant IDs), temporal consistency (birth timing), linkage type validity
+- Location: Lines 200-350 in L2 program, lines 400-550 in L3 program
+
+**Delivery Event Profiling** (Recent Enhancement - v4.2.1):
+- File: `03.0_scdm_mil_data_qa_review_l3_characterization.sas` lines 450-550
+- Purpose: Analyze linked delivery events, delivery procedures, birth outcomes
+- Fix: DEV-38343 addressed linked delivery reporting issues
+
+**Temporal Distribution Analysis**:
+- File: `03.0_scdm_mil_data_qa_review_l3_characterization.sas` lines 300-450
+- Metrics: Enrollment periods, birth cohorts, linkage timing patterns
+- Outputs: Trend analyses for data quality monitoring
+
+**Data Completeness Assessment**:
+- Files: All level programs include completeness checks
+- Approach: Variable-by-variable missing data profiling
+- Critical For: Understanding data partner coverage and quality
+
+**Snapshot Integration** (Sub-package):
+- Location: `/inputfiles/scdm_snapshot/`
+- Purpose: Transform SCDM data for specialized analyses
+- Documentation: See `/inputfiles/scdm_snapshot/README.md`
+- Integration: Called from master file via control_flow.csv when needed
+
+## Version History and Recent Changes
+
+**v4.2.1 (September 24, 2025)**:
+- Fix: DEV-39254 - Resolved QADATA.MIL column errors per SD-16353
+- Fix: DEV-38343 - Corrected linked delivery event reporting
+- Enhancement: Improved error messaging for missing lookup tables
+- Documentation: Updated README.md with troubleshooting section
+
+**Key Commits**:
+- `591176e`: Merge staging changes into master
+- `b9fe3a0`: SCDM snapshot updates (version 360cf43)
+- `92b89dd`: Version number updates
+- `6868f8b`: Pull request #60 for DEV-39254 resolution
+
+## Best Practices for LLM Interaction
+
+**When Asked to Modify Code**:
+1. Always read the relevant program file completely first
+2. Check macro definitions in standard_macros.sas for reusable logic
+3. Review control_flow.csv to understand execution context
+4. Verify changes against SCDM specifications
+5. Maintain consistent coding style (4-space indents, descriptive comments)
+
+**When Asked to Explain Functionality**:
+1. Identify which QA level (1, 2, or 3) contains the functionality
+2. Reference specific file paths and line numbers
+3. Explain in context of MIL table validation purpose
+4. Connect to SCDM data model when relevant
+
+**When Asked to Debug**:
+1. Request SAS log file for error details
+2. Check macro variable values and resolutions
+3. Verify input data structure and availability
+4. Trace execution through control_flow.csv
+5. Isolate issue to specific program or macro
+
+**When Asked to Add Features**:
+1. Determine appropriate QA level for new functionality
+2. Check if existing macros can be reused or extended
+3. Consider output requirements (dplocal vs msoc)
+4. Maintain consistency with existing validation patterns
+5. Update control_flow.csv if adding new programs
+
+## Key File Reference Quick Guide
+
+- **Master Orchestrator**: `/00.0_scdm_mil_data_qa_review_master_file.sas`
+- **Control Specification**: `/control_flow.csv`
+- **L1 Structure Checks**: `/programs/01.0_scdm_mil_data_qa_review_l1_basic_structure.sas`
+- **L2 Critical Checks**: `/programs/02.0_scdm_mil_data_qa_review_l2_run_abort_flags.sas`
+- **L3 Characterization**: `/programs/03.0_scdm_mil_data_qa_review_l3_characterization.sas`
+- **Macro Library**: `/macros/scdm_qa_mil_standard_macros.sas`
+- **Format Builder**: `/support/00.1_scdm_mil_data_qa_review_formats_build_generic.sas`
+- **Log Capture**: `/support/00.2_scdm_mil_data_qa_review_output_log.sas`
+- **Signature Generator**: `/support/00.3_scdm_mil_data_qa_review_output_signature.sas`
+- **Setup Guide**: `/README.md`
+- **SCDM Snapshot Suite**: `/inputfiles/scdm_snapshot/`
+- **Common Components**: `/inputfiles/qa_common_components/`
+
+This documentation provides comprehensive context for LLM-assisted development, debugging, and analysis of the qa_mil_package codebase.

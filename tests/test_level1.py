@@ -240,6 +240,41 @@ class TestLevel1CheckBehavior:
             result = session.execute(check.build(ctx))
             assert len(result) == 0  # No flags — numeric column
 
+    def test_table_populated_check_flags_empty_table(self, tmp_path: Path) -> None:
+        """Check 101 must emit an Abort flag when the MIL table has zero rows."""
+        from qa_mil.checks.level1.checks import TablePopulatedCheck
+
+        mil_path = tmp_path / "mil.parquet"
+        # Write an empty parquet (schema but no rows)
+        write_parquet(
+            mil_path,
+            {"MPatID": [], "CPatID": [], "ADate": [], "EncounterID": [], "Birth_Type": []},
+        )
+        with _make_session(mil_path) as session:
+            from qa_mil.checks.base import CheckContext
+
+            check = TablePopulatedCheck()
+            ctx = CheckContext(session=session, metadata=check.metadata)
+            result = session.execute(check.build(ctx))
+            assert len(result) == 1  # Single flag row
+            assert result["flagid"].iloc[0] == "MIL_1_00_00-0_101"
+            assert result["flag_type"].iloc[0] == "Abort"
+            assert result["abort_yn"].iloc[0] == "Y"
+
+    def test_table_populated_check_no_flags_when_populated(self, tmp_path: Path) -> None:
+        """Check 101 must NOT emit any flag when the MIL table has data."""
+        from qa_mil.checks.level1.checks import TablePopulatedCheck
+
+        mil_path = tmp_path / "mil.parquet"
+        write_parquet(mil_path, make_mil_data())
+        with _make_session(mil_path) as session:
+            from qa_mil.checks.base import CheckContext
+
+            check = TablePopulatedCheck()
+            ctx = CheckContext(session=session, metadata=check.metadata)
+            result = session.execute(check.build(ctx))
+            assert len(result) == 0  # No flags — table is populated
+
     def test_flagid_format_for_level1(self) -> None:
         """FlagID format: {TABID}_1_{varid}_00-0_{checknum}"""
         # Table-level check

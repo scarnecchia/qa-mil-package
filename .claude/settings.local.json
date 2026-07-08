@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "SlashCommand(/ed3d-superpowers:brainstorm)",
+      "Bash(tree:*)",
+      "Skill(ed3d-superpowers:brainstorming)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

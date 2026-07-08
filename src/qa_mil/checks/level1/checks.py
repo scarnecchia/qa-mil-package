@@ -107,19 +107,24 @@ class TablePopulatedCheck:
         )
 
     def build(self, ctx: CheckContext) -> ibis.Table:
+        """Emit a single Abort flag row when the table has zero rows.
+
+        Uses aggregate to always produce exactly one row (the count),
+        then filters to keep it only when count == 0.
+        """
         session = ctx.session
         mil = session.table("mil")
-        # Flag if count == 0
-        result = mil.filter(ibis.literal(False)).mutate(
-            flagid=ibis.literal(make_flagid(self.tabid, 1, "00", 101)),
-            flag_descr=ibis.literal("Table is not populated"),
-            message=ibis.literal(""),
-            flag_type=ibis.literal("Abort"),
-            abort_yn=ibis.literal("Y"),
+        return (
+            mil.aggregate(_count=mil.count())
+            .filter(ibis._["_count"] == 0)
+            .select(
+                ibis.literal(make_flagid(self.tabid, 1, "00", 101)).name("flagid"),
+                ibis.literal("Table is not populated").name("flag_descr"),
+                ibis.literal("").name("message"),
+                ibis.literal("Abort").name("flag_type"),
+                ibis.literal("Y").name("abort_yn"),
+            )
         )
-        # If table has 0 rows, we need to emit a flag row
-        # Use a cross join trick: if count==0, produce 1 row
-        return result
 
 
 @dataclass(frozen=True)
