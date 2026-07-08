@@ -149,8 +149,11 @@ class TableSortOrderCheck:
         """Check sort order against expected sort variables.
 
         Uses lookup metadata sortorder to determine expected sort columns.
-        Flags rows that violate the expected non-decreasing sort order by
-        comparing each row's concatenated sort key against the previous row's.
+        Flags rows that violate the expected non-decreasing sort order.
+
+        Implements typed lexicographic comparison per sort column (not string
+        concatenation), with null-first ordering matching SAS semantics:
+        null sorts before any non-null value.
 
         Note: In the parquet/SQL runtime, physical row order is not
         operationally required (all operations are set-based), but this
@@ -192,26 +195,40 @@ class TableSortOrderCheck:
                 )
             )
 
-        # Build a concatenated sort key by casting all sort columns to strings.
-        # Uses a delimiter to preserve lexicographic ordering for multi-column sort.
-        delim = "\x1f"  # ASCII unit separator — unlikely in data
-        key_expr = ibis.literal("")
-        for col in sort_cols:
-            key_expr = key_expr + mil[col].cast("string") + ibis.literal(delim)
-
-        mil_keyed = mil.mutate(_sort_key=key_expr)
-
-        # Use a LAG window to get the previous row's sort key in physical order
+        # Add LAG columns for each sort variable (previous row in physical order)
         w = ibis.window(order_by=None)
-        mil_lagged = mil_keyed.mutate(_prev_key=mil_keyed["_sort_key"].lag().over(w))
+        mil_lagged = mil
+        for col in sort_cols:
+            mil_lagged = mil_lagged.mutate(**{f"_lag_{col}": mil_lagged[col].lag().over(w)})
 
-        # Flag rows where the current sort key is less than the previous row's.
-        # Null values sort first in SAS; treat null < any string value.
-        flagged = mil_lagged.filter(
-            mil_lagged["_prev_key"].notnull()
-            & mil_lagged["_sort_key"].notnull()
-            & (mil_lagged["_sort_key"] < mil_lagged["_prev_key"])
-        )
+        # Build cascading typed lexicographic comparison.
+        # For each sort column position i, the row violates sort order if:
+        #   all columns 0..i-1 are equal AND column i is less than predecessor.
+        # Null-first ordering: null < non-null, null == null.
+        violates = ibis.literal(False)
+        all_prev_equal = ibis.literal(True)
+
+        for col in sort_cols:
+            curr = mil_lagged[col]
+            prev = mil_lagged[f"_lag_{col}"]
+
+            # null-first "less than":
+            #   (curr null AND prev not-null) → null before non-null → violation
+            #   (both not-null AND curr < prev) → native typed comparison
+            col_less = (curr.isnull() & prev.notnull()) | (
+                curr.notnull() & prev.notnull() & (curr < prev)
+            )
+
+            # null-safe equality (for cascading):
+            #   (both null) OR (both not-null AND curr == prev)
+            col_equal = (curr.isnull() & prev.isnull()) | (
+                curr.notnull() & prev.notnull() & (curr == prev)
+            )
+
+            violates = violates | (all_prev_equal & col_less)
+            all_prev_equal = all_prev_equal & col_equal
+
+        flagged = mil_lagged.filter(violates)
 
         return flagged.select(
             ibis.literal(make_flagid(self.tabid, 1, "00", 102)).name("flagid"),

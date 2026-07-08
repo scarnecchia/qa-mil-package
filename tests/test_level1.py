@@ -325,6 +325,58 @@ class TestLevel1CheckBehavior:
             result = session.execute(check.build(ctx))
             assert len(result) == 0  # No flags — correctly sorted
 
+    def test_sort_order_check_numeric_not_lexicographic(self, tmp_path: Path) -> None:
+        """Check 102 must use native numeric ordering, not lexicographic string.
+
+        Birth_Type values 2, 10 are in correct numeric sort order.
+        String comparison would incorrectly flag "10" < "2".
+        """
+        from qa_mil.checks.level1.checks import TableSortOrderCheck
+
+        mil_path = tmp_path / "mil.parquet"
+        # Birth_Type 2 then 10 — correct numerically, wrong lexicographically
+        write_parquet(
+            mil_path,
+            {
+                "MPatID": ["M001", "M001"],
+                "CPatID": ["C001", "C002"],
+                "ADate": ["2020-01-15", "2020-02-20"],
+                "EncounterID": ["E001", "E002"],
+                "Birth_Type": [2, 10],
+            },
+        )
+        with _make_session(mil_path) as session:
+            from qa_mil.checks.base import CheckContext
+
+            check = TableSortOrderCheck()
+            ctx = CheckContext(session=session, metadata=check.metadata)
+            result = session.execute(check.build(ctx))
+            assert len(result) == 0  # No false flag — native numeric comparison
+
+    def test_sort_order_check_flags_null_after_nonnull(self, tmp_path: Path) -> None:
+        """Check 102 must flag a null value appearing after a non-null (null-first)."""
+        from qa_mil.checks.level1.checks import TableSortOrderCheck
+
+        mil_path = tmp_path / "mil.parquet"
+        # MPatID goes "M001" then null — null should sort first, so this is a violation
+        write_parquet(
+            mil_path,
+            {
+                "MPatID": ["M001", None],
+                "CPatID": ["C001", "C002"],
+                "ADate": ["2020-01-15", "2020-02-20"],
+                "EncounterID": ["E001", "E002"],
+                "Birth_Type": [1, 2],
+            },
+        )
+        with _make_session(mil_path) as session:
+            from qa_mil.checks.base import CheckContext
+
+            check = TableSortOrderCheck()
+            ctx = CheckContext(session=session, metadata=check.metadata)
+            result = session.execute(check.build(ctx))
+            assert len(result) >= 1  # Null after non-null is a sort violation
+
     def test_flagid_format_for_level1(self) -> None:
         """FlagID format: {TABID}_1_{varid}_00-0_{checknum}"""
         # Table-level check
