@@ -216,13 +216,14 @@ def _write_outputs(cfg: Config, outcomes: list[dict[str, Any]]) -> dict[str, Any
         if result is None or len(result) == 0:
             continue
 
-        # Project to standard flag schema for consistent concatenation
-        projected = _project_to_flag_schema(result)
         scope = outcome.get("output_scope", "dplocal")
         if scope == OutputScope.DPLOCAL.value:
-            dplocal_tables.append(projected)
-            dplocal_count += projected.num_rows
+            # Preserve ALL columns from check results (flag + patient/detail keys)
+            dplocal_tables.append(result)
+            dplocal_count += result.num_rows
         elif scope == OutputScope.MSOC.value:
+            # msoc: project to standard flag schema and enforce identifier guard
+            projected = _project_to_flag_schema(result)
             msoc_tables.append(projected)
             msoc_count += projected.num_rows
 
@@ -246,8 +247,7 @@ def _build_run_manifest(
     """Build the run manifest data structure."""
     has_failed = any(o["status"] == "failed" for o in outcomes)
     has_aborted = any(o["status"] == "skipped" for o in outcomes) and any(
-        o["status"] == "completed" and o["flag_count"] > 0
-        and o.get("severity") == "Abort"
+        o["status"] == "completed" and o["flag_count"] > 0 and o.get("severity") == "Abort"
         for o in outcomes
     )
     run_status = "failed" if has_failed else ("aborted" if has_aborted else "completed")

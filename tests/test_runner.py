@@ -166,6 +166,31 @@ class TestRunnerWalkingSkeleton:
         assert loaded["request_id"] == "soc_qmr_wp001_nsdp_v01"
         assert len(loaded["check_outcomes"]) > 0  # Level 1 + Level 3 checks
 
+    def test_dplocal_preserves_patient_columns(self, tmp_path: Path) -> None:
+        """dplocal output must retain patient/detail columns, not just flag columns."""
+        import pyarrow.parquet as pq
+
+        setup = make_full_fixture(tmp_path)
+        config_path = setup["config"]
+        cfg = load_config(config_path)
+
+        run_pipeline(cfg)
+        dplocal_path = cfg.output_dir / "dplocal" / "flags.parquet"
+        table = pq.read_table(dplocal_path)
+
+        # Flag columns should always be present
+        assert "flagid" in table.column_names
+
+        # If any check produced rows with patient columns, they should be preserved.
+        # The null-values check (120) on MPatID includes the MPatID column in its
+        # result; check that it survives to dplocal output.
+        # (At least one of the standard patient columns should appear.)
+        patient_cols = {"MPatID", "CPatID", "EncounterID", "ADate", "Birth_Type", "Age"}
+        present_patient_cols = patient_cols & set(table.column_names)
+        assert len(present_patient_cols) > 0, (
+            f"dplocal output has no patient columns. Available: {table.column_names}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Warn/Abort behavior with fake checks
