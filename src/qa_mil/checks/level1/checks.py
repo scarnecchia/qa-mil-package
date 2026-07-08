@@ -195,9 +195,14 @@ class TableSortOrderCheck:
                 )
             )
 
-        # Add LAG columns for each sort variable (previous row in physical order)
-        w = ibis.window(order_by=None)
-        mil_lagged = mil
+        # Assign a stable ingestion row ordinal so LAG references the actual
+        # input sequence. SQL relations don't guarantee physical row order,
+        # so we materialize a sequential number first and use it as the
+        # explicit window order_by.
+        mil_numbered = mil.mutate(_row_ord=ibis.row_number())
+        w = ibis.window(order_by="_row_ord")
+
+        mil_lagged = mil_numbered
         for col in sort_cols:
             mil_lagged = mil_lagged.mutate(**{f"_lag_{col}": mil_lagged[col].lag().over(w)})
 

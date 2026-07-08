@@ -330,18 +330,20 @@ class TestLevel1CheckBehavior:
 
         Birth_Type values 2, 10 are in correct numeric sort order.
         String comparison would incorrectly flag "10" < "2".
+        All preceding sort columns are held equal so the cascade
+        actually reaches Birth_Type.
         """
         from qa_mil.checks.level1.checks import TableSortOrderCheck
 
         mil_path = tmp_path / "mil.parquet"
-        # Birth_Type 2 then 10 — correct numerically, wrong lexicographically
+        # Only Birth_Type varies (2 then 10); all earlier sort columns equal
         write_parquet(
             mil_path,
             {
                 "MPatID": ["M001", "M001"],
-                "CPatID": ["C001", "C002"],
-                "ADate": ["2020-01-15", "2020-02-20"],
-                "EncounterID": ["E001", "E002"],
+                "CPatID": ["C001", "C001"],
+                "ADate": ["2020-01-15", "2020-01-15"],
+                "EncounterID": ["E001", "E001"],
                 "Birth_Type": [2, 10],
             },
         )
