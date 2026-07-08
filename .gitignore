@@ -3,4 +3,11 @@ msoc/*.log
 msoc/*.csv
 dplocal/*.sas7bdat
 dplocal/*.log
-sasprograms/*.log
+sasprograms/*.log__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+.coverage
+htmlcov/
+*.egg-info/
